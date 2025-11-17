@@ -7,364 +7,238 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4361ee;
-            --success: #4cc9f0;
-            --danger: #f72585;
-            --warning: #f8961e;
-            --dark: #212529;
-        }
-        
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
         }
-        
         .game-container {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
             max-width: 500px;
-            margin: 20px auto;
+            margin: 0 auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
         }
-        
         .game-header {
-            background: var(--primary);
+            background: #4361ee;
             color: white;
             padding: 20px;
             text-align: center;
         }
-        
-        .stats-card {
-            background: white;
-            border-radius: 15px;
-            padding: 15px;
-            margin: 10px 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--primary);
-        }
-        
-        .coins {
-            color: var(--warning);
-            font-weight: bold;
-        }
-        
-        .reputation {
-            color: var(--success);
-            font-weight: bold;
-        }
-        
-        .nav-tabs .nav-link.active {
-            background-color: var(--primary);
-            color: white;
-            border: none;
-        }
-        
-        .nav-tabs .nav-link {
-            color: var(--primary);
-        }
-        
-        .btn-primary {
-            background-color: var(--primary);
-            border: none;
-        }
-        
-        .btn-success {
-            background-color: var(--success);
-            border: none;
-        }
-        
-        .btn-danger {
-            background-color: var(--danger);
-            border: none;
-        }
-        
-        .player-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            transition: transform 0.2s;
-        }
-        
-        .player-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-        
-        .investment-safe {
-            border-left: 5px solid var(--success);
-        }
-        
-        .investment-risky {
-            border-left: 5px solid var(--danger);
-        }
-        
-        .rank-1 {
-            background: linear-gradient(45deg, #FFD700, #FFEC8B);
-        }
-        
-        .rank-2 {
-            background: linear-gradient(45deg, #C0C0C0, #E8E8E8);
-        }
-        
-        .rank-3 {
-            background: linear-gradient(45deg, #CD7F32, #E8C8A9);
-        }
-        
         .section {
             display: none;
             padding: 20px;
             min-height: 400px;
         }
-        
         .active-section {
             display: block;
         }
-        
-        .trust-btn {
-            width: 100%;
-            margin: 5px 0;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .debug-info {
-            font-size: 12px;
+        .stats-card {
             background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 10px;
-            display: none;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4361ee;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: #4361ee;
+        }
+        .nav-tabs .nav-link.active {
+            background: #4361ee;
+            color: white;
+            border: none;
         }
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <div class="game-container">
-            <!-- Заголовок -->
-            <div class="game-header">
-                <h1>Математический капиталист</h1>
-                <p class="mb-0">Школьная экономическая игра</p>
-            </div>
-            
-            <!-- Экран входа -->
-            <div id="login-section" class="section active-section">
-                <div class="p-4">
-                    <h3 class="text-center mb-4">Вход в игру</h3>
-                    <div id="login-message" class="alert alert-info">
-                        Для входа введите никнейм, пароль и выберите класс. Если пользователя нет, он будет создан автоматически.
+    <div class="game-container">
+        <div class="game-header">
+            <h1>Математический капиталист</h1>
+            <p class="mb-0">Школьная экономическая игра</p>
+        </div>
+        
+        <!-- Экран входа -->
+        <div id="login-section" class="section active-section">
+            <div class="p-4">
+                <h3 class="text-center mb-4">Вход в игру</h3>
+                <form id="login-form">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="username" placeholder="Никнейм" required>
                     </div>
-                    <form id="login-form">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Никнейм</label>
-                            <input type="text" class="form-control" id="username" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Пароль</label>
-                            <input type="password" class="form-control" id="password" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="class" class="form-label">Ваш класс</label>
-                            <select class="form-select" id="class" required>
-                                <option value="">Выберите класс</option>
-                                <option value="5А">5А</option>
-                                <option value="5Б">5Б</option>
-                                <option value="5В">5В</option>
-                                <option value="5Г">5Г</option>
-                                <option value="6А">6А</option>
-                                <option value="6Б">6Б</option>
-                                <option value="6В">6В</option>
-                                <option value="6Г">6Г</option>
-                                <option value="6Д">6Д</option>
-                                <option value="7А">7А</option>
-                                <option value="7Б">7Б</option>
-                                <option value="8А">8А</option>
-                                <option value="8Б">8Б</option>
-                                <option value="8В">8В</option>
-                                <option value="9А">9А</option>
-                                <option value="9Б">9Б</option>
-                                <option value="9В">9В</option>
-                                <option value="10А">10А</option>
-                                <option value="10Б">10Б</option>
-                                <option value="11">11</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" id="login-btn">
-                            Войти в игру
-                        </button>
-                    </form>
-                </div>
-            </div>
-            
-            <!-- Основной интерфейс игры -->
-            <div id="game-section" class="section">
-                <!-- Навигация -->
-                <ul class="nav nav-tabs nav-justified" id="gameTabs">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" data-section="profile">Профиль</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-section="trade">Торговля</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-section="bank">Банк</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-section="leaderboard">Рейтинги</a>
-                    </li>
-                </ul>
-                
-                <!-- Профиль -->
-                <div id="profile-section" class="section active-section">
-                    <div class="p-3">
-                        <div class="stats-card">
-                            <h5>Ваш профиль</h5>
-                            <div class="d-flex justify-content-between">
-                                <span>Игрок:</span>
-                                <span id="player-name" class="fw-bold"></span>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>Класс:</span>
-                                <span id="player-class"></span>
-                            </div>
-                        </div>
-                        
-                        <div class="stats-card">
-                            <h5>Баланс</h5>
-                            <div class="d-flex justify-content-between">
-                                <span>Монеты:</span>
-                                <span id="player-coins" class="coins">0</span>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>Репутация:</span>
-                                <span id="player-reputation" class="reputation">0</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stats-card">
-                            <h5>Активные вклады</h5>
-                            <div id="active-investments">
-                                <p class="text-muted">Нет активных вкладов</p>
-                            </div>
-                        </div>
-                        
-                        <div class="stats-card">
-                            <h5>Последние транзакции</h5>
-                            <div id="recent-transactions">
-                                <p class="text-muted">Транзакций пока нет</p>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <input type="password" class="form-control" id="password" placeholder="Пароль" required>
                     </div>
-                </div>
-                
-                <!-- Торговля -->
-                <div id="trade-section" class="section">
-                    <div class="p-3">
-                        <h5>Игроки для взаимодействия</h5>
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="player-search" placeholder="Поиск игрока...">
-                        </div>
-                        <div id="players-list">
-                            <div class="text-center">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Загрузка...</span>
-                                </div>
-                                <p class="mt-2">Загрузка списка игроков...</p>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <select class="form-select" id="class" required>
+                            <option value="">Выберите класс</option>
+                            <option value="5А">5А</option>
+                            <option value="5Б">5Б</option>
+                            <option value="5В">5В</option>
+                            <option value="5Г">5Г</option>
+                            <option value="6А">6А</option>
+                            <option value="6Б">6Б</option>
+                            <option value="6В">6В</option>
+                            <option value="6Г">6Г</option>
+                            <option value="6Д">6Д</option>
+                            <option value="7А">7А</option>
+                            <option value="7Б">7Б</option>
+                            <option value="8А">8А</option>
+                            <option value="8Б">8Б</option>
+                            <option value="8В">8В</option>
+                            <option value="9А">9А</option>
+                            <option value="9Б">9Б</option>
+                            <option value="9В">9В</option>
+                            <option value="10А">10А</option>
+                            <option value="10Б">10Б</option>
+                            <option value="11">11</option>
+                        </select>
                     </div>
-                </div>
-                
-                <!-- Банк -->
-                <div id="bank-section" class="section">
-                    <div class="p-3">
-                        <h5>Банковские услуги</h5>
-                        
-                        <!-- Надёжный вклад -->
-                        <div class="stats-card investment-safe">
-                            <h6>Надёжный вклад</h6>
-                            <p class="small">Доходность: 5-10% за 24 часа</p>
-                            <p class="small">Риск: 0%</p>
-                            <p class="small">Лимит: 50% от капитала</p>
-                            <div class="mb-2">
-                                <label for="safe-amount" class="form-label">Сумма вклада</label>
-                                <input type="number" class="form-control" id="safe-amount" min="1" placeholder="Введите сумму">
-                            </div>
-                            <button class="btn btn-success w-100" id="safe-invest-btn">Создать вклад</button>
-                        </div>
-                        
-                        <!-- Рисковый вклад -->
-                        <div class="stats-card investment-risky">
-                            <h6>Рисковый вклад</h6>
-                            <p class="small">Доходность: 50-100% за 24 часа</p>
-                            <p class="small">Риск: 30% вероятность потери</p>
-                            <p class="small">Лимит: 25% от капитала</p>
-                            <div class="mb-2">
-                                <label for="risky-amount" class="form-label">Сумма вклада</label>
-                                <input type="number" class="form-control" id="risky-amount" min="1" placeholder="Введите сумму">
-                            </div>
-                            <button class="btn btn-danger w-100" id="risky-invest-btn">Создать вклад</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Рейтинги -->
-                <div id="leaderboard-section" class="section">
-                    <div class="p-3">
-                        <ul class="nav nav-pills mb-3" id="leaderboardTabs">
-                            <li class="nav-item">
-                                <a class="nav-link active" href="#" data-board="coins">По монетам</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#" data-board="reputation">По репутации</a>
-                            </li>
-                        </ul>
-                        
-                        <div id="coins-leaderboard">
-                            <div class="text-center">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Загрузка...</span>
-                                </div>
-                                <p class="mt-2">Загрузка рейтинга...</p>
-                            </div>
-                        </div>
-                        
-                        <div id="reputation-leaderboard" style="display: none;">
-                            <div class="text-center">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Загрузка...</span>
-                                </div>
-                                <p class="mt-2">Загрузка рейтинга...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    <button type="submit" class="btn btn-primary w-100">Войти в игру</button>
+                </form>
             </div>
         </div>
-    </div>
 
-    <!-- Модальное окно для сделки -->
-    <div class="modal fade" id="tradeModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Сделка с <span id="target-player-name"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <!-- Основной интерфейс игры -->
+        <div id="game-section" class="section">
+            <!-- Навигация -->
+            <ul class="nav nav-tabs nav-justified" id="gameTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showTab('profile')">Профиль</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showTab('trade')">Торговля</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showTab('bank')">Банк</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showTab('leaderboard')">Рейтинги</a>
+                </li>
+            </ul>
+
+            <!-- Профиль -->
+            <div id="profile-section" class="section active-section">
+                <div class="p-3">
+                    <div class="stats-card">
+                        <h5>Ваш профиль</h5>
+                        <div class="d-flex justify-content-between">
+                            <span>Игрок:</span>
+                            <span id="player-name" class="fw-bold">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Класс:</span>
+                            <span id="player-class">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h5>Баланс</h5>
+                        <div class="d-flex justify-content-between">
+                            <span>Монеты:</span>
+                            <span id="player-coins" class="fw-bold">0</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Репутация:</span>
+                            <span id="player-reputation" class="fw-bold">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h5>Активные вклады</h5>
+                        <div id="active-investments">
+                            <p class="text-muted">Нет активных вкладов</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h5>Последние транзакции</h5>
+                        <div id="recent-transactions">
+                            <p class="text-muted">Транзакций пока нет</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <p>Выберите ваше действие:</p>
-                    <button class="btn btn-success trust-btn" id="cooperate-btn">Сотрудничать (+2 монеты, +5 репутации)</button>
-                    <button class="btn btn-danger trust-btn" id="betray-btn">Предать (+3 монеты, -10 репутации)</button>
-                    <div class="mt-3">
-                        <p class="small text-muted">Если оба сотрудничают: +2 монеты каждому, +5 репутации</p>
-                        <p class="small text-muted">Если один предает: предатель +3 монеты, -10 репутации; жертва -1 монета</p>
-                        <p class="small text-muted">Если оба предают: -1 монета каждому, -5 репутации</p>
+            </div>
+
+            <!-- Торговля -->
+            <div id="trade-section" class="section">
+                <div class="p-3">
+                    <h5>Игроки для взаимодействия</h5>
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="player-search" placeholder="Поиск игрока..." oninput="loadPlayersList()">
+                    </div>
+                    <div id="players-list">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                            <p class="mt-2">Загрузка списка игроков...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Банк -->
+            <div id="bank-section" class="section">
+                <div class="p-3">
+                    <h5>Банковские услуги</h5>
+                    
+                    <div class="stats-card">
+                        <h6>Надёжный вклад</h6>
+                        <p class="small">Доходность: 5-10% за 24 часа</p>
+                        <p class="small">Риск: 0%</p>
+                        <p class="small">Лимит: 50% от капитала</p>
+                        <div class="mb-2">
+                            <label for="safe-amount" class="form-label">Сумма вклада</label>
+                            <input type="number" class="form-control" id="safe-amount" min="1" placeholder="Введите сумму">
+                        </div>
+                        <button class="btn btn-success w-100" onclick="createSafeInvestment()">Создать вклад</button>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <h6>Рисковый вклад</h6>
+                        <p class="small">Доходность: 50-100% за 24 часа</p>
+                        <p class="small">Риск: 30% вероятность потери</p>
+                        <p class="small">Лимит: 25% от капитала</p>
+                        <div class="mb-2">
+                            <label for="risky-amount" class="form-label">Сумма вклада</label>
+                            <input type="number" class="form-control" id="risky-amount" min="1" placeholder="Введите сумму">
+                        </div>
+                        <button class="btn btn-danger w-100" onclick="createRiskyInvestment()">Создать вклад</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Рейтинги -->
+            <div id="leaderboard-section" class="section">
+                <div class="p-3">
+                    <ul class="nav nav-pills mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" onclick="showLeaderboard('coins')">По монетам</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" onclick="showLeaderboard('reputation')">По репутации</a>
+                        </li>
+                    </ul>
+                    
+                    <div id="coins-leaderboard">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                            <p class="mt-2">Загрузка рейтинга...</p>
+                        </div>
+                    </div>
+                    
+                    <div id="reputation-leaderboard" style="display: none;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                            <p class="mt-2">Загрузка рейтинга...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -383,7 +257,7 @@
         // Текущий пользователь
         let currentUser = null;
         let targetPlayer = null;
-        
+
         // Инициализация приложения
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Приложение инициализировано');
@@ -391,71 +265,71 @@
             // Проверяем, есть ли сохраненный пользователь
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showGameSection();
-                loadUserData();
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    showGameSection();
+                    loadUserData();
+                } catch (e) {
+                    console.error('Ошибка при загрузке сохраненного пользователя:', e);
+                    localStorage.removeItem('currentUser');
+                }
             }
             
             // Обработчик формы входа
             document.getElementById('login-form').addEventListener('submit', handleLogin);
-            
-            // Обработчики навигации
-            document.querySelectorAll('#gameTabs .nav-link').forEach(tab => {
-                tab.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const sectionId = this.getAttribute('data-section') + '-section';
-                    showSection(sectionId);
-                    
-                    // Обновляем активные вкладки
-                    document.querySelectorAll('#gameTabs .nav-link').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Загружаем данные для активной секции
-                    if (sectionId === 'trade-section') {
-                        loadPlayersList();
-                    } else if (sectionId === 'leaderboard-section') {
-                        loadLeaderboard('coins');
-                    } else if (sectionId === 'profile-section') {
-                        loadUserData();
-                    }
-                });
-            });
-            
-            // Обработчики вкладок рейтингов
-            document.querySelectorAll('#leaderboardTabs .nav-link').forEach(tab => {
-                tab.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const boardType = this.getAttribute('data-board');
-                    
-                    // Обновляем активные вкладки
-                    document.querySelectorAll('#leaderboardTabs .nav-link').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Показываем соответствующий рейтинг
-                    document.getElementById('coins-leaderboard').style.display = 
-                        boardType === 'coins' ? 'block' : 'none';
-                    document.getElementById('reputation-leaderboard').style.display = 
-                        boardType === 'reputation' ? 'block' : 'none';
-                    
-                    loadLeaderboard(boardType);
-                });
-            });
-            
-            // Обработчики кнопок вкладов
-            document.getElementById('safe-invest-btn').addEventListener('click', createSafeInvestment);
-            document.getElementById('risky-invest-btn').addEventListener('click', createRiskyInvestment);
-            
-            // Обработчики кнопок сделки
-            document.getElementById('cooperate-btn').addEventListener('click', () => makeTrade('cooperate'));
-            document.getElementById('betray-btn').addEventListener('click', () => makeTrade('betray'));
-            
-            // Обработчик поиска игроков
-            document.getElementById('player-search').addEventListener('input', loadPlayersList);
         });
-        
+
+        // Функция переключения вкладок
+        function showTab(tabName) {
+            console.log('Переключение на вкладку:', tabName);
+            
+            // Скрываем все секции
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active-section');
+            });
+            
+            // Показываем выбранную секцию
+            document.getElementById(tabName + '-section').classList.add('active-section');
+            
+            // Обновляем активные вкладки
+            document.querySelectorAll('#gameTabs .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Загружаем данные для активной секции
+            if (tabName === 'trade') {
+                loadPlayersList();
+            } else if (tabName === 'leaderboard') {
+                loadLeaderboard('coins');
+            } else if (tabName === 'profile') {
+                loadUserData();
+            }
+        }
+
+        // Функция переключения рейтингов
+        function showLeaderboard(type) {
+            console.log('Переключение рейтинга на:', type);
+            
+            // Обновляем активные вкладки
+            document.querySelectorAll('#leaderboard-section .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Показываем соответствующий рейтинг
+            document.getElementById('coins-leaderboard').style.display = 
+                type === 'coins' ? 'block' : 'none';
+            document.getElementById('reputation-leaderboard').style.display = 
+                type === 'reputation' ? 'block' : 'none';
+            
+            loadLeaderboard(type);
+        }
+
         // Функция входа в игру
         async function handleLogin(e) {
             e.preventDefault();
+            console.log('Обработка входа...');
             
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -466,12 +340,12 @@
                 return;
             }
             
-            // Показываем состояние загрузки
-            const loginBtn = document.getElementById('login-btn');
-            loginBtn.disabled = true;
-            loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Вход...';
-            
             try {
+                // Показываем состояние загрузки
+                const loginBtn = document.querySelector('#login-form button');
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Вход...';
+                
                 // Ищем пользователя в базе данных
                 const { data: users, error } = await supabase
                     .from('profiles')
@@ -519,8 +393,11 @@
                 alert('Произошла ошибка при входе в игру: ' + error.message);
             } finally {
                 // Восстанавливаем кнопку
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Войти в игру';
+                const loginBtn = document.querySelector('#login-form button');
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Войти в игру';
+                }
             }
         }
         
@@ -528,17 +405,6 @@
         function showGameSection() {
             document.getElementById('login-section').classList.remove('active-section');
             document.getElementById('game-section').classList.add('active-section');
-        }
-        
-        // Показать определенный раздел
-        function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(section => {
-                if (section.id === sectionId) {
-                    section.classList.add('active-section');
-                } else {
-                    section.classList.remove('active-section');
-                }
-            });
         }
         
         // Загрузка данных пользователя
@@ -611,7 +477,7 @@
                     const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
                     
                     html += `
-                        <div class="investment-${investment.type} p-2 mb-2 rounded">
+                        <div class="p-2 mb-2 rounded" style="border-left: 4px solid ${investment.type === 'safe' ? '#28a745' : '#dc3545'}; background: #f8f9fa;">
                             <div class="d-flex justify-content-between">
                                 <span>${investment.type === 'safe' ? 'Надёжный' : 'Рисковый'} вклад</span>
                                 <span class="fw-bold">${investment.amount} монет</span>
@@ -663,19 +529,12 @@
                     const result = transaction.result;
                     
                     let description = '';
-                    let amountClass = '';
+                    let amountClass = amount > 0 ? 'text-success' : 'text-danger';
                     
                     if (type === 'trust_evolution') {
-                        if (isOutgoing) {
-                            description = `Сделка с ${otherUser.username}: ${result}`;
-                            amountClass = amount > 0 ? 'text-success' : 'text-danger';
-                        } else {
-                            description = `Сделка с ${otherUser.username}: ${result}`;
-                            amountClass = amount > 0 ? 'text-success' : 'text-danger';
-                        }
+                        description = `Сделка с ${otherUser.username}: ${result}`;
                     } else if (type === 'investment') {
                         description = `${result === 'completed' ? 'Успешный' : 'Неудачный'} вклад`;
-                        amountClass = result === 'completed' ? 'text-success' : 'text-danger';
                     }
                     
                     html += `
@@ -726,31 +585,20 @@
                 let html = '';
                 players.forEach(player => {
                     html += `
-                        <div class="player-card">
+                        <div class="stats-card">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
                                     <h6 class="mb-1">${player.username}</h6>
                                     <p class="mb-1 small">Класс: ${player.class}</p>
-                                    <p class="mb-1 small">Репутация: <span class="reputation">${player.reputation}</span></p>
+                                    <p class="mb-1 small">Репутация: ${player.reputation}</p>
                                 </div>
-                                <button class="btn btn-primary btn-sm trade-btn" data-player-id="${player.id}">Сделка</button>
+                                <button class="btn btn-primary btn-sm" onclick="openTradeModal('${player.id}', '${player.username}')">Сделка</button>
                             </div>
                         </div>
                     `;
                 });
                 
                 container.innerHTML = html;
-                
-                // Добавляем обработчики кнопок сделки
-                document.querySelectorAll('.trade-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const playerId = this.getAttribute('data-player-id');
-                        const player = players.find(p => p.id === playerId);
-                        if (player) {
-                            openTradeModal(player);
-                        }
-                    });
-                });
                 
             } catch (error) {
                 console.error('Ошибка загрузки списка игроков:', error);
@@ -759,15 +607,28 @@
         }
         
         // Открытие модального окна сделки
-        function openTradeModal(player) {
-            targetPlayer = player;
-            
-            if (!targetPlayer) return;
-            
-            document.getElementById('target-player-name').textContent = targetPlayer.username;
-            
-            const modal = new bootstrap.Modal(document.getElementById('tradeModal'));
-            modal.show();
+        async function openTradeModal(playerId, playerName) {
+            try {
+                // Получаем данные игрока
+                const { data: player, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', playerId)
+                    .single();
+                
+                if (error) throw error;
+                
+                targetPlayer = player;
+                document.getElementById('target-player-name').textContent = playerName;
+                
+                // Создаем и показываем модальное окно
+                const modal = new bootstrap.Modal(document.getElementById('tradeModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Ошибка открытия модального окна:', error);
+                alert('Ошибка: ' + error.message);
+            }
         }
         
         // Создание сделки
@@ -1075,12 +936,12 @@
                 let html = '';
                 players.forEach((player, index) => {
                     let rankClass = '';
-                    if (index === 0) rankClass = 'rank-1';
-                    else if (index === 1) rankClass = 'rank-2';
-                    else if (index === 2) rankClass = 'rank-3';
+                    if (index === 0) rankClass = 'background: linear-gradient(45deg, #FFD700, #FFEC8B);';
+                    else if (index === 1) rankClass = 'background: linear-gradient(45deg, #C0C0C0, #E8E8E8);';
+                    else if (index === 2) rankClass = 'background: linear-gradient(45deg, #CD7F32, #E8C8A9);';
                     
                     html += `
-                        <div class="player-card ${rankClass}">
+                        <div class="stats-card" style="${rankClass}">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
                                     <span class="fw-bold me-2">${index + 1}.</span>
@@ -1090,9 +951,7 @@
                                     </div>
                                 </div>
                                 <div class="text-end">
-                                    <span class="fw-bold ${type === 'coins' ? 'coins' : 'reputation'}">
-                                        ${player[type]}
-                                    </span>
+                                    <span class="fw-bold">${player[type]}</span>
                                     <p class="mb-0 small">${type === 'coins' ? 'монет' : 'репутации'}</p>
                                 </div>
                             </div>
@@ -1108,13 +967,28 @@
                 container.innerHTML = '<p class="text-danger">Ошибка загрузки рейтинга</p>';
             }
         }
-        
-        // Периодическая проверка завершения вкладов
-        setInterval(() => {
-            if (currentUser) {
-                loadActiveInvestments();
-            }
-        }, 60000);
     </script>
+
+    <!-- Модальное окно для сделки -->
+    <div class="modal fade" id="tradeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Сделка с <span id="target-player-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Выберите ваше действие:</p>
+                    <button class="btn btn-success w-100 mb-2" onclick="makeTrade('cooperate')">Сотрудничать (+2 монеты, +5 репутации)</button>
+                    <button class="btn btn-danger w-100" onclick="makeTrade('betray')">Предать (+3 монеты, -10 репутации)</button>
+                    <div class="mt-3">
+                        <p class="small text-muted">Если оба сотрудничают: +2 монеты каждому, +5 репутации</p>
+                        <p class="small text-muted">Если один предает: предатель +3 монеты, -10 репутации; жертва -1 монета</p>
+                        <p class="small text-muted">Если оба предают: -1 монета каждому, -5 репутации</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
