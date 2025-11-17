@@ -414,6 +414,8 @@
         // Конфигурация Supabase
         const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
+        
+        // Инициализация Supabase должна быть первой
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentPlayer = null;
@@ -598,7 +600,8 @@
         function setDecision(decision) {
             selectedDecision = decision;
             // Визуальная обратная связь
-            document.querySelectorAll('.decision-buttons .btn').forEach(btn => {
+            const buttons = document.querySelectorAll('.decision-buttons .btn');
+            buttons.forEach(btn => {
                 btn.style.opacity = '0.6';
             });
             event.target.style.opacity = '1';
