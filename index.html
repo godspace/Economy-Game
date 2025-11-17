@@ -6,18 +6,6 @@
     <title>Математический капиталист</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --primary: #4361ee;
-            --secondary: #3a0ca3;
-            --success: #4cc9f0;
-            --danger: #f72585;
-            --warning: #f8961e;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --background: #ffffff;
-            --card-bg: #f8f9fa;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -26,186 +14,180 @@
         }
 
         body {
-            background-color: var(--background);
-            color: var(--dark);
-            line-height: 1.6;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
-            max-width: 100%;
-            padding: 0 15px;
+            max-width: 800px;
             margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px solid #f1c40f;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 20px;
         }
 
         .screen {
             display: none;
-            padding: 20px 0;
-            min-height: 100vh;
         }
 
-        .screen.active {
+        .active {
             display: block;
         }
 
-        header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 15px 0;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
+        .form-group {
+            margin-bottom: 20px;
         }
 
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 5px;
-        }
-
-        .subtitle {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .nav-tabs {
-            display: flex;
-            background: white;
-            border-bottom: 1px solid #eee;
-            position: sticky;
-            top: 80px;
-            z-index: 99;
-        }
-
-        .nav-tab {
-            flex: 1;
-            text-align: center;
-            padding: 12px 0;
-            font-size: 0.85rem;
-            color: var(--dark);
-            text-decoration: none;
-            border-bottom: 3px solid transparent;
-        }
-
-        .nav-tab.active {
-            border-bottom-color: var(--primary);
-            color: var(--primary);
+        label {
+            display: block;
+            margin-bottom: 8px;
             font-weight: 600;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            margin: 0 5px;
+            padding: 10px;
+            text-align: center;
+            background: #ecf0f1;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .nav-btn.active {
+            background: #3498db;
+            color: white;
         }
 
         .card {
             background: white;
             border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #3498db;
         }
 
-        .card-title {
-            font-size: 1.1rem;
-            margin-bottom: 10px;
-            color: var(--secondary);
+        .stats {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-        }
-
-        .stats-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
             margin-bottom: 20px;
         }
 
-        .stat-card {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
+        .stat {
             text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            flex: 1;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin: 0 5px;
         }
 
         .stat-value {
             font-size: 1.8rem;
             font-weight: bold;
-            margin: 5px 0;
+            color: #2c3e50;
         }
 
-        .coins .stat-value {
-            color: var(--warning);
-        }
-
-        .reputation .stat-value {
-            color: var(--primary);
-        }
-
-        .btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-warning {
-            background: var(--warning);
-            color: white;
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
+        .stat-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
         }
 
         .player-list {
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
         }
 
         .player-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
+            padding: 12px;
             border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+
+        .player-item:last-child {
+            border-bottom: none;
         }
 
         .player-info {
@@ -219,7 +201,7 @@
 
         .player-class {
             font-size: 0.8rem;
-            color: #666;
+            color: #7f8c8d;
         }
 
         .player-stats {
@@ -228,119 +210,89 @@
         }
 
         .player-coins, .player-rep {
-            font-size: 0.9rem;
-            padding: 3px 8px;
+            font-weight: 600;
+        }
+
+        .investment-option {
+            border: 2px solid #eee;
             border-radius: 10px;
-            background: #f5f5f5;
-        }
-
-        .player-coins {
-            color: var(--warning);
-        }
-
-        .player-rep {
-            color: var(--primary);
-        }
-
-        .trust-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .investment-card {
-            border-left: 4px solid;
+            padding: 15px;
             margin-bottom: 15px;
+            transition: all 0.3s;
         }
 
-        .investment-safe {
-            border-left-color: var(--success);
-        }
-
-        .investment-risky {
-            border-left-color: var(--danger);
+        .investment-option:hover {
+            border-color: #3498db;
         }
 
         .investment-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
 
-        .investment-status {
-            padding: 2px 8px;
-            border-radius: 10px;
+        .investment-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .investment-risk {
+            padding: 3px 8px;
+            border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
         }
 
-        .status-active {
-            background: rgba(76, 201, 240, 0.2);
-            color: var(--success);
+        .risk-low {
+            background: #d5f4e6;
+            color: #27ae60;
         }
 
-        .status-completed {
-            background: rgba(67, 97, 238, 0.2);
-            color: var(--primary);
-        }
-
-        .status-failed {
-            background: rgba(247, 37, 133, 0.2);
-            color: var(--danger);
+        .risk-high {
+            background: #fadbd8;
+            color: #e74c3c;
         }
 
         .investment-details {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            color: #666;
+            margin-bottom: 15px;
+            color: #7f8c8d;
         }
 
-        .leaderboard-list {
-            max-height: 500px;
-            overflow-y: auto;
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .leaderboard-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px 15px;
+            text-align: left;
             border-bottom: 1px solid #eee;
         }
 
-        .leaderboard-rank {
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            margin-right: 10px;
+        .leaderboard-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .leaderboard-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .rank {
             font-weight: bold;
+            width: 50px;
         }
 
         .rank-1 {
-            background: gold;
-            color: var(--dark);
+            color: #f1c40f;
         }
 
         .rank-2 {
-            background: silver;
+            color: #95a5a6;
         }
 
         .rank-3 {
-            background: #cd7f32; /* bronze */
-        }
-
-        .leaderboard-info {
-            flex: 1;
-        }
-
-        .leaderboard-stats {
-            text-align: right;
+            color: #d35400;
         }
 
         .modal {
@@ -350,23 +302,19 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-            align-items: center;
             justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
+            align-items: center;
         }
 
         .modal-content {
             background: white;
             border-radius: 10px;
-            width: 90%;
-            max-width: 400px;
             padding: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
 
         .modal-header {
@@ -376,62 +324,70 @@
             margin-bottom: 15px;
         }
 
-        .modal-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
+        .close {
             font-size: 1.5rem;
             cursor: pointer;
-            color: #666;
         }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
         }
 
-        .spinner {
-            border: 4px solid rgba(0,0,0,0.1);
-            border-left-color: var(--primary);
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .btn-group button {
+            flex: 1;
         }
 
         .notification {
             position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--primary);
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #2ecc71;
             color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateX(150%);
+            transition: transform 0.3s;
             z-index: 1001;
-            display: none;
         }
 
-        .notification.active {
-            display: block;
-            animation: fadeInOut 3s ease;
+        .notification.show {
+            transform: translateX(0);
         }
 
-        @keyframes fadeInOut {
-            0% { opacity: 0; bottom: 0; }
-            10% { opacity: 1; bottom: 20px; }
-            90% { opacity: 1; bottom: 20px; }
-            100% { opacity: 0; bottom: 0; }
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            width: auto;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom: 3px solid #3498db;
+            font-weight: 600;
         }
 
         .tab-content {
@@ -442,1029 +398,1084 @@
             display: block;
         }
 
-        .login-container {
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
         }
 
-        .login-card {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        .positive {
+            color: #27ae60;
         }
 
-        .login-title {
-            text-align: center;
-            margin-bottom: 20px;
-            color: var(--primary);
+        .negative {
+            color: #e74c3c;
         }
 
-        .error-message {
-            color: var(--danger);
-            text-align: center;
-            margin-top: 10px;
-            font-size: 0.9rem;
-        }
-
-        @media (min-width: 768px) {
-            .container {
-                max-width: 750px;
+        @media (max-width: 600px) {
+            .stats {
+                flex-direction: column;
             }
             
-            .stats-container {
-                grid-template-columns: 1fr 1fr 1fr 1fr;
+            .stat {
+                margin: 5px 0;
+            }
+            
+            .nav {
+                flex-wrap: wrap;
+            }
+            
+            .nav-btn {
+                flex: 1 0 45%;
+                margin: 5px;
+            }
+            
+            .player-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .player-stats {
+                margin-top: 5px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Экран входа -->
-    <div id="login-screen" class="screen active">
-        <div class="login-container">
-            <div class="login-card">
-                <h2 class="login-title">Математический капиталист</h2>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="login-email" class="form-input" placeholder="Ваш email">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Пароль</label>
-                    <input type="password" id="login-password" class="form-input" placeholder="Ваш пароль">
-                </div>
-                <button id="login-btn" class="btn btn-primary">Войти</button>
-                <div class="form-group" style="text-align: center; margin-top: 15px;">
-                    <span>Нет аккаунта? </span>
-                    <a href="#" id="show-register">Зарегистрироваться</a>
-                </div>
-                <div id="login-error" class="error-message"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Экран регистрации -->
-    <div id="register-screen" class="screen">
-        <div class="login-container">
-            <div class="login-card">
-                <h2 class="login-title">Регистрация</h2>
-                <div class="form-group">
-                    <label class="form-label">Имя пользователя</label>
-                    <input type="text" id="register-username" class="form-input" placeholder="Придумайте имя">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Класс</label>
-                    <input type="text" id="register-class" class="form-input" placeholder="Например, 10А">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" id="register-email" class="form-input" placeholder="Ваш email">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Пароль</label>
-                    <input type="password" id="register-password" class="form-input" placeholder="Придумайте пароль">
-                </div>
-                <button id="register-btn" class="btn btn-primary">Зарегистрироваться</button>
-                <div class="form-group" style="text-align: center; margin-top: 15px;">
-                    <span>Уже есть аккаунт? </span>
-                    <a href="#" id="show-login">Войти</a>
-                </div>
-                <div id="register-error" class="error-message"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Основной интерфейс -->
-    <div id="main-screen" class="screen">
+    <div class="container">
         <header>
-            <div class="container">
-                <h1>Математический капиталист</h1>
-                <div class="subtitle" id="user-info">Загрузка...</div>
-            </div>
+            <h1>Математический капиталист</h1>
+            <div class="subtitle">Школьная экономическая игра</div>
         </header>
-
-        <div class="nav-tabs">
-            <a href="#" class="nav-tab active" data-tab="profile">Профиль</a>
-            <a href="#" class="nav-tab" data-tab="trust">Эволюция доверия</a>
-            <a href="#" class="nav-tab" data-tab="invest">Банк</a>
-            <a href="#" class="nav-tab" data-tab="leaderboard">Рейтинги</a>
-        </div>
-
-        <div class="container">
-            <!-- Профиль -->
-            <div id="profile-tab" class="tab-content active">
-                <div class="stats-container">
-                    <div class="stat-card coins">
-                        <div class="stat-label">Монеты</div>
-                        <div class="stat-value" id="coins-value">0</div>
-                        <div class="stat-change" id="coins-change">+0 сегодня</div>
-                    </div>
-                    <div class="stat-card reputation">
-                        <div class="stat-label">Репутация</div>
-                        <div class="stat-value" id="reputation-value">0</div>
-                        <div class="stat-change" id="reputation-change">+0 сегодня</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Сделки</div>
-                        <div class="stat-value" id="transactions-value">0</div>
-                        <div class="stat-change">всего</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Вклады</div>
-                        <div class="stat-value" id="investments-value">0</div>
-                        <div class="stat-change">активные</div>
-                    </div>
-                </div>
-
+        
+        <div class="content">
+            <!-- Экран входа -->
+            <div id="login-screen" class="screen active">
                 <div class="card">
-                    <div class="card-title">
-                        <span>Активные вклады</span>
-                        <button class="btn btn-primary" style="padding: 5px 10px; width: auto;" onclick="showTab('invest')">Новый вклад</button>
-                    </div>
-                    <div id="active-investments-list">
-                        <!-- Активные вклады будут загружены здесь -->
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Последние транзакции</div>
-                    <div id="recent-transactions">
-                        <!-- Последние транзакции будут загружены здесь -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Эволюция доверия -->
-            <div id="trust-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title">Игроки для взаимодействия</div>
-                    <div class="player-list" id="players-list">
-                        <!-- Список игроков будет загружен здесь -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Банк -->
-            <div id="invest-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title">Надёжный вклад</div>
-                    <p>Безрисковый вклад с гарантированной доходностью 5-10% через 24 часа.</p>
+                    <h2>Вход в игру</h2>
+                    <p style="margin-bottom: 20px;">Введите ваш никнейм, пароль и выберите класс</p>
+                    
                     <div class="form-group">
-                        <label class="form-label">Сумма вклада</label>
-                        <input type="number" id="safe-amount" class="form-input" placeholder="Максимум 50% от капитала" min="1">
+                        <label for="username">Никнейм</label>
+                        <input type="text" id="username" placeholder="Придумайте уникальный никнейм">
                     </div>
-                    <button id="safe-invest-btn" class="btn btn-success">Сделать вклад</button>
-                </div>
-
-                <div class="card">
-                    <div class="card-title">Рисковый вклад</div>
-                    <p>Высокодоходный вклад с 30% риском потери средств. Доходность 50-100% при успехе.</p>
+                    
                     <div class="form-group">
-                        <label class="form-label">Сумма вклада</label>
-                        <input type="number" id="risky-amount" class="form-input" placeholder="Максимум 25% от капитала" min="1">
+                        <label for="password">Пароль</label>
+                        <input type="password" id="password" placeholder="Введите пароль">
                     </div>
-                    <button id="risky-invest-btn" class="btn btn-danger">Сделать вклад</button>
+                    
+                    <div class="form-group">
+                        <label for="class">Ваш класс</label>
+                        <select id="class">
+                            <option value="">Выберите класс</option>
+                            <option value="5А">5А</option>
+                            <option value="5Б">5Б</option>
+                            <option value="5В">5В</option>
+                            <option value="5Г">5Г</option>
+                            <option value="6А">6А</option>
+                            <option value="6Б">6Б</option>
+                            <option value="6В">6В</option>
+                            <option value="6Г">6Г</option>
+                            <option value="6Д">6Д</option>
+                            <option value="7А">7А</option>
+                            <option value="7Б">7Б</option>
+                            <option value="8А">8А</option>
+                            <option value="8Б">8Б</option>
+                            <option value="8В">8В</option>
+                            <option value="9А">9А</option>
+                            <option value="9Б">9Б</option>
+                            <option value="9В">9В</option>
+                            <option value="10А">10А</option>
+                            <option value="10Б">10Б</option>
+                            <option value="11">11</option>
+                        </select>
+                    </div>
+                    
+                    <button id="login-btn">Войти в игру</button>
                 </div>
             </div>
-
-            <!-- Рейтинги -->
-            <div id="leaderboard-tab" class="tab-content">
-                <div class="card">
-                    <div class="card-title">Рейтинг по монетам</div>
-                    <div class="leaderboard-list" id="coins-leaderboard">
-                        <!-- Рейтинг по монетам будет загружен здесь -->
+            
+            <!-- Основной экран игры -->
+            <div id="game-screen" class="screen">
+                <div class="nav">
+                    <div class="nav-btn active" data-screen="profile">Профиль</div>
+                    <div class="nav-btn" data-screen="trade">Торговля</div>
+                    <div class="nav-btn" data-screen="bank">Банк</div>
+                    <div class="nav-btn" data-screen="leaderboard">Рейтинги</div>
+                    <div class="nav-btn" data-screen="history">История</div>
+                </div>
+                
+                <!-- Профиль -->
+                <div id="profile" class="screen-section active">
+                    <div class="card">
+                        <h2>Ваш профиль</h2>
+                        <div class="stats">
+                            <div class="stat">
+                                <div class="stat-value" id="user-coins">100</div>
+                                <div class="stat-label">Монеты</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="user-reputation">50</div>
+                                <div class="stat-label">Репутация</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value" id="user-class">5А</div>
+                                <div class="stat-label">Класс</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <h3>Статистика</h3>
+                            <p>Успешных сделок: <span id="successful-deals">0</span></p>
+                            <p>Активных вкладов: <span id="active-investments">0</span></p>
+                            <p>Общий доход: <span id="total-income">0</span> монет</p>
+                        </div>
+                    </div>
+                    
+                    <button id="logout-btn" class="btn-secondary" style="margin-top: 20px;">Выйти</button>
+                </div>
+                
+                <!-- Торговая площадка -->
+                <div id="trade" class="screen-section">
+                    <div class="card">
+                        <h2>Торговая площадка</h2>
+                        <p>Взаимодействуйте с другими игроками через механику "Эволюция доверия"</p>
+                        
+                        <div class="tabs">
+                            <div class="tab active" data-tab="players">Игроки</div>
+                            <div class="tab" data-tab="propose">Предложить сделку</div>
+                        </div>
+                        
+                        <div id="players-tab" class="tab-content active">
+                            <h3>Доступные игроки</h3>
+                            <div class="player-list" id="players-list">
+                                <!-- Список игроков будет здесь -->
+                            </div>
+                        </div>
+                        
+                        <div id="propose-tab" class="tab-content">
+                            <h3>Предложить сделку</h3>
+                            <div class="form-group">
+                                <label for="deal-player">Выберите игрока</label>
+                                <select id="deal-player">
+                                    <!-- Опции будут заполнены JavaScript -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="deal-amount">Сумма сделки</label>
+                                <input type="number" id="deal-amount" min="1" max="100" value="10">
+                            </div>
+                            <button id="propose-deal-btn">Предложить сделку</button>
+                        </div>
                     </div>
                 </div>
-
-                <div class="card">
-                    <div class="card-title">Рейтинг по репутации</div>
-                    <div class="leaderboard-list" id="reputation-leaderboard">
-                        <!-- Рейтинг по репутации будет загружен здесь -->
+                
+                <!-- Банк -->
+                <div id="bank" class="screen-section">
+                    <div class="card">
+                        <h2>Банковские услуги</h2>
+                        <p>Увеличьте свой капитал с помощью банковских вкладов</p>
+                        
+                        <div class="investment-option">
+                            <div class="investment-header">
+                                <div class="investment-title">Надёжный вклад</div>
+                                <div class="investment-risk risk-low">Низкий риск</div>
+                            </div>
+                            <div class="investment-details">
+                                <p>Доходность: 5-10% за 24 часа</p>
+                                <p>Риск: 0%</p>
+                                <p>Лимит: 50% от капитала</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="safe-amount">Сумма вклада</label>
+                                <input type="number" id="safe-amount" min="1" value="10">
+                            </div>
+                            <button id="safe-invest-btn" class="btn-success">Сделать вклад</button>
+                        </div>
+                        
+                        <div class="investment-option">
+                            <div class="investment-header">
+                                <div class="investment-title">Рисковый вклад</div>
+                                <div class="investment-risk risk-high">Высокий риск</div>
+                            </div>
+                            <div class="investment-details">
+                                <p>Доходность: 50-100% за 24 часа</p>
+                                <p>Риск: 30% вероятность потери</p>
+                                <p>Лимит: 25% от капитала</p>
+                            </div>
+                            <div class="form-group">
+                                <label for="risky-amount">Сумма вклада</label>
+                                <input type="number" id="risky-amount" min="1" value="10">
+                            </div>
+                            <button id="risky-invest-btn" class="btn-secondary">Сделать вклад</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Рейтинги -->
+                <div id="leaderboard" class="screen-section">
+                    <div class="card">
+                        <h2>Рейтинги игроков</h2>
+                        
+                        <div class="tabs">
+                            <div class="tab active" data-tab="coins-leaderboard">По монетам</div>
+                            <div class="tab" data-tab="reputation-leaderboard">По репутации</div>
+                        </div>
+                        
+                        <div id="coins-leaderboard-tab" class="tab-content active">
+                            <table class="leaderboard-table">
+                                <thead>
+                                    <tr>
+                                        <th class="rank">#</th>
+                                        <th>Игрок</th>
+                                        <th>Класс</th>
+                                        <th>Монеты</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="coins-leaderboard-body">
+                                    <!-- Рейтинг по монетам будет здесь -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="reputation-leaderboard-tab" class="tab-content">
+                            <table class="leaderboard-table">
+                                <thead>
+                                    <tr>
+                                        <th class="rank">#</th>
+                                        <th>Игрок</th>
+                                        <th>Класс</th>
+                                        <th>Репутация</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reputation-leaderboard-body">
+                                    <!-- Рейтинг по репутации будет здесь -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- История -->
+                <div id="history" class="screen-section">
+                    <div class="card">
+                        <h2>История операций</h2>
+                        
+                        <div class="tabs">
+                            <div class="tab active" data-tab="transactions-history">Сделки</div>
+                            <div class="tab" data-tab="investments-history">Вклады</div>
+                        </div>
+                        
+                        <div id="transactions-history-tab" class="tab-content active">
+                            <div id="transactions-list">
+                                <!-- История сделок будет здесь -->
+                            </div>
+                        </div>
+                        
+                        <div id="investments-history-tab" class="tab-content">
+                            <div id="investments-list">
+                                <!-- История вкладов будет здесь -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <!-- Модальное окно для сделки -->
     <div id="deal-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title" id="deal-modal-title">Сделка с игроком</div>
-                <button class="close-modal">&times;</button>
+                <h3>Предложение сделки</h3>
+                <span class="close">&times;</span>
             </div>
-            <div id="deal-modal-content">
-                <!-- Содержимое модального окна будет заполнено динамически -->
+            <p>Игрок <span id="deal-player-name"></span> предлагает вам сделку на <span id="deal-amount-value"></span> монет.</p>
+            <p>Вы можете сотрудничать или предать. Помните: ваше решение повлияет на репутацию!</p>
+            <div class="btn-group">
+                <button id="cooperate-btn" class="btn-success">Сотрудничать</button>
+                <button id="betray-btn" class="btn-secondary">Предать</button>
             </div>
         </div>
     </div>
-
+    
     <!-- Уведомление -->
     <div id="notification" class="notification"></div>
-
+    
     <script>
         // Конфигурация Supabase
-        const SUPABASE_URL = 'https://isugrtihjmbrzwflybrr.supabase.co'; // Замените на ваш URL
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI'; // Замените на ваш ключ
-
-        // Инициализация Supabase клиента
+        const SUPABASE_URL = 'https://isugrtihjmbrzwflybrr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
+        
+        // Инициализация Supabase
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // Текущий пользователь
+        
+        // Глобальные переменные
         let currentUser = null;
-        let userProfile = null;
-
+        let players = [];
+        let pendingDeal = null;
+        
         // DOM элементы
         const loginScreen = document.getElementById('login-screen');
-        const registerScreen = document.getElementById('register-screen');
-        const mainScreen = document.getElementById('main-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const classSelect = document.getElementById('class');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const screenSections = document.querySelectorAll('.screen-section');
+        const userCoinsEl = document.getElementById('user-coins');
+        const userReputationEl = document.getElementById('user-reputation');
+        const userClassEl = document.getElementById('user-class');
+        const playersList = document.getElementById('players-list');
+        const dealPlayerSelect = document.getElementById('deal-player');
+        const dealAmountInput = document.getElementById('deal-amount');
+        const proposeDealBtn = document.getElementById('propose-deal-btn');
+        const safeAmountInput = document.getElementById('safe-amount');
+        const safeInvestBtn = document.getElementById('safe-invest-btn');
+        const riskyAmountInput = document.getElementById('risky-amount');
+        const riskyInvestBtn = document.getElementById('risky-invest-btn');
+        const coinsLeaderboardBody = document.getElementById('coins-leaderboard-body');
+        const reputationLeaderboardBody = document.getElementById('reputation-leaderboard-body');
+        const dealModal = document.getElementById('deal-modal');
+        const dealPlayerName = document.getElementById('deal-player-name');
+        const dealAmountValue = document.getElementById('deal-amount-value');
+        const cooperateBtn = document.getElementById('cooperate-btn');
+        const betrayBtn = document.getElementById('betray-btn');
         const notification = document.getElementById('notification');
-
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
         // Инициализация приложения
         document.addEventListener('DOMContentLoaded', function() {
-            // Проверка авторизации
-            checkAuth();
-            
-            // Настройка обработчиков событий
-            setupEventListeners();
-        });
-
-        // Проверка авторизации
-        async function checkAuth() {
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            if (session) {
-                currentUser = session.user;
-                await loadUserProfile();
-                showScreen('main');
-            } else {
-                showScreen('login');
+            // Проверяем, есть ли сохраненный пользователь
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showGameScreen();
+                loadUserData();
+                loadPlayers();
+                loadLeaderboards();
+                loadHistory();
             }
-        }
-
-        // Настройка обработчиков событий
-        function setupEventListeners() {
-            // Навигация между экранами
-            document.getElementById('show-register').addEventListener('click', function(e) {
-                e.preventDefault();
-                showScreen('register');
-            });
             
-            document.getElementById('show-login').addEventListener('click', function(e) {
-                e.preventDefault();
-                showScreen('login');
-            });
+            // Назначаем обработчики событий
+            loginBtn.addEventListener('click', handleLogin);
+            logoutBtn.addEventListener('click', handleLogout);
             
-            // Кнопки входа и регистрации
-            document.getElementById('login-btn').addEventListener('click', login);
-            document.getElementById('register-btn').addEventListener('click', register);
-            
-            // Навигация по вкладкам
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    showTab(this.getAttribute('data-tab'));
+            // Навигация
+            navBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const screen = this.getAttribute('data-screen');
+                    showScreen(screen);
+                    
+                    // Обновляем активные кнопки навигации
+                    navBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
                 });
             });
             
-            // Кнопки вкладов
-            document.getElementById('safe-invest-btn').addEventListener('click', makeSafeInvestment);
-            document.getElementById('risky-invest-btn').addEventListener('click', makeRiskyInvestment);
-            
-            // Закрытие модального окна
-            document.querySelector('.close-modal').addEventListener('click', function() {
-                document.getElementById('deal-modal').classList.remove('active');
+            // Табы
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // Обновляем активные табы
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Показываем соответствующий контент
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === tabId + '-tab') {
+                            content.classList.add('active');
+                        }
+                    });
+                });
             });
             
-            // Ввод суммы вклада
-            document.getElementById('safe-amount').addEventListener('input', function() {
-                validateInvestmentAmount('safe');
+            // Торговля
+            proposeDealBtn.addEventListener('click', proposeDeal);
+            safeInvestBtn.addEventListener('click', () => makeInvestment('safe'));
+            riskyInvestBtn.addEventListener('click', () => makeInvestment('risky'));
+            
+            // Модальное окно сделки
+            document.querySelector('.close').addEventListener('click', () => {
+                dealModal.style.display = 'none';
             });
             
-            document.getElementById('risky-amount').addEventListener('input', function() {
-                validateInvestmentAmount('risky');
-            });
+            cooperateBtn.addEventListener('click', () => respondToDeal('cooperate'));
+            betrayBtn.addEventListener('click', () => respondToDeal('betray'));
+            
+            // Обновляем лимиты вкладов при изменении суммы
+            safeAmountInput.addEventListener('input', updateInvestmentLimits);
+            riskyAmountInput.addEventListener('input', updateInvestmentLimits);
+            dealAmountInput.addEventListener('input', updateDealLimit);
+        });
+        
+        // Функции для работы с экранами
+        function showLoginScreen() {
+            loginScreen.classList.add('active');
+            gameScreen.classList.remove('active');
         }
-
-        // Показать определенный экран
-        function showScreen(screenName) {
+        
+        function showGameScreen() {
             loginScreen.classList.remove('active');
-            registerScreen.classList.remove('active');
-            mainScreen.classList.remove('active');
-            
-            if (screenName === 'login') {
-                loginScreen.classList.add('active');
-            } else if (screenName === 'register') {
-                registerScreen.classList.add('active');
-            } else if (screenName === 'main') {
-                mainScreen.classList.add('active');
-                loadDashboard();
-            }
+            gameScreen.classList.add('active');
         }
-
-        // Показать определенную вкладку
-        function showTab(tabName) {
-            // Обновление активной вкладки в навигации
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
+        
+        function showScreen(screenName) {
+            screenSections.forEach(section => {
+                section.classList.remove('active');
+                if (section.id === screenName) {
+                    section.classList.add('active');
+                }
             });
-            document.querySelector(`.nav-tab[data-tab="${tabName}"]`).classList.add('active');
-            
-            // Показать соответствующий контент
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            
-            // Загрузить данные для вкладки
-            if (tabName === 'trust') {
-                loadPlayersList();
-            } else if (tabName === 'leaderboard') {
-                loadLeaderboards();
-            }
         }
-
-        // Вход в систему
-        async function login() {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorElement = document.getElementById('login-error');
+        
+        // Обработка входа
+        async function handleLogin() {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            const userClass = classSelect.value;
             
-            if (!email || !password) {
-                errorElement.textContent = 'Пожалуйста, заполните все поля';
+            if (!username || !password || !userClass) {
+                showNotification('Заполните все поля!', 'error');
                 return;
             }
             
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password
-            });
-            
-            if (error) {
-                errorElement.textContent = error.message;
-            } else {
-                currentUser = data.user;
-                await loadUserProfile();
-                showScreen('main');
-            }
-        }
-
-        // Регистрация
-        async function register() {
-            const username = document.getElementById('register-username').value;
-            const userClass = document.getElementById('register-class').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const errorElement = document.getElementById('register-error');
-            
-            if (!username || !userClass || !email || !password) {
-                errorElement.textContent = 'Пожалуйста, заполните все поля';
-                return;
-            }
-            
-            // Регистрация в Supabase Auth
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password
-            });
-            
-            if (error) {
-                errorElement.textContent = error.message;
-                return;
-            }
-            
-            // Создание профиля пользователя
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert([
-                    {
-                        id: data.user.id,
-                        username: username,
+            try {
+                // Проверяем, существует ли пользователь
+                const { data: existingUser, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('username', username)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+                
+                if (existingUser) {
+                    // Проверяем пароль
+                    if (existingUser.password !== password) {
+                        showNotification('Неверный пароль!', 'error');
+                        return;
+                    }
+                    currentUser = existingUser;
+                } else {
+                    // Создаем нового пользователя
+                    const newUser = {
+                        username,
+                        password,
                         class: userClass,
                         coins: 100,
                         reputation: 50
-                    }
-                ]);
-            
-            if (profileError) {
-                errorElement.textContent = 'Ошибка создания профиля: ' + profileError.message;
-            } else {
-                showNotification('Регистрация успешна! Теперь вы можете войти.');
-                showScreen('login');
-            }
-        }
-
-        // Загрузка профиля пользователя
-        async function loadUserProfile() {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (error) {
-                console.error('Ошибка загрузки профиля:', error);
-                return;
-            }
-            
-            userProfile = data;
-            document.getElementById('user-info').textContent = `${data.username} (${data.class})`;
-            document.getElementById('coins-value').textContent = data.coins;
-            document.getElementById('reputation-value').textContent = data.reputation;
-        }
-
-        // Загрузка дашборда
-        async function loadDashboard() {
-            await loadUserProfile();
-            await loadActiveInvestments();
-            await loadRecentTransactions();
-        }
-
-        // Загрузка активных вкладов
-        async function loadActiveInvestments() {
-            const { data, error } = await supabase
-                .from('investments')
-                .select('*')
-                .eq('user_id', currentUser.id)
-                .eq('status', 'active')
-                .order('created_at', { ascending: false });
-            
-            if (error) {
-                console.error('Ошибка загрузки вкладов:', error);
-                return;
-            }
-            
-            const container = document.getElementById('active-investments-list');
-            container.innerHTML = '';
-            
-            if (data.length === 0) {
-                container.innerHTML = '<p>У вас нет активных вкладов</p>';
-                return;
-            }
-            
-            data.forEach(investment => {
-                const investmentElement = document.createElement('div');
-                investmentElement.className = `investment-card ${investment.type === 'safe' ? 'investment-safe' : 'investment-risky'}`;
-                
-                const returnPercent = (investment.return_multiplier * 100 - 100).toFixed(1);
-                
-                investmentElement.innerHTML = `
-                    <div class="investment-header">
-                        <div>${investment.type === 'safe' ? 'Надёжный вклад' : 'Рисковый вклад'}</div>
-                        <div class="investment-status status-active">Активен</div>
-                    </div>
-                    <div class="investment-details">
-                        <div>Сумма: ${investment.amount} монет</div>
-                        <div>Доходность: +${returnPercent}%</div>
-                    </div>
-                `;
-                
-                container.appendChild(investmentElement);
-            });
-            
-            document.getElementById('investments-value').textContent = data.length;
-        }
-
-        // Загрузка последних транзакций
-        async function loadRecentTransactions() {
-            const { data, error } = await supabase
-                .from('transactions')
-                .select(`
-                    *,
-                    from_user:profiles!transactions_from_user_id_fkey(username),
-                    to_user:profiles!transactions_to_user_id_fkey(username)
-                `)
-                .or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
-                .order('created_at', { ascending: false })
-                .limit(5);
-            
-            if (error) {
-                console.error('Ошибка загрузки транзакций:', error);
-                return;
-            }
-            
-            const container = document.getElementById('recent-transactions');
-            container.innerHTML = '';
-            
-            if (data.length === 0) {
-                container.innerHTML = '<p>У вас пока нет транзакций</p>';
-                return;
-            }
-            
-            data.forEach(transaction => {
-                const transactionElement = document.createElement('div');
-                transactionElement.className = 'player-item';
-                
-                let description = '';
-                let amountClass = '';
-                
-                if (transaction.type === 'trust_evolution') {
-                    if (transaction.from_user_id === currentUser.id) {
-                        description = `Сделка с ${transaction.to_user.username}`;
-                        amountClass = transaction.result === 'win' ? 'positive' : 'negative';
-                    } else {
-                        description = `Сделка с ${transaction.from_user.username}`;
-                        amountClass = transaction.result === 'win' ? 'positive' : 'negative';
-                    }
-                } else if (transaction.type === 'investment') {
-                    description = transaction.result === 'win' ? 'Успешный вклад' : 'Неудачный вклад';
-                    amountClass = transaction.result === 'win' ? 'positive' : 'negative';
+                    };
+                    
+                    const { data, error } = await supabase
+                        .from('profiles')
+                        .insert([newUser])
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    currentUser = data;
                 }
                 
-                const amount = transaction.from_user_id === currentUser.id ? 
-                    -transaction.amount : transaction.amount;
+                // Сохраняем пользователя в localStorage
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
-                transactionElement.innerHTML = `
-                    <div class="player-info">
-                        <div class="player-name">${description}</div>
-                        <div class="player-class">${new Date(transaction.created_at).toLocaleDateString()}</div>
-                    </div>
-                    <div class="player-stats">
-                        <div class="player-coins ${amountClass}">${amount > 0 ? '+' : ''}${amount}</div>
-                    </div>
-                `;
+                // Показываем игровой экран
+                showGameScreen();
+                showScreen('profile');
                 
-                container.appendChild(transactionElement);
-            });
-            
-            document.getElementById('transactions-value').textContent = data.length;
+                // Загружаем данные
+                loadUserData();
+                loadPlayers();
+                loadLeaderboards();
+                loadHistory();
+                
+                showNotification('Успешный вход в игру!');
+                
+            } catch (error) {
+                console.error('Ошибка входа:', error);
+                showNotification('Ошибка входа. Попробуйте снова.', 'error');
+            }
         }
-
+        
+        // Обработка выхода
+        function handleLogout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            showLoginScreen();
+            usernameInput.value = '';
+            passwordInput.value = '';
+            classSelect.value = '';
+        }
+        
+        // Загрузка данных пользователя
+        async function loadUserData() {
+            if (!currentUser) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) throw error;
+                
+                currentUser = data;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                // Обновляем UI
+                userCoinsEl.textContent = currentUser.coins;
+                userReputationEl.textContent = currentUser.reputation;
+                userClassEl.textContent = currentUser.class;
+                
+                // Обновляем лимиты вкладов
+                updateInvestmentLimits();
+                updateDealLimit();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных пользователя:', error);
+            }
+        }
+        
         // Загрузка списка игроков
-        async function loadPlayersList() {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .neq('id', currentUser.id)
-                .order('coins', { ascending: false });
+        async function loadPlayers() {
+            if (!currentUser) return;
             
-            if (error) {
-                console.error('Ошибка загрузки игроков:', error);
-                return;
-            }
-            
-            const container = document.getElementById('players-list');
-            container.innerHTML = '';
-            
-            data.forEach(player => {
-                const playerElement = document.createElement('div');
-                playerElement.className = 'player-item';
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('id, username, class, coins, reputation')
+                    .neq('id', currentUser.id)
+                    .order('coins', { ascending: false });
                 
-                playerElement.innerHTML = `
-                    <div class="player-info">
-                        <div class="player-name">${player.username}</div>
-                        <div class="player-class">${player.class}</div>
-                    </div>
-                    <div class="player-stats">
-                        <div class="player-coins">${player.coins} 🪙</div>
-                        <div class="player-rep">${player.reputation} ⭐</div>
-                    </div>
-                    <div class="trust-actions">
-                        <button class="btn btn-success" onclick="proposeDeal('${player.id}', 'cooperate')">Сотрудничать</button>
-                        <button class="btn btn-danger" onclick="proposeDeal('${player.id}', 'betray')">Предать</button>
-                    </div>
-                `;
+                if (error) throw error;
                 
-                container.appendChild(playerElement);
-            });
-        }
-
-        // Предложение сделки
-        async function proposeDeal(playerId, action) {
-            // Загрузка данных целевого игрока
-            const { data: targetPlayer, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', playerId)
-                .single();
-            
-            if (error) {
-                showNotification('Ошибка загрузки данных игрока');
-                return;
-            }
-            
-            // Симуляция ответа целевого игрока (в реальной игре это должен быть реальный ход)
-            const possibleActions = ['cooperate', 'betray'];
-            const targetAction = possibleActions[Math.floor(Math.random() * possibleActions.length)];
-            
-            // Расчет результата
-            let userResult, targetResult, userRepChange, targetRepChange;
-            
-            if (action === 'cooperate' && targetAction === 'cooperate') {
-                // Оба сотрудничают
-                userResult = 'win';
-                targetResult = 'win';
-                userRepChange = 5;
-                targetRepChange = 5;
-            } else if (action === 'cooperate' && targetAction === 'betray') {
-                // Пользователь сотрудничает, цель предает
-                userResult = 'lose';
-                targetResult = 'win';
-                userRepChange = -10;
-                targetRepChange = 0;
-            } else if (action === 'betray' && targetAction === 'cooperate') {
-                // Пользователь предает, цель сотрудничает
-                userResult = 'win';
-                targetResult = 'lose';
-                userRepChange = -10;
-                targetRepChange = 0;
-            } else {
-                // Оба предают
-                userResult = 'lose';
-                targetResult = 'lose';
-                userRepChange = -5;
-                targetRepChange = -5;
-            }
-            
-            // Расчет изменения монет
-            const baseAmount = 10;
-            let userCoinChange = 0;
-            let targetCoinChange = 0;
-            
-            if (userResult === 'win') {
-                userCoinChange = action === 'cooperate' ? baseAmount : baseAmount * 1.5;
-            } else {
-                userCoinChange = -baseAmount;
-            }
-            
-            if (targetResult === 'win') {
-                targetCoinChange = targetAction === 'cooperate' ? baseAmount : baseAmount * 1.5;
-            } else {
-                targetCoinChange = -baseAmount;
-            }
-            
-            // Обновление балансов пользователей
-            const { error: updateError } = await supabase
-                .rpc('update_user_balances', {
-                    user_id: currentUser.id,
-                    target_id: playerId,
-                    user_coin_change: userCoinChange,
-                    target_coin_change: targetCoinChange,
-                    user_rep_change: userRepChange,
-                    target_rep_change: targetRepChange
+                players = data;
+                
+                // Обновляем список игроков в UI
+                playersList.innerHTML = '';
+                dealPlayerSelect.innerHTML = '<option value="">Выберите игрока</option>';
+                
+                players.forEach(player => {
+                    // Добавляем в список игроков
+                    const playerItem = document.createElement('div');
+                    playerItem.className = 'player-item';
+                    playerItem.innerHTML = `
+                        <div class="player-info">
+                            <div class="player-name">${player.username}</div>
+                            <div class="player-class">${player.class}</div>
+                        </div>
+                        <div class="player-stats">
+                            <div class="player-coins">${player.coins} монет</div>
+                            <div class="player-rep">${player.reputation} реп.</div>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="action-btn propose-deal-btn" data-player-id="${player.id}">Сделка</button>
+                        </div>
+                    `;
+                    playersList.appendChild(playerItem);
+                    
+                    // Добавляем в выпадающий список для предложения сделки
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = `${player.username} (${player.class}) - ${player.coins} монет`;
+                    dealPlayerSelect.appendChild(option);
                 });
-            
-            if (updateError) {
-                console.error('Ошибка обновления балансов:', updateError);
-                showNotification('Ошибка выполнения сделки');
-                return;
-            }
-            
-            // Запись транзакции
-            const { error: transactionError } = await supabase
-                .from('transactions')
-                .insert([
-                    {
-                        from_user_id: currentUser.id,
-                        to_user_id: playerId,
-                        amount: Math.abs(userCoinChange),
-                        type: 'trust_evolution',
-                        result: userResult
-                    }
-                ]);
-            
-            if (transactionError) {
-                console.error('Ошибка записи транзакции:', transactionError);
-            }
-            
-            // Показать результат
-            showDealResult(action, targetAction, userCoinChange, userRepChange);
-            
-            // Обновление данных
-            await loadUserProfile();
-            await loadRecentTransactions();
-        }
-
-        // Показать результат сделки
-        function showDealResult(userAction, targetAction, coinChange, repChange) {
-            const modal = document.getElementById('deal-modal');
-            const title = document.getElementById('deal-modal-title');
-            const content = document.getElementById('deal-modal-content');
-            
-            title.textContent = 'Результат сделки';
-            
-            let resultText = '';
-            
-            if (userAction === 'cooperate' && targetAction === 'cooperate') {
-                resultText = 'Оба игрока сотрудничали! Вы оба получаете выгоду.';
-            } else if (userAction === 'cooperate' && targetAction === 'betray') {
-                resultText = 'Вы сотрудничали, но другой игрок предал вас. Вы понесли убытки.';
-            } else if (userAction === 'betray' && targetAction === 'cooperate') {
-                resultText = 'Вы предали доверие другого игрока и получили выгоду.';
-            } else {
-                resultText = 'Оба игрока предали друг друга. Никто не выиграл.';
-            }
-            
-            content.innerHTML = `
-                <p>${resultText}</p>
-                <p>Ваше действие: ${userAction === 'cooperate' ? 'Сотрудничество' : 'Предательство'}</p>
-                <p>Действие оппонента: ${targetAction === 'cooperate' ? 'Сотрудничество' : 'Предательство'}</p>
-                <p>Изменение монет: <span style="color: ${coinChange >= 0 ? 'green' : 'red'}">${coinChange >= 0 ? '+' : ''}${coinChange}</span></p>
-                <p>Изменение репутации: <span style="color: ${repChange >= 0 ? 'green' : 'red'}">${repChange >= 0 ? '+' : ''}${repChange}</span></p>
-                <button class="btn btn-primary" style="margin-top: 15px;" onclick="document.getElementById('deal-modal').classList.remove('active')">Закрыть</button>
-            `;
-            
-            modal.classList.add('active');
-        }
-
-        // Создание надежного вклада
-        async function makeSafeInvestment() {
-            const amountInput = document.getElementById('safe-amount');
-            const amount = parseInt(amountInput.value);
-            
-            if (!amount || amount <= 0) {
-                showNotification('Введите корректную сумму');
-                return;
-            }
-            
-            // Проверка лимита (50% от капитала)
-            const maxAmount = Math.floor(userProfile.coins * 0.5);
-            if (amount > maxAmount) {
-                showNotification(`Максимальная сумма для надежного вклада: ${maxAmount} монет`);
-                return;
-            }
-            
-            // Расчет доходности (5-10%)
-            const returnMultiplier = 1 + (5 + Math.random() * 5) / 100;
-            
-            // Создание вклада
-            const { error } = await supabase
-                .from('investments')
-                .insert([
-                    {
-                        user_id: currentUser.id,
-                        type: 'safe',
-                        amount: amount,
-                        status: 'active',
-                        return_multiplier: returnMultiplier
-                    }
-                ]);
-            
-            if (error) {
-                console.error('Ошибка создания вклада:', error);
-                showNotification('Ошибка создания вклада');
-                return;
-            }
-            
-            // Обновление баланса пользователя
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ coins: userProfile.coins - amount })
-                .eq('id', currentUser.id);
-            
-            if (updateError) {
-                console.error('Ошибка обновления баланса:', updateError);
-                showNotification('Ошибка обновления баланса');
-                return;
-            }
-            
-            showNotification(`Надежный вклад на ${amount} монет создан!`);
-            amountInput.value = '';
-            
-            // Обновление данных
-            await loadUserProfile();
-            await loadActiveInvestments();
-        }
-
-        // Создание рискового вклада
-        async function makeRiskyInvestment() {
-            const amountInput = document.getElementById('risky-amount');
-            const amount = parseInt(amountInput.value);
-            
-            if (!amount || amount <= 0) {
-                showNotification('Введите корректную сумму');
-                return;
-            }
-            
-            // Проверка лимита (25% от капитала)
-            const maxAmount = Math.floor(userProfile.coins * 0.25);
-            if (amount > maxAmount) {
-                showNotification(`Максимальная сумма для рискового вклада: ${maxAmount} монет`);
-                return;
-            }
-            
-            // Расчет доходности (50-100% при успехе)
-            const returnMultiplier = 1 + (50 + Math.random() * 50) / 100;
-            
-            // Создание вклада
-            const { error } = await supabase
-                .from('investments')
-                .insert([
-                    {
-                        user_id: currentUser.id,
-                        type: 'risky',
-                        amount: amount,
-                        status: 'active',
-                        return_multiplier: returnMultiplier
-                    }
-                ]);
-            
-            if (error) {
-                console.error('Ошибка создания вклада:', error);
-                showNotification('Ошибка создания вклада');
-                return;
-            }
-            
-            // Обновление баланса пользователя
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ coins: userProfile.coins - amount })
-                .eq('id', currentUser.id);
-            
-            if (updateError) {
-                console.error('Ошибка обновления баланса:', updateError);
-                showNotification('Ошибка обновления баланса');
-                return;
-            }
-            
-            showNotification(`Рисковый вклад на ${amount} монет создан!`);
-            amountInput.value = '';
-            
-            // Обновление данных
-            await loadUserProfile();
-            await loadActiveInvestments();
-        }
-
-        // Валидация суммы вклада
-        function validateInvestmentAmount(type) {
-            const input = document.getElementById(`${type}-amount`);
-            const button = document.getElementById(`${type}-invest-btn`);
-            const amount = parseInt(input.value);
-            
-            if (!amount || amount <= 0) {
-                button.disabled = true;
-                return;
-            }
-            
-            const maxAmount = type === 'safe' ? 
-                Math.floor(userProfile.coins * 0.5) : 
-                Math.floor(userProfile.coins * 0.25);
-            
-            if (amount > maxAmount) {
-                button.disabled = true;
-            } else {
-                button.disabled = false;
+                
+                // Назначаем обработчики для кнопок предложения сделки
+                document.querySelectorAll('.propose-deal-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const playerId = this.getAttribute('data-player-id');
+                        const player = players.find(p => p.id === playerId);
+                        if (player) {
+                            dealPlayerSelect.value = playerId;
+                            // Переключаемся на вкладку предложения сделки
+                            document.querySelector('[data-tab="propose"]').click();
+                        }
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Ошибка загрузки списка игроков:', error);
             }
         }
-
+        
         // Загрузка рейтингов
         async function loadLeaderboards() {
-            // Загрузка рейтинга по монетам
-            const { data: coinsData, error: coinsError } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('coins', { ascending: false })
-                .limit(20);
-            
-            if (coinsError) {
-                console.error('Ошибка загрузки рейтинга по монетам:', coinsError);
-                return;
+            try {
+                // Рейтинг по монетам
+                const { data: coinsData, error: coinsError } = await supabase
+                    .from('profiles')
+                    .select('username, class, coins')
+                    .order('coins', { ascending: false })
+                    .limit(20);
+                
+                if (coinsError) throw coinsError;
+                
+                coinsLeaderboardBody.innerHTML = '';
+                coinsData.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    const rankClass = index < 3 ? `rank-${index+1}` : '';
+                    row.innerHTML = `
+                        <td class="rank ${rankClass}">${index + 1}</td>
+                        <td>${player.username}</td>
+                        <td>${player.class}</td>
+                        <td>${player.coins}</td>
+                    `;
+                    coinsLeaderboardBody.appendChild(row);
+                });
+                
+                // Рейтинг по репутации
+                const { data: reputationData, error: reputationError } = await supabase
+                    .from('profiles')
+                    .select('username, class, reputation')
+                    .order('reputation', { ascending: false })
+                    .limit(20);
+                
+                if (reputationError) throw reputationError;
+                
+                reputationLeaderboardBody.innerHTML = '';
+                reputationData.forEach((player, index) => {
+                    const row = document.createElement('tr');
+                    const rankClass = index < 3 ? `rank-${index+1}` : '';
+                    row.innerHTML = `
+                        <td class="rank ${rankClass}">${index + 1}</td>
+                        <td>${player.username}</td>
+                        <td>${player.class}</td>
+                        <td>${player.reputation}</td>
+                    `;
+                    reputationLeaderboardBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('Ошибка загрузки рейтингов:', error);
             }
-            
-            const coinsContainer = document.getElementById('coins-leaderboard');
-            coinsContainer.innerHTML = '';
-            
-            coinsData.forEach((player, index) => {
-                const rank = index + 1;
-                const playerElement = document.createElement('div');
-                playerElement.className = 'leaderboard-item';
-                
-                playerElement.innerHTML = `
-                    <div class="leaderboard-rank ${rank <= 3 ? `rank-${rank}` : ''}">${rank}</div>
-                    <div class="leaderboard-info">
-                        <div class="player-name">${player.username}</div>
-                        <div class="player-class">${player.class}</div>
-                    </div>
-                    <div class="leaderboard-stats">
-                        <div class="player-coins">${player.coins} 🪙</div>
-                    </div>
-                `;
-                
-                coinsContainer.appendChild(playerElement);
-            });
-            
-            // Загрузка рейтинга по репутации
-            const { data: repData, error: repError } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('reputation', { ascending: false })
-                .limit(20);
-            
-            if (repError) {
-                console.error('Ошибка загрузки рейтинга по репутации:', repError);
-                return;
-            }
-            
-            const repContainer = document.getElementById('reputation-leaderboard');
-            repContainer.innerHTML = '';
-            
-            repData.forEach((player, index) => {
-                const rank = index + 1;
-                const playerElement = document.createElement('div');
-                playerElement.className = 'leaderboard-item';
-                
-                playerElement.innerHTML = `
-                    <div class="leaderboard-rank ${rank <= 3 ? `rank-${rank}` : ''}">${rank}</div>
-                    <div class="leaderboard-info">
-                        <div class="player-name">${player.username}</div>
-                        <div class="player-class">${player.class}</div>
-                    </div>
-                    <div class="leaderboard-stats">
-                        <div class="player-rep">${player.reputation} ⭐</div>
-                    </div>
-                `;
-                
-                repContainer.appendChild(playerElement);
-            });
         }
-
+        
+        // Загрузка истории операций
+        async function loadHistory() {
+            if (!currentUser) return;
+            
+            try {
+                // История сделок
+                const { data: transactions, error: transactionsError } = await supabase
+                    .from('transactions')
+                    .select('*')
+                    .or(`from_user_id.eq.${currentUser.id},to_user_id.eq.${currentUser.id}`)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                
+                if (transactionsError) throw transactionsError;
+                
+                const transactionsList = document.getElementById('transactions-list');
+                transactionsList.innerHTML = '';
+                
+                if (transactions.length === 0) {
+                    transactionsList.innerHTML = '<p>У вас еще нет сделок.</p>';
+                } else {
+                    transactions.forEach(transaction => {
+                        const isOutgoing = transaction.from_user_id === currentUser.id;
+                        const otherUserId = isOutgoing ? transaction.to_user_id : transaction.from_user_id;
+                        const otherUser = players.find(p => p.id === otherUserId) || { username: 'Неизвестный' };
+                        
+                        const item = document.createElement('div');
+                        item.className = 'history-item';
+                        
+                        let resultText = '';
+                        let amountClass = '';
+                        
+                        if (transaction.type === 'trust_evolution') {
+                            if (transaction.result === 'both_cooperate') {
+                                resultText = 'Оба сотрудничали';
+                                amountClass = 'positive';
+                            } else if (transaction.result === 'both_betray') {
+                                resultText = 'Оба предали';
+                                amountClass = 'negative';
+                            } else if (transaction.result === 'one_betrayed') {
+                                if (isOutgoing && transaction.from_user_gain > 0) {
+                                    resultText = 'Вы предали';
+                                    amountClass = 'positive';
+                                } else if (!isOutgoing && transaction.to_user_gain > 0) {
+                                    resultText = 'Вас предали';
+                                    amountClass = 'negative';
+                                }
+                            }
+                        }
+                        
+                        item.innerHTML = `
+                            <div>
+                                <strong>${isOutgoing ? 'Вы → ' + otherUser.username : otherUser.username + ' → Вы'}</strong>
+                                <div>${resultText}</div>
+                                <small>${new Date(transaction.created_at).toLocaleString()}</small>
+                            </div>
+                            <div class="${amountClass}">
+                                ${isOutgoing ? '-' : '+'}${transaction.amount} монет
+                            </div>
+                        `;
+                        
+                        transactionsList.appendChild(item);
+                    });
+                }
+                
+                // История вкладов
+                const { data: investments, error: investmentsError } = await supabase
+                    .from('investments')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                
+                if (investmentsError) throw investmentsError;
+                
+                const investmentsList = document.getElementById('investments-list');
+                investmentsList.innerHTML = '';
+                
+                if (investments.length === 0) {
+                    investmentsList.innerHTML = '<p>У вас еще нет вкладов.</p>';
+                } else {
+                    investments.forEach(investment => {
+                        const item = document.createElement('div');
+                        item.className = 'history-item';
+                        
+                        let statusText = '';
+                        let amountClass = '';
+                        
+                        if (investment.status === 'active') {
+                            statusText = 'Активный';
+                        } else if (investment.status === 'completed') {
+                            statusText = 'Завершен';
+                            amountClass = 'positive';
+                        } else if (investment.status === 'failed') {
+                            statusText = 'Провален';
+                            amountClass = 'negative';
+                        }
+                        
+                        item.innerHTML = `
+                            <div>
+                                <strong>${investment.type === 'safe' ? 'Надёжный вклад' : 'Рисковый вклад'}</strong>
+                                <div>${statusText}</div>
+                                <small>${new Date(investment.created_at).toLocaleString()}</small>
+                            </div>
+                            <div>
+                                <div>${investment.amount} монет</div>
+                                <div class="${amountClass}">${investment.return_amount ? investment.return_amount + ' монет' : ''}</div>
+                            </div>
+                        `;
+                        
+                        investmentsList.appendChild(item);
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+            }
+        }
+        
+        // Предложение сделки
+        async function proposeDeal() {
+            const targetPlayerId = dealPlayerSelect.value;
+            const amount = parseInt(dealAmountInput.value);
+            
+            if (!targetPlayerId || !amount || amount <= 0) {
+                showNotification('Выберите игрока и укажите сумму!', 'error');
+                return;
+            }
+            
+            if (amount > currentUser.coins) {
+                showNotification('Недостаточно монет!', 'error');
+                return;
+            }
+            
+            const targetPlayer = players.find(p => p.id === targetPlayerId);
+            if (!targetPlayer) {
+                showNotification('Игрок не найден!', 'error');
+                return;
+            }
+            
+            try {
+                // Создаем запись о предложении сделки
+                const deal = {
+                    from_user_id: currentUser.id,
+                    to_user_id: targetPlayerId,
+                    amount: amount,
+                    type: 'trust_evolution',
+                    status: 'pending'
+                };
+                
+                const { data, error } = await supabase
+                    .from('transactions')
+                    .insert([deal])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                // Уменьшаем монеты у текущего пользователя
+                const newCoins = currentUser.coins - amount;
+                await supabase
+                    .from('profiles')
+                    .update({ coins: newCoins })
+                    .eq('id', currentUser.id);
+                
+                currentUser.coins = newCoins;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                userCoinsEl.textContent = newCoins;
+                
+                showNotification(`Предложение сделки отправлено игроку ${targetPlayer.username}!`);
+                
+                // Сбрасываем форму
+                dealAmountInput.value = Math.min(10, Math.floor(newCoins / 2));
+                
+            } catch (error) {
+                console.error('Ошибка предложения сделки:', error);
+                showNotification('Ошибка предложения сделки. Попробуйте снова.', 'error');
+            }
+        }
+        
+        // Создание вклада
+        async function makeInvestment(type) {
+            const amountInput = type === 'safe' ? safeAmountInput : riskyAmountInput;
+            const amount = parseInt(amountInput.value);
+            
+            if (!amount || amount <= 0) {
+                showNotification('Укажите сумму вклада!', 'error');
+                return;
+            }
+            
+            if (amount > currentUser.coins) {
+                showNotification('Недостаточно монет!', 'error');
+                return;
+            }
+            
+            // Проверяем лимиты
+            const maxAmount = type === 'safe' 
+                ? Math.floor(currentUser.coins * 0.5) 
+                : Math.floor(currentUser.coins * 0.25);
+                
+            if (amount > maxAmount) {
+                showNotification(`Максимальная сумма для этого вклада: ${maxAmount} монет`, 'error');
+                return;
+            }
+            
+            try {
+                // Определяем параметры вклада
+                let returnMultiplier, successRate;
+                
+                if (type === 'safe') {
+                    returnMultiplier = 1 + (Math.random() * 0.05 + 0.05); // 5-10%
+                    successRate = 1.0;
+                } else {
+                    returnMultiplier = 1 + (Math.random() * 0.5 + 0.5); // 50-100%
+                    successRate = 0.7; // 70% успеха
+                }
+                
+                // Создаем запись о вкладе
+                const investment = {
+                    user_id: currentUser.id,
+                    type: type,
+                    amount: amount,
+                    return_multiplier: returnMultiplier,
+                    success_rate: successRate,
+                    status: 'active',
+                    created_at: new Date().toISOString()
+                };
+                
+                const { data, error } = await supabase
+                    .from('investments')
+                    .insert([investment])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                
+                // Уменьшаем монеты у текущего пользователя
+                const newCoins = currentUser.coins - amount;
+                await supabase
+                    .from('profiles')
+                    .update({ coins: newCoins })
+                    .eq('id', currentUser.id);
+                
+                currentUser.coins = newCoins;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                userCoinsEl.textContent = newCoins;
+                
+                showNotification(`Вклад на ${amount} монет успешно создан!`);
+                
+                // Сбрасываем форму
+                amountInput.value = Math.min(10, Math.floor(newCoins / (type === 'safe' ? 2 : 4)));
+                updateInvestmentLimits();
+                
+                // Обновляем историю
+                loadHistory();
+                
+            } catch (error) {
+                console.error('Ошибка создания вклада:', error);
+                showNotification('Ошибка создания вклада. Попробуйте снова.', 'error');
+            }
+        }
+        
+        // Обновление лимитов вкладов
+        function updateInvestmentLimits() {
+            if (!currentUser) return;
+            
+            const safeMax = Math.floor(currentUser.coins * 0.5);
+            const riskyMax = Math.floor(currentUser.coins * 0.25);
+            
+            safeAmountInput.max = safeMax;
+            riskyAmountInput.max = riskyMax;
+            
+            // Обновляем placeholder'ы
+            safeAmountInput.placeholder = `Макс: ${safeMax}`;
+            riskyAmountInput.placeholder = `Макс: ${riskyMax}`;
+        }
+        
+        // Обновление лимита сделки
+        function updateDealLimit() {
+            if (!currentUser) return;
+            
+            const dealMax = Math.min(100, currentUser.coins);
+            dealAmountInput.max = dealMax;
+            dealAmountInput.placeholder = `Макс: ${dealMax}`;
+        }
+        
+        // Ответ на предложение сделки
+        async function respondToDeal(decision) {
+            if (!pendingDeal) return;
+            
+            try {
+                // Определяем результат сделки
+                let result, fromUserGain, toUserGain, fromUserRepChange, toUserRepChange;
+                
+                // Для простоты, предполагаем, что другой игрок всегда сотрудничает
+                // В реальном приложении здесь была бы сложная логика
+                if (decision === 'cooperate') {
+                    result = 'both_cooperate';
+                    fromUserGain = pendingDeal.amount;
+                    toUserGain = pendingDeal.amount;
+                    fromUserRepChange = 5;
+                    toUserRepChange = 5;
+                } else {
+                    result = 'one_betrayed';
+                    fromUserGain = pendingDeal.amount * 3;
+                    toUserGain = -pendingDeal.amount;
+                    fromUserRepChange = -10;
+                    toUserRepChange = 0;
+                }
+                
+                // Обновляем сделку
+                await supabase
+                    .from('transactions')
+                    .update({
+                        status: 'completed',
+                        result: result,
+                        from_user_gain: fromUserGain,
+                        to_user_gain: toUserGain
+                    })
+                    .eq('id', pendingDeal.id);
+                
+                // Обновляем балансы и репутацию
+                const fromUserNewCoins = currentUser.coins + fromUserGain;
+                const fromUserNewRep = Math.max(0, currentUser.reputation + fromUserRepChange);
+                
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        coins: fromUserNewCoins,
+                        reputation: fromUserNewRep
+                    })
+                    .eq('id', currentUser.id);
+                
+                currentUser.coins = fromUserNewCoins;
+                currentUser.reputation = fromUserNewRep;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                userCoinsEl.textContent = fromUserNewCoins;
+                userReputationEl.textContent = fromUserNewRep;
+                
+                // Обновляем другого игрока
+                const toUserNewCoins = pendingDeal.from_user_coins + toUserGain;
+                const toUserNewRep = Math.max(0, pendingDeal.from_user_reputation + toUserRepChange);
+                
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        coins: toUserNewCoins,
+                        reputation: toUserNewRep
+                    })
+                    .eq('id', pendingDeal.from_user_id);
+                
+                showNotification(`Сделка завершена! Вы ${decision === 'cooperate' ? 'сотрудничали' : 'предали'}.`);
+                
+                // Закрываем модальное окно
+                dealModal.style.display = 'none';
+                pendingDeal = null;
+                
+                // Обновляем данные
+                loadUserData();
+                loadPlayers();
+                loadLeaderboards();
+                loadHistory();
+                
+            } catch (error) {
+                console.error('Ошибка обработки сделки:', error);
+                showNotification('Ошибка обработки сделки. Попробуйте снова.', 'error');
+            }
+        }
+        
         // Показать уведомление
-        function showNotification(message) {
+        function showNotification(message, type = 'success') {
             notification.textContent = message;
-            notification.classList.add('active');
+            notification.className = 'notification';
+            notification.classList.add(type === 'error' ? 'error' : 'success');
+            notification.classList.add('show');
             
             setTimeout(() => {
-                notification.classList.remove('active');
+                notification.classList.remove('show');
             }, 3000);
         }
-
-        // Функция для обработки завершения вкладов (должна запускаться периодически)
-        async function processCompletedInvestments() {
-            const { data: investments, error } = await supabase
-                .from('investments')
-                .select('*')
-                .eq('status', 'active')
-                .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Вклады старше 24 часов
+        
+        // Симуляция получения предложения сделки (для демонстрации)
+        // В реальном приложении это бы делалось через веб-сокеты или периодический опрос
+        function simulateIncomingDeal() {
+            if (players.length === 0 || Math.random() < 0.8) return;
             
-            if (error) {
-                console.error('Ошибка загрузки вкладов для обработки:', error);
-                return;
-            }
+            const randomPlayer = players[Math.floor(Math.random() * players.length)];
+            const amount = Math.floor(Math.random() * 20) + 5;
             
-            for (const investment of investments) {
-                let result = 'win';
-                let returnAmount = investment.amount;
-                
-                if (investment.type === 'safe') {
-                    // Надёжный вклад всегда успешен
-                    returnAmount = Math.floor(investment.amount * investment.return_multiplier);
-                } else {
-                    // Рисковый вклад имеет 30% шанс провала
-                    if (Math.random() < 0.3) {
-                        result = 'lose';
-                        returnAmount = 0;
-                    } else {
-                        returnAmount = Math.floor(investment.amount * investment.return_multiplier);
-                    }
-                }
-                
-                // Обновление статуса вклада
-                const { error: updateError } = await supabase
-                    .from('investments')
-                    .update({ 
-                        status: result === 'win' ? 'completed' : 'failed',
-                        completed_at: new Date().toISOString()
-                    })
-                    .eq('id', investment.id);
-                
-                if (updateError) {
-                    console.error('Ошибка обновления вклада:', updateError);
-                    continue;
-                }
-                
-                // Обновление баланса пользователя
-                if (result === 'win') {
-                    const { error: balanceError } = await supabase
-                        .from('profiles')
-                        .update({ coins: userProfile.coins + returnAmount })
-                        .eq('id', investment.user_id);
-                    
-                    if (balanceError) {
-                        console.error('Ошибка обновления баланса:', balanceError);
-                    }
-                }
-                
-                // Запись транзакции
-                const { error: transactionError } = await supabase
-                    .from('transactions')
-                    .insert([
-                        {
-                            from_user_id: investment.user_id,
-                            to_user_id: investment.user_id, // Для вкладов from и to - один пользователь
-                            amount: returnAmount - investment.amount,
-                            type: 'investment',
-                            result: result
-                        }
-                    ]);
-                
-                if (transactionError) {
-                    console.error('Ошибка записи транзакции:', transactionError);
-                }
-            }
+            pendingDeal = {
+                id: 'simulated-' + Date.now(),
+                from_user_id: randomPlayer.id,
+                from_user_name: randomPlayer.username,
+                from_user_coins: randomPlayer.coins,
+                from_user_reputation: randomPlayer.reputation,
+                amount: amount
+            };
+            
+            dealPlayerName.textContent = randomPlayer.username;
+            dealAmountValue.textContent = amount;
+            dealModal.style.display = 'flex';
         }
-
-        // Запуск обработки завершенных вкладов каждые 10 минут
-        setInterval(processCompletedInvestments, 10 * 60 * 1000);
+        
+        // Периодическое обновление данных
+        setInterval(() => {
+            if (currentUser) {
+                loadUserData();
+                loadPlayers();
+                loadLeaderboards();
+                simulateIncomingDeal();
+            }
+        }, 10000); // Обновление каждые 10 секунд
     </script>
 </body>
 </html>
