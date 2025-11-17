@@ -365,28 +365,32 @@
         const SUPABASE_URL = 'https://isugrtihjmbrzwflybrr.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
         
-        // Инициализация Supabase
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Текущий пользователь
+        // Глобальные переменные
+        let supabase = null;
         let currentUser = null;
         let targetPlayer = null;
         
         // Элементы DOM
-        const loginSection = document.getElementById('login-section');
-        const gameSection = document.getElementById('game-section');
-        const loginForm = document.getElementById('login-form');
-        const loginBtn = document.getElementById('login-btn');
-        const loginMessage = document.getElementById('login-message');
-        const loginDebug = document.getElementById('login-debug');
-        const gameTabs = document.querySelectorAll('#gameTabs .nav-link');
-        const leaderboardTabs = document.querySelectorAll('#leaderboardTabs .nav-link');
-        const sections = document.querySelectorAll('.section');
-        
-        // Инициализация приложения
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Приложение инициализировано');
-            
+        let loginSection, gameSection, loginForm, loginBtn, loginMessage, loginDebug;
+        let gameTabs, leaderboardTabs, sections;
+
+        // Функция инициализации приложения после загрузки Supabase
+        function initializeApp() {
+            // Инициализация Supabase
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('Supabase инициализирован');
+
+            // Инициализация DOM элементов
+            loginSection = document.getElementById('login-section');
+            gameSection = document.getElementById('game-section');
+            loginForm = document.getElementById('login-form');
+            loginBtn = document.getElementById('login-btn');
+            loginMessage = document.getElementById('login-message');
+            loginDebug = document.getElementById('login-debug');
+            gameTabs = document.querySelectorAll('#gameTabs .nav-link');
+            leaderboardTabs = document.querySelectorAll('#leaderboardTabs .nav-link');
+            sections = document.querySelectorAll('.section');
+
             // Проверяем, есть ли сохраненный пользователь
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
@@ -460,6 +464,27 @@
             document.querySelector('.game-header').addEventListener('dblclick', function() {
                 loginDebug.style.display = loginDebug.style.display === 'none' ? 'block' : 'none';
             });
+
+            console.log('Приложение инициализировано');
+        }
+
+        // Инициализация приложения после загрузки страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM загружен, проверяем Supabase...');
+            
+            // Проверяем, загружена ли библиотека Supabase
+            if (typeof window.supabase !== 'undefined') {
+                initializeApp();
+            } else {
+                // Если нет, ждем и проверяем снова
+                console.log('Supabase еще не загружен, ждем...');
+                const checkSupabase = setInterval(() => {
+                    if (typeof window.supabase !== 'undefined') {
+                        clearInterval(checkSupabase);
+                        initializeApp();
+                    }
+                }, 100);
+            }
         });
         
         // Функция входа в игру
