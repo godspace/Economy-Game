@@ -142,6 +142,11 @@
             margin-top: 10px;
             display: none;
         }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -274,7 +279,12 @@
                             <input type="text" class="form-control" id="player-search" placeholder="Поиск игрока...">
                         </div>
                         <div id="players-list">
-                            <!-- Список игроков будет загружен здесь -->
+                            <div class="loading-spinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2">Загрузка списка игроков...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -292,7 +302,7 @@
                             <p class="small">Лимит: 50% от капитала</p>
                             <div class="mb-2">
                                 <label for="safe-amount" class="form-label">Сумма вклада</label>
-                                <input type="number" class="form-control" id="safe-amount" min="1">
+                                <input type="number" class="form-control" id="safe-amount" min="1" placeholder="Введите сумму">
                             </div>
                             <button class="btn btn-success w-100" id="safe-invest-btn">Создать вклад</button>
                         </div>
@@ -305,7 +315,7 @@
                             <p class="small">Лимит: 25% от капитала</p>
                             <div class="mb-2">
                                 <label for="risky-amount" class="form-label">Сумма вклада</label>
-                                <input type="number" class="form-control" id="risky-amount" min="1">
+                                <input type="number" class="form-control" id="risky-amount" min="1" placeholder="Введите сумму">
                             </div>
                             <button class="btn btn-danger w-100" id="risky-invest-btn">Создать вклад</button>
                         </div>
@@ -325,11 +335,21 @@
                         </ul>
                         
                         <div id="coins-leaderboard">
-                            <!-- Рейтинг по монетам -->
+                            <div class="loading-spinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2">Загрузка рейтинга...</p>
+                            </div>
                         </div>
                         
                         <div id="reputation-leaderboard" style="display: none;">
-                            <!-- Рейтинг по репутации -->
+                            <div class="loading-spinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Загрузка...</span>
+                                </div>
+                                <p class="mt-2">Загрузка рейтинга...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -398,6 +418,9 @@
                     currentUser = JSON.parse(savedUser);
                     showGameSection();
                     loadUserData();
+                    // Предварительная загрузка данных для других вкладок
+                    loadPlayersList();
+                    loadLeaderboard('coins');
                 } catch (e) {
                     console.error('Ошибка при загрузке сохраненного пользователя:', e);
                     localStorage.removeItem('currentUser');
@@ -420,12 +443,16 @@
                     
                     // Загружаем данные для активной секции
                     if (sectionId === 'trade-section') {
+                        console.log('Загрузка списка игроков...');
                         loadPlayersList();
                     } else if (sectionId === 'leaderboard-section') {
+                        console.log('Загрузка рейтинга...');
                         loadLeaderboard('coins');
                     } else if (sectionId === 'profile-section') {
+                        console.log('Обновление профиля...');
                         loadUserData();
                     }
+                    // Банк не требует дополнительной загрузки данных
                 });
             });
             
@@ -458,7 +485,10 @@
             document.getElementById('betray-btn').addEventListener('click', () => makeTrade('betray'));
             
             // Обработчик поиска игроков
-            document.getElementById('player-search').addEventListener('input', loadPlayersList);
+            const playerSearch = document.getElementById('player-search');
+            if (playerSearch) {
+                playerSearch.addEventListener('input', loadPlayersList);
+            }
             
             // Показываем отладочную информацию при двойном клике на заголовок
             document.querySelector('.game-header').addEventListener('dblclick', function() {
@@ -631,6 +661,9 @@
                 setTimeout(() => {
                     showGameSection();
                     loadUserData();
+                    // Предварительная загрузка данных для других вкладок
+                    loadPlayersList();
+                    loadLeaderboard('coins');
                 }, 1000);
                 
             } catch (error) {
@@ -822,7 +855,13 @@
         
         // Загрузка списка игроков
         async function loadPlayersList() {
+            if (!currentUser) {
+                console.error('Пользователь не авторизован');
+                return;
+            }
+            
             try {
+                console.log('Загрузка списка игроков...');
                 const searchTerm = document.getElementById('player-search').value.toLowerCase();
                 
                 let query = supabase
@@ -836,8 +875,13 @@
                 
                 const { data: players, error } = await query;
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Ошибка загрузки игроков:', error);
+                    document.getElementById('players-list').innerHTML = '<p class="text-danger">Ошибка загрузки списка игроков</p>';
+                    return;
+                }
                 
+                console.log('Игроки загружены:', players);
                 const container = document.getElementById('players-list');
                 
                 if (!players || players.length === 0) {
@@ -867,18 +911,22 @@
                 document.querySelectorAll('.trade-btn').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const playerId = this.getAttribute('data-player-id');
-                        openTradeModal(playerId, players);
+                        const player = players.find(p => p.id === playerId);
+                        if (player) {
+                            openTradeModal(player);
+                        }
                     });
                 });
                 
             } catch (error) {
-                console.error('Ошибка загрузки списка игроков:', error);
+                console.error('Неожиданная ошибка в loadPlayersList:', error);
+                document.getElementById('players-list').innerHTML = '<p class="text-danger">Ошибка загрузки списка игроков</p>';
             }
         }
         
         // Открытие модального окна сделки
-        function openTradeModal(playerId, players) {
-            targetPlayer = players.find(p => p.id === playerId);
+        function openTradeModal(player) {
+            targetPlayer = player;
             
             if (!targetPlayer) return;
             
@@ -978,7 +1026,8 @@
         
         // Создание надежного вклада
         async function createSafeInvestment() {
-            const amount = parseInt(document.getElementById('safe-amount').value);
+            const amountInput = document.getElementById('safe-amount');
+            const amount = parseInt(amountInput.value);
             
             if (!amount || amount <= 0) {
                 alert('Введите корректную сумму');
@@ -1023,7 +1072,7 @@
                     .eq('id', currentUser.id);
                 
                 // Очищаем поле ввода
-                document.getElementById('safe-amount').value = '';
+                amountInput.value = '';
                 
                 // Обновляем данные пользователя
                 await loadUserData();
@@ -1038,7 +1087,8 @@
         
         // Создание рискового вклада
         async function createRiskyInvestment() {
-            const amount = parseInt(document.getElementById('risky-amount').value);
+            const amountInput = document.getElementById('risky-amount');
+            const amount = parseInt(amountInput.value);
             
             if (!amount || amount <= 0) {
                 alert('Введите корректную сумму');
@@ -1083,7 +1133,7 @@
                     .eq('id', currentUser.id);
                 
                 // Очищаем поле ввода
-                document.getElementById('risky-amount').value = '';
+                amountInput.value = '';
                 
                 // Обновляем данные пользователя
                 await loadUserData();
@@ -1173,14 +1223,21 @@
         // Загрузка рейтингов
         async function loadLeaderboard(type) {
             try {
+                console.log('Загрузка рейтинга:', type);
                 const { data: players, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .order(type, { ascending: false })
                     .limit(20);
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Ошибка загрузки рейтинга:', error);
+                    const container = document.getElementById(`${type}-leaderboard`);
+                    container.innerHTML = '<p class="text-danger">Ошибка загрузки рейтинга</p>';
+                    return;
+                }
                 
+                console.log('Рейтинг загружен:', players);
                 const container = document.getElementById(`${type}-leaderboard`);
                 
                 if (!players || players.length === 0) {
@@ -1219,7 +1276,9 @@
                 container.innerHTML = html;
                 
             } catch (error) {
-                console.error('Ошибка загрузки рейтингов:', error);
+                console.error('Неожиданная ошибка в loadLeaderboard:', error);
+                const container = document.getElementById(`${type}-leaderboard`);
+                container.innerHTML = '<p class="text-danger">Ошибка загрузки рейтинга</p>';
             }
         }
         
