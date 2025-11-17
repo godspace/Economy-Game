@@ -142,11 +142,6 @@
             margin-top: 10px;
             display: none;
         }
-        
-        .loading-spinner {
-            text-align: center;
-            padding: 20px;
-        }
     </style>
 </head>
 <body>
@@ -204,9 +199,6 @@
                             Войти в игру
                         </button>
                     </form>
-                    <div class="debug-info" id="login-debug">
-                        <!-- Отладочная информация будет здесь -->
-                    </div>
                 </div>
             </div>
             
@@ -279,7 +271,7 @@
                             <input type="text" class="form-control" id="player-search" placeholder="Поиск игрока...">
                         </div>
                         <div id="players-list">
-                            <div class="loading-spinner">
+                            <div class="text-center">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Загрузка...</span>
                                 </div>
@@ -335,7 +327,7 @@
                         </ul>
                         
                         <div id="coins-leaderboard">
-                            <div class="loading-spinner">
+                            <div class="text-center">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Загрузка...</span>
                                 </div>
@@ -344,7 +336,7 @@
                         </div>
                         
                         <div id="reputation-leaderboard" style="display: none;">
-                            <div class="loading-spinner">
+                            <div class="text-center">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Загрузка...</span>
                                 </div>
@@ -385,85 +377,58 @@
         const SUPABASE_URL = 'https://isugrtihjmbrzwflybrr.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
         
-        // Глобальные переменные
-        let supabase = null;
+        // Инициализация Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Текущий пользователь
         let currentUser = null;
         let targetPlayer = null;
         
-        // Элементы DOM
-        let loginSection, gameSection, loginForm, loginBtn, loginMessage, loginDebug;
-        let gameTabs, leaderboardTabs, sections;
-
-        // Функция инициализации приложения после загрузки Supabase
-        function initializeApp() {
-            // Инициализация Supabase
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            console.log('Supabase инициализирован');
-
-            // Инициализация DOM элементов
-            loginSection = document.getElementById('login-section');
-            gameSection = document.getElementById('game-section');
-            loginForm = document.getElementById('login-form');
-            loginBtn = document.getElementById('login-btn');
-            loginMessage = document.getElementById('login-message');
-            loginDebug = document.getElementById('login-debug');
-            gameTabs = document.querySelectorAll('#gameTabs .nav-link');
-            leaderboardTabs = document.querySelectorAll('#leaderboardTabs .nav-link');
-            sections = document.querySelectorAll('.section');
-
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Приложение инициализировано');
+            
             // Проверяем, есть ли сохраненный пользователь
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
-                try {
-                    currentUser = JSON.parse(savedUser);
-                    showGameSection();
-                    loadUserData();
-                    // Предварительная загрузка данных для других вкладок
-                    loadPlayersList();
-                    loadLeaderboard('coins');
-                } catch (e) {
-                    console.error('Ошибка при загрузке сохраненного пользователя:', e);
-                    localStorage.removeItem('currentUser');
-                }
+                currentUser = JSON.parse(savedUser);
+                showGameSection();
+                loadUserData();
             }
             
             // Обработчик формы входа
-            loginForm.addEventListener('submit', handleLogin);
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
             
             // Обработчики навигации
-            gameTabs.forEach(tab => {
+            document.querySelectorAll('#gameTabs .nav-link').forEach(tab => {
                 tab.addEventListener('click', function(e) {
                     e.preventDefault();
                     const sectionId = this.getAttribute('data-section') + '-section';
                     showSection(sectionId);
                     
                     // Обновляем активные вкладки
-                    gameTabs.forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('#gameTabs .nav-link').forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
                     // Загружаем данные для активной секции
                     if (sectionId === 'trade-section') {
-                        console.log('Загрузка списка игроков...');
                         loadPlayersList();
                     } else if (sectionId === 'leaderboard-section') {
-                        console.log('Загрузка рейтинга...');
                         loadLeaderboard('coins');
                     } else if (sectionId === 'profile-section') {
-                        console.log('Обновление профиля...');
                         loadUserData();
                     }
-                    // Банк не требует дополнительной загрузки данных
                 });
             });
             
             // Обработчики вкладок рейтингов
-            leaderboardTabs.forEach(tab => {
+            document.querySelectorAll('#leaderboardTabs .nav-link').forEach(tab => {
                 tab.addEventListener('click', function(e) {
                     e.preventDefault();
                     const boardType = this.getAttribute('data-board');
                     
                     // Обновляем активные вкладки
-                    leaderboardTabs.forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('#leaderboardTabs .nav-link').forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
                     // Показываем соответствующий рейтинг
@@ -485,36 +450,7 @@
             document.getElementById('betray-btn').addEventListener('click', () => makeTrade('betray'));
             
             // Обработчик поиска игроков
-            const playerSearch = document.getElementById('player-search');
-            if (playerSearch) {
-                playerSearch.addEventListener('input', loadPlayersList);
-            }
-            
-            // Показываем отладочную информацию при двойном клике на заголовок
-            document.querySelector('.game-header').addEventListener('dblclick', function() {
-                loginDebug.style.display = loginDebug.style.display === 'none' ? 'block' : 'none';
-            });
-
-            console.log('Приложение инициализировано');
-        }
-
-        // Инициализация приложения после загрузки страницы
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM загружен, проверяем Supabase...');
-            
-            // Проверяем, загружена ли библиотека Supabase
-            if (typeof window.supabase !== 'undefined') {
-                initializeApp();
-            } else {
-                // Если нет, ждем и проверяем снова
-                console.log('Supabase еще не загружен, ждем...');
-                const checkSupabase = setInterval(() => {
-                    if (typeof window.supabase !== 'undefined') {
-                        clearInterval(checkSupabase);
-                        initializeApp();
-                    }
-                }, 100);
-            }
+            document.getElementById('player-search').addEventListener('input', loadPlayersList);
         });
         
         // Функция входа в игру
@@ -526,51 +462,34 @@
             const userClass = document.getElementById('class').value;
             
             if (!username || !password || !userClass) {
-                showLoginMessage('Пожалуйста, заполните все поля', 'danger');
+                alert('Пожалуйста, заполните все поля');
                 return;
             }
             
             // Показываем состояние загрузки
+            const loginBtn = document.getElementById('login-btn');
             loginBtn.disabled = true;
             loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Вход...';
             
             try {
-                // Сначала проверяем подключение к Supabase
-                const { data, error: connectionError } = await supabase.from('profiles').select('count').limit(1);
-                
-                if (connectionError) {
-                    console.error('Ошибка подключения к Supabase:', connectionError);
-                    showLoginMessage('Ошибка подключения к базе данных. Проверьте настройки Supabase.', 'danger');
-                    loginDebug.innerHTML = `Ошибка подключения: ${connectionError.message}`;
-                    loginDebug.style.display = 'block';
-                    return;
-                }
-                
                 // Ищем пользователя в базе данных
-                const { data: users, error: findError } = await supabase
+                const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .eq('username', username);
                 
-                if (findError) {
-                    console.error('Ошибка при поиске пользователя:', findError);
-                    showLoginMessage('Ошибка при поиске пользователя', 'danger');
-                    loginDebug.innerHTML = `Ошибка поиска: ${findError.message}`;
-                    loginDebug.style.display = 'block';
-                    return;
-                }
+                if (error) throw error;
                 
                 if (users && users.length > 0) {
                     // Пользователь существует, проверяем пароль
                     if (users[0].password !== password) {
-                        showLoginMessage('Неверный пароль', 'danger');
+                        alert('Неверный пароль');
                         return;
                     }
                     currentUser = users[0];
-                    showLoginMessage('Вход выполнен успешно!', 'success');
                 } else {
                     // Создаем нового пользователя
-                    const { data: newUser, error: insertError } = await supabase
+                    const { data: newUser, error } = await supabase
                         .from('profiles')
                         .insert([
                             {
@@ -584,93 +503,20 @@
                         ])
                         .select();
                     
-                    if (insertError) {
-                        console.error('Ошибка при создании пользователя:', insertError);
-                        
-                        // Если ошибка связана с отсутствием таблицы, показываем инструкции
-                        if (insertError.message.includes('relation') && insertError.message.includes('does not exist')) {
-                            showLoginMessage('Таблицы не созданы в Supabase. Проверьте инструкции по настройке.', 'danger');
-                            loginDebug.innerHTML = `
-                                <strong>Ошибка: таблицы не найдены в Supabase</strong><br>
-                                Выполните следующие SQL-запросы в Supabase SQL Editor:<br><br>
-                                <code>
-                                CREATE TABLE profiles (<br>
-                                &nbsp;&nbsp;id UUID DEFAULT gen_random_uuid() PRIMARY KEY,<br>
-                                &nbsp;&nbsp;username TEXT UNIQUE NOT NULL,<br>
-                                &nbsp;&nbsp;password TEXT NOT NULL,<br>
-                                &nbsp;&nbsp;class TEXT NOT NULL,<br>
-                                &nbsp;&nbsp;coins INTEGER DEFAULT 100,<br>
-                                &nbsp;&nbsp;reputation INTEGER DEFAULT 50,<br>
-                                &nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL<br>
-                                );<br><br>
-                                
-                                CREATE TABLE transactions (<br>
-                                &nbsp;&nbsp;id UUID DEFAULT gen_random_uuid() PRIMARY KEY,<br>
-                                &nbsp;&nbsp;from_user_id UUID REFERENCES profiles(id) NOT NULL,<br>
-                                &nbsp;&nbsp;to_user_id UUID REFERENCES profiles(id) NOT NULL,<br>
-                                &nbsp;&nbsp;amount INTEGER NOT NULL,<br>
-                                &nbsp;&nbsp;type TEXT NOT NULL,<br>
-                                &nbsp;&nbsp;result TEXT NOT NULL,<br>
-                                &nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL<br>
-                                );<br><br>
-                                
-                                CREATE TABLE investments (<br>
-                                &nbsp;&nbsp;id UUID DEFAULT gen_random_uuid() PRIMARY KEY,<br>
-                                &nbsp;&nbsp;user_id UUID REFERENCES profiles(id) NOT NULL,<br>
-                                &nbsp;&nbsp;type TEXT NOT NULL,<br>
-                                &nbsp;&nbsp;amount INTEGER NOT NULL,<br>
-                                &nbsp;&nbsp;status TEXT NOT NULL,<br>
-                                &nbsp;&nbsp;return_multiplier DECIMAL NOT NULL,<br>
-                                &nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,<br>
-                                &nbsp;&nbsp;completed_at TIMESTAMP WITH TIME ZONE<br>
-                                );<br><br>
-                                
-                                -- Включение Row Level Security (RLS)<br>
-                                ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;<br>
-                                ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;<br>
-                                ALTER TABLE investments ENABLE ROW LEVEL SECURITY;<br><br>
-                                
-                                -- Создание политик для анонимного доступа<br>
-                                CREATE POLICY "Allow anonymous access to profiles" ON profiles FOR ALL USING (true);<br>
-                                CREATE POLICY "Allow anonymous access to transactions" ON transactions FOR ALL USING (true);<br>
-                                CREATE POLICY "Allow anonymous access to investments" ON investments FOR ALL USING (true);
-                                </code>
-                            `;
-                            loginDebug.style.display = 'block';
-                        } else {
-                            showLoginMessage('Ошибка при создании пользователя: ' + insertError.message, 'danger');
-                            loginDebug.innerHTML = `Ошибка создания: ${insertError.message}`;
-                            loginDebug.style.display = 'block';
-                        }
-                        return;
-                    }
-
-                    if (newUser && newUser.length > 0) {
-                        currentUser = newUser[0];
-                        showLoginMessage('Новый пользователь создан успешно!', 'success');
-                    } else {
-                        showLoginMessage('Не удалось создать пользователя', 'danger');
-                        return;
-                    }
+                    if (error) throw error;
+                    currentUser = newUser[0];
                 }
                 
                 // Сохраняем пользователя в localStorage
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 
                 // Показываем игровой раздел
-                setTimeout(() => {
-                    showGameSection();
-                    loadUserData();
-                    // Предварительная загрузка данных для других вкладок
-                    loadPlayersList();
-                    loadLeaderboard('coins');
-                }, 1000);
+                showGameSection();
+                loadUserData();
                 
             } catch (error) {
-                console.error('Неожиданная ошибка:', error);
-                showLoginMessage('Произошла непредвиденная ошибка: ' + error.message, 'danger');
-                loginDebug.innerHTML = `Неожиданная ошибка: ${error.message}`;
-                loginDebug.style.display = 'block';
+                console.error('Ошибка входа:', error);
+                alert('Произошла ошибка при входе в игру: ' + error.message);
             } finally {
                 // Восстанавливаем кнопку
                 loginBtn.disabled = false;
@@ -678,21 +524,15 @@
             }
         }
         
-        // Функция для показа сообщений входа
-        function showLoginMessage(message, type) {
-            loginMessage.textContent = message;
-            loginMessage.className = `alert alert-${type}`;
-        }
-        
         // Показать игровой раздел
         function showGameSection() {
-            loginSection.classList.remove('active-section');
-            gameSection.classList.add('active-section');
+            document.getElementById('login-section').classList.remove('active-section');
+            document.getElementById('game-section').classList.add('active-section');
         }
         
         // Показать определенный раздел
         function showSection(sectionId) {
-            sections.forEach(section => {
+            document.querySelectorAll('.section').forEach(section => {
                 if (section.id === sectionId) {
                     section.classList.add('active-section');
                 } else {
@@ -861,7 +701,6 @@
             }
             
             try {
-                console.log('Загрузка списка игроков...');
                 const searchTerm = document.getElementById('player-search').value.toLowerCase();
                 
                 let query = supabase
@@ -875,13 +714,8 @@
                 
                 const { data: players, error } = await query;
                 
-                if (error) {
-                    console.error('Ошибка загрузки игроков:', error);
-                    document.getElementById('players-list').innerHTML = '<p class="text-danger">Ошибка загрузки списка игроков</p>';
-                    return;
-                }
+                if (error) throw error;
                 
-                console.log('Игроки загружены:', players);
                 const container = document.getElementById('players-list');
                 
                 if (!players || players.length === 0) {
@@ -919,7 +753,7 @@
                 });
                 
             } catch (error) {
-                console.error('Неожиданная ошибка в loadPlayersList:', error);
+                console.error('Ошибка загрузки списка игроков:', error);
                 document.getElementById('players-list').innerHTML = '<p class="text-danger">Ошибка загрузки списка игроков</p>';
             }
         }
@@ -1223,21 +1057,14 @@
         // Загрузка рейтингов
         async function loadLeaderboard(type) {
             try {
-                console.log('Загрузка рейтинга:', type);
                 const { data: players, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .order(type, { ascending: false })
                     .limit(20);
                 
-                if (error) {
-                    console.error('Ошибка загрузки рейтинга:', error);
-                    const container = document.getElementById(`${type}-leaderboard`);
-                    container.innerHTML = '<p class="text-danger">Ошибка загрузки рейтинга</p>';
-                    return;
-                }
+                if (error) throw error;
                 
-                console.log('Рейтинг загружен:', players);
                 const container = document.getElementById(`${type}-leaderboard`);
                 
                 if (!players || players.length === 0) {
@@ -1276,7 +1103,7 @@
                 container.innerHTML = html;
                 
             } catch (error) {
-                console.error('Неожиданная ошибка в loadLeaderboard:', error);
+                console.error('Ошибка загрузки рейтингов:', error);
                 const container = document.getElementById(`${type}-leaderboard`);
                 container.innerHTML = '<p class="text-danger">Ошибка загрузки рейтинга</p>';
             }
@@ -1287,7 +1114,7 @@
             if (currentUser) {
                 loadActiveInvestments();
             }
-        }, 60000); // Каждую минуту
+        }, 60000);
     </script>
 </body>
 </html>
