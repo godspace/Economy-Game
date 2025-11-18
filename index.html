@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эволюция Доверия - Школьная Экономическая Игра</title>
+    <title>Эволюция Доверия - Школьная Игра</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -13,890 +13,831 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
         }
 
-        .header {
-            background: linear-gradient(135deg, #2c3e50, #34495e);
+        header {
+            background: #2c3e50;
             color: white;
             padding: 20px;
             text-align: center;
         }
 
-        .header h1 {
-            font-size: 1.8em;
-            margin-bottom: 10px;
+        .app-section {
+            padding: 20px;
+            display: none;
         }
 
-        .tabs {
-            display: flex;
-            background: #34495e;
-            border-bottom: 2px solid #2c3e50;
+        .active {
+            display: block;
         }
 
-        .tab {
-            flex: 1;
-            padding: 15px;
-            text-align: center;
-            background: #34495e;
+        /* Формы */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            background: #3498db;
             color: white;
             border: none;
             cursor: pointer;
             transition: background 0.3s;
-            font-size: 1em;
         }
 
-        .tab.active {
-            background: #2c3e50;
-            font-weight: bold;
+        button:hover {
+            background: #2980b9;
         }
 
-        .tab:hover {
-            background: #2c3e50;
+        button.secondary {
+            background: #95a5a6;
         }
 
-        .tab-content {
-            display: none;
-            padding: 20px;
-            min-height: 400px;
+        button.success {
+            background: #27ae60;
         }
 
-        .tab-content.active {
-            display: block;
+        button.danger {
+            background: #e74c3c;
         }
 
-        .login-form {
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 30px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #bdc3c7;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            border-color: #3498db;
-            outline: none;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
-            width: 100%;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #27ae60, #229954);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-
-        .player-card {
+        /* Карточки */
+        .card {
             background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-left: 5px solid #3498db;
-        }
-
-        .deal-card {
-            background: white;
-            border: 2px solid #e9ecef;
+            border: 1px solid #dee2e6;
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 15px;
-            transition: border-color 0.3s;
         }
 
-        .deal-card:hover {
-            border-color: #3498db;
-        }
-
-        .reputation {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-
-        .reputation.high {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .reputation.medium {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .reputation.low {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
+        .player-card {
+            display: flex;
+            justify-content: between;
             align-items: center;
-            justify-content: center;
         }
 
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .notification {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .notification.unread {
-            background: #fff3e0;
-            border-left-color: #ff9800;
-            font-weight: bold;
-        }
-
-        .decision-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .decision-buttons .btn {
+        .player-info {
             flex: 1;
         }
 
-        .rating-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+        .player-stats {
+            text-align: right;
         }
 
-        .rating-table th, .rating-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
+        /* Сетки */
+        .grid {
+            display: grid;
+            gap: 15px;
         }
 
-        .rating-table th {
-            background: #f8f9fa;
-            font-weight: bold;
+        .grid-2 {
+            grid-template-columns: 1fr 1fr;
         }
 
-        .rating-table tr:hover {
-            background: #f5f5f5;
+        .grid-3 {
+            grid-template-columns: 1fr 1fr 1fr;
         }
 
-        @media (max-width: 600px) {
-            .tabs {
+        /* Навигация */
+        .nav {
+            display: flex;
+            background: #34495e;
+            overflow-x: auto;
+        }
+
+        .nav button {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            border-radius: 0;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .nav button.active {
+            background: #3498db;
+        }
+
+        /* Репутация */
+        .reputation-bar {
+            height: 10px;
+            background: #ecf0f1;
+            border-radius: 5px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+
+        .reputation-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav {
                 flex-direction: column;
-            }
-            
-            .tab {
-                padding: 12px;
-            }
-            
-            .container {
-                margin: 10px;
-                border-radius: 10px;
-            }
-            
-            .modal-content {
-                margin: 20px;
-                padding: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Экран входа -->
-    <div id="loginScreen" class="login-form">
-        <h2 style="text-align: center; margin-bottom: 30px; color: #2c3e50;">Вход в игру</h2>
-        <div class="form-group">
-            <label for="username">Никнейм:</label>
-            <input type="text" id="username" placeholder="Введите ваш никнейм">
-        </div>
-        <div class="form-group">
-            <label for="password">Пароль:</label>
-            <input type="password" id="password" placeholder="Введите пароль">
-        </div>
-        <div class="form-group">
-            <label for="class">Класс:</label>
-            <select id="class">
-                <option value="">Выберите класс</option>
-                <option value="5А">5А</option>
-                <option value="5Б">5Б</option>
-                <option value="5В">5В</option>
-                <option value="5Г">5Г</option>
-                <option value="6А">6А</option>
-                <option value="6Б">6Б</option>
-                <option value="6В">6В</option>
-                <option value="6Г">6Г</option>
-                <option value="6Д">6Д</option>
-                <option value="7А">7А</option>
-                <option value="7Б">7Б</option>
-                <option value="8А">8А</option>
-                <option value="8Б">8Б</option>
-                <option value="8В">8В</option>
-                <option value="9А">9А</option>
-                <option value="9Б">9Б</option>
-                <option value="9В">9В</option>
-                <option value="10А">10А</option>
-                <option value="10Б">10Б</option>
-                <option value="11">11</option>
-            </select>
-        </div>
-        <button class="btn" onclick="login()">Войти в игру</button>
-    </div>
+    <div class="container">
+        <header>
+            <h1>🎮 Эволюция Доверия</h1>
+            <p>Школьная экономическая игра</p>
+        </header>
 
-    <!-- Основной интерфейс игры -->
-    <div id="gameScreen" class="container" style="display: none;">
-        <div class="header">
-            <h1>Эволюция Доверия</h1>
-            <p id="playerInfo">Добро пожаловать!</p>
-        </div>
-        
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('profile')">Профиль</button>
-            <button class="tab" onclick="switchTab('trade')">Торговля</button>
-            <button class="tab" onclick="switchTab('rating')">Рейтинг</button>
-        </div>
+        <!-- Навигация -->
+        <nav class="nav" id="nav" style="display: none;">
+            <button onclick="showSection('profile')">👤 Профиль</button>
+            <button onclick="showSection('players')">👥 Игроки</button>
+            <button onclick="showSection('deals')">🤝 Сделки</button>
+            <button onclick="showSection('rating')">🏆 Рейтинг</button>
+            <button onclick="logout()">🚪 Выйти</button>
+        </nav>
 
-        <!-- Вкладка профиля -->
-        <div id="profile" class="tab-content active">
-            <div class="player-card">
-                <h3>Ваш профиль</h3>
-                <div id="profileInfo"></div>
+        <!-- Экран входа/регистрации -->
+        <section id="auth-section" class="app-section active">
+            <div style="max-width: 400px; margin: 40px auto; padding: 20px;">
+                <h2 style="text-align: center; margin-bottom: 30px;">Вход в игру</h2>
+                
+                <div class="form-group">
+                    <label>Никнейм:</label>
+                    <input type="text" id="username" placeholder="Придумайте никнейм">
+                </div>
+                
+                <div class="form-group">
+                    <label>Пароль:</label>
+                    <input type="password" id="password" placeholder="Придумайте пароль">
+                </div>
+                
+                <div class="form-group">
+                    <label>Класс:</label>
+                    <select id="class">
+                        <option value="5А">5А</option>
+                        <option value="5Б">5Б</option>
+                        <option value="5В">5В</option>
+                        <option value="5Г">5Г</option>
+                        <option value="6А">6А</option>
+                        <option value="6Б">6Б</option>
+                        <option value="6В">6В</option>
+                        <option value="6Г">6Г</option>
+                        <option value="6Д">6Д</option>
+                        <option value="7А">7А</option>
+                        <option value="7Б">7Б</option>
+                        <option value="8А">8А</option>
+                        <option value="8Б">8Б</option>
+                        <option value="8В">8В</option>
+                        <option value="9А">9А</option>
+                        <option value="9Б">9Б</option>
+                        <option value="9В">9В</option>
+                        <option value="10А">10А</option>
+                        <option value="10Б">10Б</option>
+                        <option value="11">11</option>
+                    </select>
+                </div>
+                
+                <button onclick="login()" style="margin-bottom: 15px;">Войти</button>
+                <button onclick="register()" class="secondary">Зарегистрироваться</button>
             </div>
-            
-            <h3>Уведомления</h3>
-            <div id="notificationsList"></div>
-        </div>
+        </section>
 
-        <!-- Вкладка торговли -->
-        <div id="trade" class="tab-content">
-            <button class="btn" onclick="showCreateDealModal()">Предложить сделку</button>
-            <div style="margin-top: 20px;">
-                <h3>Предложения других игроков</h3>
-                <div id="dealsList"></div>
-            </div>
-        </div>
-
-        <!-- Вкладка рейтинга -->
-        <div id="rating" class="tab-content">
-            <h3>Рейтинг игроков</h3>
-            <table class="rating-table">
-                <thead>
-                    <tr>
-                        <th>Место</th>
-                        <th>Игрок</th>
-                        <th>Класс</th>
-                        <th>Репутация</th>
-                    </tr>
-                </thead>
-                <tbody id="ratingTable"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Модальное окно создания сделки -->
-    <div id="createDealModal" class="modal">
-        <div class="modal-content">
-            <h3>Предложить сделку</h3>
-            <div class="form-group">
-                <label for="toPlayer">Выберите игрока:</label>
-                <select id="toPlayer"></select>
-            </div>
-            <div class="form-group">
-                <label>Ваше решение:</label>
-                <div class="decision-buttons">
-                    <button class="btn btn-success" onclick="setDecision('cooperate')">Сотрудничать</button>
-                    <button class="btn btn-danger" onclick="setDecision('cheat')">Обмануть</button>
+        <!-- Профиль -->
+        <section id="profile-section" class="app-section">
+            <h2>Ваш профиль</h2>
+            <div class="card">
+                <div class="player-card">
+                    <div class="player-info">
+                        <h3 id="profile-username"></h3>
+                        <p>Класс: <span id="profile-class"></span></p>
+                        <p>Очки: <span id="profile-score"></span></p>
+                    </div>
+                    <div class="player-stats">
+                        <p>Репутация: <span id="profile-reputation"></span>/100</p>
+                        <div class="reputation-bar">
+                            <div class="reputation-fill" id="reputation-fill"></div>
+                        </div>
+                        <p>Игр сыграно: <span id="profile-games"></span></p>
+                    </div>
                 </div>
             </div>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn" onclick="createDeal()">Предложить сделку</button>
-                <button class="btn btn-danger" onclick="hideModal('createDealModal')">Отмена</button>
-            </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Модальное окно принятия сделки -->
-    <div id="acceptDealModal" class="modal">
-        <div class="modal-content">
-            <h3>Предложение сделки</h3>
-            <div id="dealInfo"></div>
-            <div class="decision-buttons">
-                <button class="btn btn-success" onclick="acceptDeal('cooperate')">Сотрудничать</button>
-                <button class="btn btn-danger" onclick="acceptDeal('cheat')">Обмануть</button>
-                <button class="btn" onclick="hideModal('acceptDealModal')">Отклонить</button>
+        <!-- Список игроков -->
+        <section id="players-section" class="app-section">
+            <h2>Игроки</h2>
+            <div class="form-group">
+                <input type="text" id="search-players" placeholder="Поиск по никнейму..." oninput="searchPlayers()">
             </div>
-        </div>
-    </div>
+            <select id="class-filter" onchange="loadPlayers()">
+                <option value="">Все классы</option>
+                <!-- Опции классов будут добавлены через JS -->
+            </select>
+            <div id="players-list"></div>
+        </section>
 
-    <!-- Модальное окно результата сделки -->
-    <div id="dealResultModal" class="modal">
-        <div class="modal-content">
-            <h3>Результат сделки</h3>
-            <div id="dealResult"></div>
-            <button class="btn" onclick="hideModal('dealResultModal')">Закрыть</button>
-        </div>
+        <!-- Сделки -->
+        <section id="deals-section" class="app-section">
+            <div class="grid grid-2">
+                <div>
+                    <h2>Активные сделки</h2>
+                    <div id="active-deals"></div>
+                </div>
+                <div>
+                    <h2>История сделок</h2>
+                    <div id="deal-history"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Рейтинг -->
+        <section id="rating-section" class="app-section">
+            <div class="grid grid-2">
+                <div>
+                    <h2>🏆 Рейтинг по очкам</h2>
+                    <div id="score-rating"></div>
+                </div>
+                <div>
+                    <h2>⭐ Рейтинг по репутации</h2>
+                    <div id="reputation-rating"></div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script>
-        // Конфигурация Supabase
+        // Инициализация Supabase
         const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
-        
-        // Инициализация Supabase должна быть первой
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        let currentPlayer = null;
-        let selectedDecision = null;
-        let currentDealId = null;
+        let currentUser = null;
 
-        // Функции для работы с модальными окнами
-        function showModal(modalId) {
-            document.getElementById(modalId).classList.add('active');
-        }
+        // Функции аутентификации
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const userClass = document.getElementById('class').value;
 
-        function hideModal(modalId) {
-            document.getElementById(modalId).classList.remove('active');
-        }
-
-        function switchTab(tabName) {
-            // Скрыть все вкладки
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Показать выбранную вкладку
-            document.getElementById(tabName).classList.add('active');
-            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
-
-            // Загрузить данные для вкладки
-            if (tabName === 'profile') {
-                loadProfile();
-            } else if (tabName === 'trade') {
-                loadDeals();
-            } else if (tabName === 'rating') {
-                loadRating();
+            if (!username || !password || !userClass) {
+                alert('Заполните все поля!');
+                return;
             }
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .insert([{ username, password, class: userClass }])
+                .select();
+
+            if (error) {
+                alert('Ошибка регистрации: ' + error.message);
+                return;
+            }
+
+            currentUser = data[0];
+            startGame();
         }
 
-        // Функция входа
         async function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-            const playerClass = document.getElementById('class').value;
 
-            if (!username || !password || !playerClass) {
-                alert('Пожалуйста, заполните все поля');
+            if (!username || !password) {
+                alert('Введите никнейм и пароль!');
                 return;
             }
 
-            try {
-                // Проверяем существование игрока
-                const { data: existingPlayer, error: selectError } = await supabase
-                    .from('players')
-                    .select('*')
-                    .eq('username', username)
-                    .single();
-
-                if (selectError && selectError.code !== 'PGRST116') {
-                    throw selectError;
-                }
-
-                if (existingPlayer) {
-                    // Проверяем пароль
-                    if (existingPlayer.password !== password) {
-                        alert('Неверный пароль');
-                        return;
-                    }
-                    currentPlayer = existingPlayer;
-                } else {
-                    // Создаем нового игрока
-                    const { data: newPlayer, error: insertError } = await supabase
-                        .from('players')
-                        .insert([{
-                            username: username,
-                            password: password,
-                            class: playerClass,
-                            reputation: 100
-                        }])
-                        .select()
-                        .single();
-
-                    if (insertError) throw insertError;
-                    currentPlayer = newPlayer;
-                }
-
-                // Переключаем на игровой экран
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('gameScreen').style.display = 'block';
-                
-                // Обновляем информацию о игроке
-                document.getElementById('playerInfo').textContent = 
-                    `${currentPlayer.username} (${currentPlayer.class}) - Репутация: ${currentPlayer.reputation}`;
-                
-                // Загружаем начальные данные
-                loadProfile();
-                checkPendingNotifications();
-
-            } catch (error) {
-                console.error('Ошибка входа:', error);
-                alert('Ошибка входа: ' + error.message);
-            }
-        }
-
-        // Загрузка профиля
-        async function loadProfile() {
-            if (!currentPlayer) return;
-
-            // Обновляем информацию о игроке
-            document.getElementById('profileInfo').innerHTML = `
-                <p><strong>Никнейм:</strong> ${currentPlayer.username}</p>
-                <p><strong>Класс:</strong> ${currentPlayer.class}</p>
-                <p><strong>Репутация:</strong> <span class="reputation ${getReputationClass(currentPlayer.reputation)}">${currentPlayer.reputation}</span></p>
-            `;
-
-            // Загружаем уведомления
-            const { data: notifications, error } = await supabase
-                .from('notifications')
+            const { data, error } = await supabase
+                .from('profiles')
                 .select('*')
-                .eq('player_id', currentPlayer.id)
-                .order('created_at', { ascending: false });
+                .eq('username', username)
+                .eq('password', password);
 
-            if (error) {
-                console.error('Ошибка загрузки уведомлений:', error);
+            if (error || !data.length) {
+                alert('Неверный никнейм или пароль!');
                 return;
             }
 
-            const notificationsList = document.getElementById('notificationsList');
-            notificationsList.innerHTML = '';
-
-            if (notifications.length === 0) {
-                notificationsList.innerHTML = '<p>У вас пока нет уведомлений</p>';
-                return;
-            }
-
-            notifications.forEach(notification => {
-                const notificationElement = document.createElement('div');
-                notificationElement.className = `notification ${notification.is_read ? '' : 'unread'}`;
-                notificationElement.innerHTML = `
-                    <p>${notification.message}</p>
-                    <small>${new Date(notification.created_at).toLocaleString()}</small>
-                `;
-                notificationElement.onclick = async () => {
-                    if (!notification.is_read) {
-                        await supabase
-                            .from('notifications')
-                            .update({ is_read: true })
-                            .eq('id', notification.id);
-                        notificationElement.classList.remove('unread');
-                    }
-                };
-                notificationsList.appendChild(notificationElement);
-            });
+            currentUser = data[0];
+            startGame();
         }
 
-        // Показ модального окна создания сделки
-        async function showCreateDealModal() {
-            // Загружаем список игроков (исключая текущего)
-            const { data: players, error } = await supabase
-                .from('players')
-                .select('id, username, class, reputation')
-                .neq('id', currentPlayer.id);
+        function logout() {
+            currentUser = null;
+            showSection('auth-section');
+            document.getElementById('nav').style.display = 'none';
+        }
 
-            if (error) {
-                console.error('Ошибка загрузки игроков:', error);
-                return;
+        function startGame() {
+            showSection('profile');
+            document.getElementById('nav').style.display = 'flex';
+            updateProfile();
+            loadPlayers();
+            loadDeals();
+            loadRating();
+            setupRealtimeUpdates();
+        }
+
+        // Навигация
+        function showSection(sectionName) {
+            document.querySelectorAll('.app-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionName + '-section').classList.add('active');
+            
+            // Обновляем данные при переходе на раздел
+            if (sectionName === 'profile') updateProfile();
+            if (sectionName === 'players') loadPlayers();
+            if (sectionName === 'deals') loadDeals();
+            if (sectionName === 'rating') loadRating();
+        }
+
+        // Обновление профиля
+        async function updateProfile() {
+            if (!currentUser) return;
+
+            const { data } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+
+            if (data) {
+                currentUser = data;
+                document.getElementById('profile-username').textContent = data.username;
+                document.getElementById('profile-class').textContent = data.class;
+                document.getElementById('profile-score').textContent = data.score;
+                document.getElementById('profile-reputation').textContent = data.reputation;
+                document.getElementById('profile-games').textContent = data.total_games;
+                document.getElementById('reputation-fill').style.width = data.reputation + '%';
+            }
+        }
+
+        // Загрузка игроков
+        async function loadPlayers() {
+            const search = document.getElementById('search-players').value;
+            const classFilter = document.getElementById('class-filter').value;
+
+            let query = supabase
+                .from('profiles')
+                .select('*')
+                .neq('id', currentUser.id);
+
+            if (search) {
+                query = query.ilike('username', `%${search}%`);
             }
 
-            const toPlayerSelect = document.getElementById('toPlayer');
-            toPlayerSelect.innerHTML = '';
+            if (classFilter) {
+                query = query.eq('class', classFilter);
+            }
+
+            const { data: players } = await query;
+
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
 
             players.forEach(player => {
-                const option = document.createElement('option');
-                option.value = player.id;
-                option.textContent = `${player.username} (${player.class}) - Репутация: ${player.reputation}`;
-                toPlayerSelect.appendChild(option);
-            });
-
-            selectedDecision = null;
-            showModal('createDealModal');
-        }
-
-        function setDecision(decision) {
-            selectedDecision = decision;
-            // Визуальная обратная связь
-            const buttons = document.querySelectorAll('.decision-buttons .btn');
-            buttons.forEach(btn => {
-                btn.style.opacity = '0.6';
-            });
-            event.target.style.opacity = '1';
-        }
-
-        // Создание сделки
-        async function createDeal() {
-            if (!selectedDecision) {
-                alert('Пожалуйста, выберите ваше решение');
-                return;
-            }
-
-            const toPlayerId = document.getElementById('toPlayer').value;
-
-            try {
-                const { data: deal, error } = await supabase
-                    .from('deals')
-                    .insert([{
-                        from_player_id: currentPlayer.id,
-                        to_player_id: toPlayerId,
-                        from_decision: selectedDecision,
-                        status: 'pending'
-                    }])
-                    .select()
-                    .single();
-
-                if (error) throw error;
-
-                // Создаем уведомление для получателя
-                const { data: fromPlayer } = await supabase
-                    .from('players')
-                    .select('username, reputation')
-                    .eq('id', currentPlayer.id)
-                    .single();
-
-                await supabase
-                    .from('notifications')
-                    .insert([{
-                        player_id: toPlayerId,
-                        deal_id: deal.id,
-                        message: `Игрок ${fromPlayer.username} (репутация: ${fromPlayer.reputation}) предложил вам сделку`
-                    }]);
-
-                alert('Сделка предложена!');
-                hideModal('createDealModal');
-                loadDeals();
-
-            } catch (error) {
-                console.error('Ошибка создания сделки:', error);
-                alert('Ошибка создания сделки: ' + error.message);
-            }
-        }
-
-        // Загрузка списка сделок
-        async function loadDeals() {
-            if (!currentPlayer) return;
-
-            // Загружаем предложенные нам сделки
-            const { data: incomingDeals, error: incomingError } = await supabase
-                .from('deals')
-                .select(`
-                    *,
-                    from_player:players!deals_from_player_id_fkey(username, reputation, class)
-                `)
-                .eq('to_player_id', currentPlayer.id)
-                .eq('status', 'pending');
-
-            if (incomingError) {
-                console.error('Ошибка загрузки входящих сделок:', incomingError);
-                return;
-            }
-
-            const dealsList = document.getElementById('dealsList');
-            dealsList.innerHTML = '';
-
-            if (incomingDeals.length === 0) {
-                dealsList.innerHTML = '<p>Пока нет предложений сделок</p>';
-                return;
-            }
-
-            incomingDeals.forEach(deal => {
-                const dealCard = document.createElement('div');
-                dealCard.className = 'deal-card';
-                dealCard.innerHTML = `
-                    <h4>Предложение от ${deal.from_player.username} (${deal.from_player.class})</h4>
-                    <p>Репутация: <span class="reputation ${getReputationClass(deal.from_player.reputation)}">${deal.from_player.reputation}</span></p>
-                    <button class="btn" onclick="showAcceptDealModal('${deal.id}')">Рассмотреть сделку</button>
+                const playerCard = document.createElement('div');
+                playerCard.className = 'card fade-in';
+                playerCard.innerHTML = `
+                    <div class="player-card">
+                        <div class="player-info">
+                            <h4>${player.username}</h4>
+                            <p>Класс: ${player.class}</p>
+                            <p>Очки: ${player.score}</p>
+                        </div>
+                        <div class="player-stats">
+                            <p>Репутация: ${player.reputation}/100</p>
+                            <div class="reputation-bar">
+                                <div class="reputation-fill" style="width: ${player.reputation}%"></div>
+                            </div>
+                            <button onclick="proposeDeal('${player.id}')" class="success">Предложить сделку</button>
+                        </div>
+                    </div>
                 `;
-                dealsList.appendChild(dealCard);
+                playersList.appendChild(playerCard);
             });
         }
 
-        // Показ модального окна принятия сделки
-        async function showAcceptDealModal(dealId) {
-            currentDealId = dealId;
+        function searchPlayers() {
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(loadPlayers, 300);
+        }
 
-            const { data: deal, error } = await supabase
+        // Сделки
+        async function proposeDeal(player2Id) {
+            const { error } = await supabase
+                .from('deals')
+                .insert([{ 
+                    player1_id: currentUser.id, 
+                    player2_id: player2Id 
+                }]);
+
+            if (error) {
+                alert('Ошибка при предложении сделки: ' + error.message);
+            } else {
+                alert('Сделка предложена!');
+                loadDeals();
+            }
+        }
+
+        async function loadDeals() {
+            // Активные сделки (где текущий пользователь участник)
+            const { data: activeDeals } = await supabase
                 .from('deals')
                 .select(`
                     *,
-                    from_player:players!deals_from_player_id_fkey(username, reputation, class)
+                    player1:profiles!player1_id(username, class),
+                    player2:profiles!player2_id(username, class)
                 `)
+                .or(`player1_id.eq.${currentUser.id},player2_id.eq.${currentUser.id}`)
+                .neq('status', 'completed')
+                .order('created_at', { ascending: false });
+
+            const activeDealsContainer = document.getElementById('active-deals');
+            activeDealsContainer.innerHTML = '';
+
+            if (activeDeals && activeDeals.length) {
+                activeDeals.forEach(deal => {
+                    const isPlayer1 = deal.player1_id === currentUser.id;
+                    const opponent = isPlayer1 ? deal.player2 : deal.player1;
+                    
+                    const dealCard = document.createElement('div');
+                    dealCard.className = 'card fade-in';
+                    
+                    let actions = '';
+                    if (deal.status === 'pending' && !isPlayer1) {
+                        actions = `
+                            <button onclick="acceptDeal('${deal.id}')" class="success">Принять</button>
+                            <button onclick="declineDeal('${deal.id}')" class="danger">Отклонить</button>
+                        `;
+                    } else if (deal.status === 'accepted') {
+                        if (!deal[isPlayer1 ? 'player1_choice' : 'player2_choice']) {
+                            actions = `
+                                <button onclick="makeChoice('${deal.id}', 'cooperate')" class="success">Сотрудничать</button>
+                                <button onclick="makeChoice('${deal.id}', 'betray')" class="danger">Предать</button>
+                            `;
+                        } else {
+                            actions = '<p>Ожидание хода оппонента...</p>';
+                        }
+                    }
+
+                    dealCard.innerHTML = `
+                        <h4>Сделка с ${opponent.username} (${opponent.class})</h4>
+                        <p>Статус: ${getStatusText(deal.status)}</p>
+                        ${actions}
+                    `;
+                    activeDealsContainer.appendChild(dealCard);
+                });
+            } else {
+                activeDealsContainer.innerHTML = '<p>Нет активных сделок</p>';
+            }
+
+            // История сделок
+            const { data: historyDeals } = await supabase
+                .from('deals')
+                .select(`
+                    *,
+                    player1:profiles!player1_id(username),
+                    player2:profiles!player2_id(username)
+                `)
+                .or(`player1_id.eq.${currentUser.id},player2_id.eq.${currentUser.id}`)
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            const historyContainer = document.getElementById('deal-history');
+            historyContainer.innerHTML = '';
+
+            if (historyDeals && historyDeals.length) {
+                historyDeals.forEach(deal => {
+                    const isPlayer1 = deal.player1_id === currentUser.id;
+                    const myChoice = isPlayer1 ? deal.player1_choice : deal.player2_choice;
+                    const opponentChoice = isPlayer1 ? deal.player2_choice : deal.player1_choice;
+                    const myScore = isPlayer1 ? deal.player1_score : deal.player2_score;
+                    
+                    const dealCard = document.createElement('div');
+                    dealCard.className = 'card fade-in';
+                    dealCard.innerHTML = `
+                        <p><strong>${deal.player1.username} vs ${deal.player2.username}</strong></p>
+                        <p>Ваш ход: ${getChoiceText(myChoice)}</p>
+                        <p>Ход оппонента: ${getChoiceText(opponentChoice)}</p>
+                        <p>Ваши очки: ${myScore}</p>
+                    `;
+                    historyContainer.appendChild(dealCard);
+                });
+            } else {
+                historyContainer.innerHTML = '<p>Нет завершенных сделок</p>';
+            }
+        }
+
+        async function acceptDeal(dealId) {
+            const { error } = await supabase
+                .from('deals')
+                .update({ status: 'accepted' })
+                .eq('id', dealId);
+
+            if (error) {
+                alert('Ошибка: ' + error.message);
+            } else {
+                loadDeals();
+            }
+        }
+
+        async function declineDeal(dealId) {
+            const { error } = await supabase
+                .from('deals')
+                .delete()
+                .eq('id', dealId);
+
+            if (error) {
+                alert('Ошибка: ' + error.message);
+            } else {
+                loadDeals();
+            }
+        }
+
+        async function makeChoice(dealId, choice) {
+            // Получаем текущую сделку
+            const { data: deal } = await supabase
+                .from('deals')
+                .select('*')
                 .eq('id', dealId)
                 .single();
 
+            const isPlayer1 = deal.player1_id === currentUser.id;
+            const updateField = isPlayer1 ? 'player1_choice' : 'player2_choice';
+
+            // Обновляем выбор
+            const { error } = await supabase
+                .from('deals')
+                .update({ [updateField]: choice })
+                .eq('id', dealId);
+
             if (error) {
-                console.error('Ошибка загрузки сделки:', error);
+                alert('Ошибка: ' + error.message);
                 return;
             }
 
-            document.getElementById('dealInfo').innerHTML = `
-                <p><strong>Игрок:</strong> ${deal.from_player.username} (${deal.from_player.class})</p>
-                <p><strong>Репутация:</strong> <span class="reputation ${getReputationClass(deal.from_player.reputation)}">${deal.from_player.reputation}</span></p>
-                <p><strong>Предложил сделку</strong></p>
-                <p>Примите решение: сотрудничать или обмануть?</p>
-            `;
+            // Проверяем, сделали ли оба хода
+            const { data: updatedDeal } = await supabase
+                .from('deals')
+                .select('*')
+                .eq('id', dealId)
+                .single();
 
-            showModal('acceptDealModal');
-        }
-
-        // Принятие сделки
-        async function acceptDeal(decision) {
-            if (!currentDealId) return;
-
-            try {
-                // Обновляем сделку
-                const { data: deal, error: updateError } = await supabase
-                    .from('deals')
-                    .update({
-                        to_decision: decision,
-                        status: 'completed',
-                        updated_at: new Date()
-                    })
-                    .eq('id', currentDealId)
-                    .select(`
-                        *,
-                        from_player:players!deals_from_player_id_fkey(username, reputation),
-                        to_player:players!deals_to_player_id_fkey(username, reputation)
-                    `)
-                    .single();
-
-                if (updateError) throw updateError;
-
-                // Вычисляем результат сделки
-                const result = calculateDealResult(deal.from_decision, decision);
-                
-                // Обновляем репутацию игроков
-                await updatePlayerReputation(deal.from_player_id, result.fromRepChange);
-                await updatePlayerReputation(deal.to_player_id, result.toRepChange);
-
-                // Создаем уведомления для обоих игроков
-                await supabase
-                    .from('notifications')
-                    .insert([
-                        {
-                            player_id: deal.from_player_id,
-                            deal_id: currentDealId,
-                            message: `Сделка с ${deal.to_player.username} завершена. Вы: ${getDecisionText(deal.from_decision)}, Оппонент: ${getDecisionText(decision)}. Изменение репутации: ${result.fromRepChange > 0 ? '+' : ''}${result.fromRepChange}`
-                        },
-                        {
-                            player_id: deal.to_player_id,
-                            deal_id: currentDealId,
-                            message: `Сделка с ${deal.from_player.username} завершена. Вы: ${getDecisionText(decision)}, Оппонент: ${getDecisionText(deal.from_decision)}. Изменение репутации: ${result.toRepChange > 0 ? '+' : ''}${result.toRepChange}`
-                        }
-                    ]);
-
-                // Показываем результат текущему игроку
-                showDealResult(result, deal.from_decision, decision, deal.from_player.username);
-
-                hideModal('acceptDealModal');
-                loadDeals();
-                loadProfile();
-
-            } catch (error) {
-                console.error('Ошибка принятия сделки:', error);
-                alert('Ошибка принятия сделки: ' + error.message);
+            if (updatedDeal.player1_choice && updatedDeal.player2_choice) {
+                // Оба сделали ход - вычисляем результаты
+                await calculateDealResults(dealId);
             }
+
+            loadDeals();
+            updateProfile();
         }
 
-        // Вычисление результата сделки
-        function calculateDealResult(fromDecision, toDecision) {
-            if (fromDecision === 'cooperate' && toDecision === 'cooperate') {
-                return { fromRepChange: 10, toRepChange: 10, message: 'Оба игрока сотрудничали! +10 репутации каждому' };
-            } else if (fromDecision === 'cooperate' && toDecision === 'cheat') {
-                return { fromRepChange: -20, toRepChange: 5, message: 'Вы обманули сотрудничающего игрока! Вы получаете +5 репутации, игрок теряет -20' };
-            } else if (fromDecision === 'cheat' && toDecision === 'cooperate') {
-                return { fromRepChange: 5, toRepChange: -20, message: 'Вас обманули! Вы теряете -20 репутации, игрок получает +5' };
+        async function calculateDealResults(dealId) {
+            const { data: deal } = await supabase
+                .from('deals')
+                .select('*')
+                .eq('id', dealId)
+                .single();
+
+            // Правила дилеммы заключенного
+            let player1Score, player2Score;
+
+            if (deal.player1_choice === 'cooperate' && deal.player2_choice === 'cooperate') {
+                player1Score = player2Score = 2; // Взаимное сотрудничество
+            } else if (deal.player1_choice === 'cooperate' && deal.player2_choice === 'betray') {
+                player1Score = 0; // Вас обманули
+                player2Score = 3; // Искушение предать
+            } else if (deal.player1_choice === 'betray' && deal.player2_choice === 'cooperate') {
+                player1Score = 3; // Искушение предать
+                player2Score = 0; // Вас обманули
             } else {
-                return { fromRepChange: -5, toRepChange: -5, message: 'Оба игрока обманули! -5 репутации каждому' };
+                player1Score = player2Score = 1; // Взаимное предательство
             }
+
+            // Обновляем очки в сделке
+            await supabase
+                .from('deals')
+                .update({ 
+                    player1_score: player1Score,
+                    player2_score: player2Score,
+                    status: 'completed'
+                })
+                .eq('id', dealId);
+
+            // Обновляем профили игроков
+            await updatePlayerStats(deal.player1_id, player1Score, deal.player1_choice);
+            await updatePlayerStats(deal.player2_id, player2Score, deal.player2_choice);
         }
 
-        function getDecisionText(decision) {
-            return decision === 'cooperate' ? 'Сотрудничал' : 'Обманул';
-        }
-
-        // Показ результата сделки
-        function showDealResult(result, fromDecision, toDecision, opponentName) {
-            document.getElementById('dealResult').innerHTML = `
-                <p><strong>${result.message}</strong></p>
-                <p>Решение ${opponentName}: ${getDecisionText(fromDecision)}</p>
-                <p>Ваше решение: ${getDecisionText(toDecision)}</p>
-            `;
-            showModal('dealResultModal');
-        }
-
-        // Обновление репутации игрока
-        async function updatePlayerReputation(playerId, repChange) {
-            const { data: player, error } = await supabase
-                .from('players')
-                .select('reputation')
+        async function updatePlayerStats(playerId, score, choice) {
+            // Получаем текущие данные игрока
+            const { data: player } = await supabase
+                .from('profiles')
+                .select('*')
                 .eq('id', playerId)
                 .single();
 
-            if (error) {
-                console.error('Ошибка загрузки игрока:', error);
-                return;
-            }
-
-            const newReputation = Math.max(0, player.reputation + repChange);
+            const newScore = player.score + score;
+            const newTotalGames = player.total_games + 1;
+            const newCooperationCount = player.cooperation_count + (choice === 'cooperate' ? 1 : 0);
+            const newReputation = Math.round((newCooperationCount / newTotalGames) * 100);
 
             await supabase
-                .from('players')
-                .update({ reputation: newReputation })
+                .from('profiles')
+                .update({
+                    score: newScore,
+                    total_games: newTotalGames,
+                    cooperation_count: newCooperationCount,
+                    reputation: newReputation
+                })
                 .eq('id', playerId);
+        }
 
-            // Обновляем текущего игрока если необходимо
-            if (playerId === currentPlayer.id) {
-                currentPlayer.reputation = newReputation;
-                document.getElementById('playerInfo').textContent = 
-                    `${currentPlayer.username} (${currentPlayer.class}) - Репутация: ${currentPlayer.reputation}`;
+        // Рейтинг
+        async function loadRating() {
+            // Рейтинг по очкам
+            const { data: scoreRating } = await supabase
+                .from('profiles')
+                .select('username, class, score, reputation')
+                .order('score', { ascending: false })
+                .limit(20);
+
+            const scoreContainer = document.getElementById('score-rating');
+            scoreContainer.innerHTML = '';
+
+            if (scoreRating) {
+                scoreRating.forEach((player, index) => {
+                    const rankCard = document.createElement('div');
+                    rankCard.className = 'card fade-in';
+                    rankCard.innerHTML = `
+                        <div style="display: flex; justify-content: between; align-items: center;">
+                            <div style="font-size: 24px; font-weight: bold; margin-right: 15px;">
+                                ${index + 1}
+                            </div>
+                            <div style="flex: 1;">
+                                <h4>${player.username}</h4>
+                                <p>Класс: ${player.class}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="font-size: 18px; font-weight: bold;">${player.score} очков</p>
+                                <p>Репутация: ${player.reputation}</p>
+                            </div>
+                        </div>
+                    `;
+                    scoreContainer.appendChild(rankCard);
+                });
+            }
+
+            // Рейтинг по репутации
+            const { data: reputationRating } = await supabase
+                .from('profiles')
+                .select('username, class, score, reputation')
+                .order('reputation', { ascending: false })
+                .limit(20);
+
+            const reputationContainer = document.getElementById('reputation-rating');
+            reputationContainer.innerHTML = '';
+
+            if (reputationRating) {
+                reputationRating.forEach((player, index) => {
+                    const rankCard = document.createElement('div');
+                    rankCard.className = 'card fade-in';
+                    rankCard.innerHTML = `
+                        <div style="display: flex; justify-content: between; align-items: center;">
+                            <div style="font-size: 24px; font-weight: bold; margin-right: 15px;">
+                                ${index + 1}
+                            </div>
+                            <div style="flex: 1;">
+                                <h4>${player.username}</h4>
+                                <p>Класс: ${player.class}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="font-size: 18px; font-weight: bold;">${player.reputation}%</p>
+                                <p>Очки: ${player.score}</p>
+                            </div>
+                        </div>
+                    `;
+                    reputationContainer.appendChild(rankCard);
+                });
             }
         }
 
-        // Загрузка рейтинга
-        async function loadRating() {
-            const { data: players, error } = await supabase
-                .from('players')
-                .select('username, class, reputation')
-                .order('reputation', { ascending: false });
+        // Вспомогательные функции
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Ожидание',
+                'accepted': 'Принята',
+                'completed': 'Завершена'
+            };
+            return statusMap[status] || status;
+        }
 
-            if (error) {
-                console.error('Ошибка загрузки рейтинга:', error);
-                return;
-            }
+        function getChoiceText(choice) {
+            const choiceMap = {
+                'cooperate': '🤝 Сотрудничество',
+                'betray': '😈 Предательство'
+            };
+            return choiceMap[choice] || 'Не сделан';
+        }
 
-            const ratingTable = document.getElementById('ratingTable');
-            ratingTable.innerHTML = '';
+        // Real-time обновления
+        function setupRealtimeUpdates() {
+            // Слушаем изменения в сделках
+            supabase
+                .channel('deals')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'deals' },
+                    () => {
+                        if (document.getElementById('deals-section').classList.contains('active')) {
+                            loadDeals();
+                        }
+                    }
+                )
+                .subscribe();
 
-            players.forEach((player, index) => {
-                const row = document.createElement('tr');
-                if (player.username === currentPlayer.username) {
-                    row.style.backgroundColor = '#e3f2fd';
-                }
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${player.username}</td>
-                    <td>${player.class}</td>
-                    <td><span class="reputation ${getReputationClass(player.reputation)}">${player.reputation}</span></td>
-                `;
-                ratingTable.appendChild(row);
+            // Слушаем изменения в профилях
+            supabase
+                .channel('profiles')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'profiles' },
+                    () => {
+                        updateProfile();
+                        if (document.getElementById('rating-section').classList.contains('active')) {
+                            loadRating();
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        // Инициализация фильтра классов
+        function initClassFilter() {
+            const classes = ["5А", "5Б", "5В", "5Г", "6А", "6Б", "6В", "6Г", "6Д", "7А", "7Б", "8А", "8Б", "8В", "9А", "9Б", "9В", "10А", "10Б", "11"];
+            const filter = document.getElementById('class-filter');
+            
+            classes.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                filter.appendChild(option);
             });
         }
 
-        // Получение класса для отображения репутации
-        function getReputationClass(reputation) {
-            if (reputation >= 80) return 'high';
-            if (reputation >= 50) return 'medium';
-            return 'low';
-        }
-
-        // Проверка непрочитанных уведомлений при входе
-        async function checkPendingNotifications() {
-            const { data: notifications, error } = await supabase
-                .from('notifications')
-                .select('*')
-                .eq('player_id', currentPlayer.id)
-                .eq('is_read', false)
-                .order('created_at', { ascending: false });
-
-            if (error || notifications.length === 0) return;
-
-            // Показываем уведомление о наличии новых сообщений
-            if (notifications.length > 0) {
-                alert(`У вас ${notifications.length} непрочитанных уведомлений! Проверьте вкладку "Профиль".`);
+        // Запуск при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            initClassFilter();
+            
+            // Проверяем, есть ли сохраненный пользователь
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                startGame();
             }
-        }
-
-        // Автоматическое обновление данных каждые 30 секунд
-        setInterval(() => {
-            if (currentPlayer) {
-                loadDeals();
-                loadProfile();
-            }
-        }, 30000);
+        });
     </script>
 </body>
 </html>
