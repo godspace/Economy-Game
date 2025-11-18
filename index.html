@@ -1232,7 +1232,7 @@
                     .from('deals')
                     .select(`
                         *,
-                        from_user:profiles!deals_from_user_fkey(username, class)
+                        from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
                     `)
                     .eq('id', dealId)
                     .single();
@@ -1246,8 +1246,16 @@
                 
                 if (responseDealInfo) {
                     responseDealInfo.innerHTML = `
-                        <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                        <p><strong>Выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Игрок:</strong> ${deal.from_user.username}</p>
+                        <p><strong>Класс:</strong> ${deal.from_user.class}</p>
+                        <p><strong>Монеты:</strong> ${deal.from_user.coins}</p>
+                        <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
+                        <div class="deal-info">
+                            <h3>Выберите вашу стратегию:</h3>
+                            <p><strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
+                            <p><strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
+                            <p>Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
+                        </div>
                     `;
                 }
                 
@@ -1358,12 +1366,12 @@
                     return;
                 }
                 
-                // Входящие сделки - НЕ показываем выбор другого игрока до ответа
+                // Входящие сделки - показываем только информацию об отправителе, без его выбора
                 const { data: incoming, error: incomingError } = await supabase
                     .from('deals')
                     .select(`
                         *,
-                        from_user:profiles!deals_from_user_fkey(username, class)
+                        from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
                     `)
                     .eq('to_user', currentUser.id)
                     .eq('status', 'pending');
@@ -1382,7 +1390,8 @@
                             dealItem.innerHTML = `
                                 <div>
                                     <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                                    <p><em>Выбор другого игрока скрыт до вашего ответа</em></p>
+                                    <p><strong>Монеты:</strong> ${deal.from_user.coins}</p>
+                                    <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
                                 </div>
                                 <div class="deal-actions">
                                     <button class="btn-success respond-deal" data-deal-id="${deal.id}">Ответить</button>
