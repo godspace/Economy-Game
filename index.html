@@ -1358,7 +1358,7 @@
                     return;
                 }
                 
-                // Входящие сделки
+                // Входящие сделки - НЕ показываем выбор другого игрока до ответа
                 const { data: incoming, error: incomingError } = await supabase
                     .from('deals')
                     .select(`
@@ -1382,7 +1382,7 @@
                             dealItem.innerHTML = `
                                 <div>
                                     <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                                    <p><strong>Выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                                    <p><em>Выбор другого игрока скрыт до вашего ответа</em></p>
                                 </div>
                                 <div class="deal-actions">
                                     <button class="btn-success respond-deal" data-deal-id="${deal.id}">Ответить</button>
@@ -1422,19 +1422,26 @@
                         outgoing.forEach(deal => {
                             const statusBadge = deal.status === 'pending' ? 
                                 '<span class="badge badge-warning">Ожидание</span>' : 
-                                '<span class="badge badge-success">Завершена</span>';
+                                deal.status === 'completed' ? 
+                                '<span class="badge badge-success">Завершена</span>' :
+                                '<span class="badge badge-danger">Отклонена</span>';
                             
                             const dealItem = document.createElement('div');
                             dealItem.className = 'deal-item';
-                            dealItem.innerHTML = `
+                            
+                            let dealInfo = `
                                 <div>
                                     <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
                                     <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                                    ${deal.to_choice ? `<p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>` : ''}
-                                    <p><strong>Статус:</strong> ${statusBadge}</p>
-                                </div>
                             `;
                             
+                            if (deal.status === 'completed') {
+                                dealInfo += `<p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>`;
+                            }
+                            
+                            dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p></div>`;
+                            
+                            dealItem.innerHTML = dealInfo;
                             outgoingDeals.appendChild(dealItem);
                         });
                     }
@@ -1443,7 +1450,6 @@
                 console.error('Ошибка загрузки сделок:', error);
             }
         }
-
         // Загрузка рейтинга
         async function loadRanking() {
             try {
