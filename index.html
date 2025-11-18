@@ -4,16 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эволюция доверия</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Все стили остаются без изменений */
         :root {
             --primary: #4361ee;
+            --primary-light: #4895ef;
             --secondary: #3a0ca3;
             --success: #4cc9f0;
             --danger: #f72585;
             --warning: #f8961e;
             --light: #f8f9fa;
             --dark: #212529;
+            --gray: #6c757d;
+            --border-radius: 12px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
         }
         
         * {
@@ -27,32 +32,50 @@
             background-color: #f5f7fb;
             color: var(--dark);
             line-height: 1.6;
+            padding-bottom: env(safe-area-inset-bottom);
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
         }
         
         header {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             padding: 20px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
         }
         
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo i {
+            font-size: 1.8rem;
         }
         
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
         }
         
         .auth-section, .profile-section {
@@ -61,32 +84,52 @@
         
         .active {
             display: block;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .card {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
             padding: 20px;
             margin-bottom: 20px;
+            transition: var(--transition);
+        }
+        
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
         }
         
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
         
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 600;
+            color: var(--dark);
         }
         
         input, select, button {
             width: 100%;
-            padding: 12px;
+            padding: 14px 16px;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 1rem;
+            transition: var(--transition);
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
         }
         
         button {
@@ -94,12 +137,20 @@
             color: white;
             border: none;
             cursor: pointer;
-            transition: background-color 0.3s;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         button:hover {
             background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
         
         .btn-secondary {
@@ -118,43 +169,100 @@
             background-color: var(--warning);
         }
         
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 10px 14px;
+            font-size: 0.9rem;
+        }
+        
         .stats {
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
             margin: 20px 0;
         }
         
         .stat-card {
             text-align: center;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 18px 12px;
+            border-radius: 10px;
             background: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            flex: 1;
-            margin: 0 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+        
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-bottom: 5px;
         }
         
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.6rem;
             font-weight: bold;
-            margin: 10px 0;
+            color: var(--dark);
         }
         
         .tabs {
             display: flex;
             margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #e9ecef;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        
+        .tabs::-webkit-scrollbar {
+            display: none;
         }
         
         .tab {
-            padding: 10px 20px;
+            padding: 14px 20px;
             cursor: pointer;
             border-bottom: 3px solid transparent;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
         }
         
         .tab.active {
             border-bottom: 3px solid var(--primary);
             font-weight: bold;
+            color: var(--primary);
         }
         
         .tab-content {
@@ -167,34 +275,65 @@
         
         .user-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
         }
         
         .user-card {
             background: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
             text-align: center;
-            transition: transform 0.3s;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         
         .user-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
         }
         
         .user-avatar {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
-            margin: 0 auto 10px;
+            font-size: 1.8rem;
+            margin: 0 auto 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .user-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .user-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 12px 0;
+            justify-content: center;
+        }
+        
+        .user-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .user-detail i {
+            color: var(--primary);
         }
         
         .deal-form {
@@ -214,37 +353,63 @@
             z-index: 1000;
             align-items: center;
             justify-content: center;
+            padding: 15px;
+            backdrop-filter: blur(5px);
         }
         
         .modal.active {
             display: flex;
+            animation: fadeIn 0.3s ease;
         }
         
         .modal-content {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
-            width: 90%;
+            border-radius: 16px;
+            padding: 25px;
+            width: 100%;
             max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
         }
         
         .close-modal {
-            float: right;
+            position: absolute;
+            top: 15px;
+            right: 20px;
             font-size: 1.5rem;
             cursor: pointer;
+            color: var(--gray);
+            transition: var(--transition);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .close-modal:hover {
+            background: #f5f5f5;
+            color: var(--dark);
         }
         
         .deal-item {
             background: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: var(--transition);
+        }
+        
+        .deal-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
         
         .deal-actions {
@@ -255,26 +420,36 @@
         .ranking-table {
             width: 100%;
             border-collapse: collapse;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            overflow: hidden;
         }
         
         .ranking-table th, .ranking-table td {
-            padding: 12px 15px;
+            padding: 14px 15px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #e9ecef;
         }
         
         .ranking-table th {
             background-color: var(--primary);
             color: white;
+            font-weight: 600;
+        }
+        
+        .ranking-table tr:last-child td {
+            border-bottom: none;
         }
         
         .ranking-table tr:hover {
-            background-color: #f1f1f1;
+            background-color: #f8f9fa;
         }
         
         .badge {
-            display: inline-block;
-            padding: 3px 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: bold;
@@ -295,67 +470,294 @@
             color: white;
         }
         
-        @media (max-width: 768px) {
-            .stats {
-                flex-direction: column;
-            }
-            
-            .stat-card {
-                margin: 10px 0;
-            }
-            
-            .user-list {
-                grid-template-columns: 1fr;
-            }
+        .badge-primary {
+            background-color: var(--primary);
+            color: white;
         }
         
-        .loading {
-            text-align: center;
-            padding: 20px;
+        .search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
         }
         
-        .error-message {
-            background-color: #ffebee;
-            color: #c62828;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-            text-align: center;
+        .search-input {
+            flex: 1;
         }
         
         .choice-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 12px;
+            margin-top: 20px;
         }
         
         .choice-buttons button {
             flex: 1;
+            padding: 16px;
+            font-size: 1.1rem;
+            border-radius: 10px;
         }
         
         .deal-info {
             background-color: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            padding: 16px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
         }
         
         .result-message {
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
+            padding: 16px;
+            border-radius: 10px;
+            margin: 15px 0;
             text-align: center;
             font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .result-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
         }
         
         .result-success {
             background-color: #e8f5e8;
             color: #2e7d32;
+            border-left: 4px solid #4caf50;
         }
         
         .result-danger {
             background-color: #ffebee;
             color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+        
+        .result-warning {
+            background-color: #fff3e0;
+            color: #ef6c00;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(67, 97, 238, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border-left: 4px solid #f44336;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #dee2e6;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .user-info-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        /* Мобильные стили */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            header {
+                border-radius: 0;
+                margin-bottom: 15px;
+                position: static;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+            
+            .subtitle {
+                font-size: 0.8rem;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .stat-card {
+                padding: 15px 10px;
+            }
+            
+            .stat-value {
+                font-size: 1.4rem;
+            }
+            
+            .user-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .user-card {
+                padding: 15px;
+            }
+            
+            .tab {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .ranking-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .search-container {
+                flex-direction: column;
+            }
+            
+            .choice-buttons {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                padding: 20px;
+                border-radius: 12px;
+            }
+            
+            .deal-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .deal-actions {
+                width: 100%;
+                justify-content: stretch;
+            }
+            
+            .deal-actions button {
+                flex: 1;
+            }
+            
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .card {
+                padding: 15px;
+            }
+            
+            input, select, button {
+                padding: 12px 14px;
+            }
+        }
+        
+        /* Улучшения для очень маленьких экранов */
+        @media (max-width: 360px) {
+            .container {
+                padding: 8px;
+            }
+            
+            .card {
+                padding: 12px;
+            }
+            
+            .tab {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* Поддержка темной темы */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --light: #1a1d23;
+                --dark: #f8f9fa;
+            }
+            
+            body {
+                background-color: #121212;
+                color: var(--dark);
+            }
+            
+            .card, .stat-card, .user-card, .deal-item {
+                background: #1e1e1e;
+                color: var(--dark);
+            }
+            
+            input, select {
+                background: #2d2d2d;
+                border-color: #444;
+                color: var(--dark);
+            }
+            
+            .deal-info, .user-info {
+                background: #2a2a2a;
+            }
+            
+            .ranking-table tr:hover {
+                background-color: #2a2a2a;
+            }
         }
     </style>
 </head>
@@ -363,41 +765,49 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <div>
-                    <h1>Эволюция доверия</h1>
-                    <p>Создавай сделки, зарабатывай монеты и повышай репутацию!</p>
+                <div class="logo">
+                    <i class="fas fa-handshake"></i>
+                    <div>
+                        <h1>Эволюция доверия</h1>
+                        <p class="subtitle">Создавай сделки, зарабатывай монеты и повышай репутацию!</p>
+                    </div>
                 </div>
                 <div id="userInfo" style="display: none;">
-                    <p id="userGreeting">Привет, </p>
-                    <button id="logoutBtn" class="btn-secondary">Выйти</button>
+                    <button id="logoutBtn" class="btn-outline btn-small">
+                        <i class="fas fa-sign-out-alt"></i> Выйти
+                    </button>
                 </div>
             </div>
         </header>
 
         <div id="loadingMessage" class="loading">
+            <div class="spinner"></div>
             <p>Загрузка приложения...</p>
         </div>
 
         <div id="errorMessage" class="error-message" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
             <p>Произошла ошибка при загрузке приложения. Пожалуйста, обновите страницу.</p>
         </div>
 
         <!-- Секция аутентификации -->
-        <section id="authSection" class="auth-section">
+        <section id="authSection" class="auth-section active">
             <div class="card">
-                <h2>Вход / Регистрация</h2>
+                <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                    <i class="fas fa-user"></i> Вход / Регистрация
+                </h2>
                 <div id="authError" class="error-message" style="display: none;"></div>
                 <form id="authForm">
                     <div class="form-group">
-                        <label for="username">Никнейм</label>
-                        <input type="text" id="username" required>
+                        <label for="username"><i class="fas fa-user-tag"></i> Никнейм</label>
+                        <input type="text" id="username" placeholder="Введите ваш никнейм" required>
                     </div>
                     <div class="form-group">
-                        <label for="password">Пароль</label>
-                        <input type="password" id="password" required>
+                        <label for="password"><i class="fas fa-lock"></i> Пароль</label>
+                        <input type="password" id="password" placeholder="Введите пароль" required>
                     </div>
                     <div class="form-group">
-                        <label for="class">Класс</label>
+                        <label for="class"><i class="fas fa-users"></i> Класс</label>
                         <select id="class" required>
                             <option value="">Выберите класс</option>
                             <option value="5А">5А</option>
@@ -422,70 +832,103 @@
                             <option value="11">11</option>
                         </select>
                     </div>
-                    <button type="submit" id="authBtn">Войти / Зарегистрироваться</button>
+                    <button type="submit" id="authBtn">
+                        <i class="fas fa-sign-in-alt"></i> Войти / Зарегистрироваться
+                    </button>
                 </form>
             </div>
         </section>
 
         <!-- Секция профиля -->
         <section id="profileSection" class="profile-section">
+            <div class="user-info">
+                <div class="user-info-avatar" id="userAvatar"></div>
+                <div>
+                    <h3 id="userGreeting">Привет, игрок!</h3>
+                    <p id="userClass">Класс: -</p>
+                </div>
+            </div>
+
             <div class="stats">
                 <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-coins"></i>
+                    </div>
                     <div class="stat-label">Монеты</div>
                     <div class="stat-value" id="coinsValue">0</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
                     <div class="stat-label">Репутация</div>
                     <div class="stat-value" id="reputationValue">0</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
                     <div class="stat-label">Класс</div>
                     <div class="stat-value" id="classValue">-</div>
                 </div>
             </div>
 
             <div class="tabs">
-                <div class="tab active" data-tab="users">Игроки</div>
-                <div class="tab" data-tab="deals">Мои сделки</div>
-                <div class="tab" data-tab="ranking">Рейтинг</div>
+                <div class="tab active" data-tab="users">
+                    <i class="fas fa-users"></i> Игроки
+                </div>
+                <div class="tab" data-tab="deals">
+                    <i class="fas fa-handshake"></i> Мои сделки
+                </div>
+                <div class="tab" data-tab="ranking">
+                    <i class="fas fa-trophy"></i> Рейтинг
+                </div>
             </div>
 
             <div class="tab-content active" id="usersTab">
                 <div class="card">
-                    <h2>Поиск игроков</h2>
-                    <div class="form-group">
-                        <input type="text" id="searchInput" placeholder="Введите имя пользователя или выберите класс">
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-search"></i> Поиск игроков
+                    </h2>
+                    <div class="search-container">
+                        <div class="form-group search-input">
+                            <input type="text" id="searchInput" placeholder="Введите имя пользователя">
+                        </div>
+                        <div class="form-group" style="min-width: 150px;">
+                            <select id="classFilter">
+                                <option value="">Все классы</option>
+                                <option value="5А">5А</option>
+                                <option value="5Б">5Б</option>
+                                <option value="5В">5В</option>
+                                <option value="5Г">5Г</option>
+                                <option value="6А">6А</option>
+                                <option value="6Б">6Б</option>
+                                <option value="6В">6В</option>
+                                <option value="6Г">6Г</option>
+                                <option value="6Д">6Д</option>
+                                <option value="7А">7А</option>
+                                <option value="7Б">7Б</option>
+                                <option value="8А">8А</option>
+                                <option value="8Б">8Б</option>
+                                <option value="8В">8В</option>
+                                <option value="9А">9А</option>
+                                <option value="9Б">9Б</option>
+                                <option value="9В">9В</option>
+                                <option value="10А">10А</option>
+                                <option value="10Б">10Б</option>
+                                <option value="11">11</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <select id="classFilter">
-                            <option value="">Все классы</option>
-                            <option value="5А">5А</option>
-                            <option value="5Б">5Б</option>
-                            <option value="5В">5В</option>
-                            <option value="5Г">5Г</option>
-                            <option value="6А">6А</option>
-                            <option value="6Б">6Б</option>
-                            <option value="6В">6В</option>
-                            <option value="6Г">6Г</option>
-                            <option value="6Д">6Д</option>
-                            <option value="7А">7А</option>
-                            <option value="7Б">7Б</option>
-                            <option value="8А">8А</option>
-                            <option value="8Б">8Б</option>
-                            <option value="8В">8В</option>
-                            <option value="9А">9А</option>
-                            <option value="9Б">9Б</option>
-                            <option value="9В">9В</option>
-                            <option value="10А">10А</option>
-                            <option value="10Б">10Б</option>
-                            <option value="11">11</option>
-                        </select>
-                    </div>
-                    <button id="searchBtn">Поиск</button>
+                    <button id="searchBtn">
+                        <i class="fas fa-search"></i> Поиск
+                    </button>
                 </div>
 
                 <div class="card">
-                    <h2>Список игроков</h2>
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-users"></i> Список игроков
+                    </h2>
                     <div id="usersList" class="user-list">
                         <!-- Список пользователей будет загружен здесь -->
                     </div>
@@ -494,14 +937,18 @@
 
             <div class="tab-content" id="dealsTab">
                 <div class="card">
-                    <h2>Входящие сделки</h2>
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-inbox"></i> Входящие сделки
+                    </h2>
                     <div id="incomingDeals">
                         <!-- Входящие сделки будут загружены здесь -->
                     </div>
                 </div>
 
                 <div class="card">
-                    <h2>Исходящие сделки</h2>
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-paper-plane"></i> Исходящие сделки
+                    </h2>
                     <div id="outgoingDeals">
                         <!-- Исходящие сделки будут загружены здесь -->
                     </div>
@@ -510,7 +957,9 @@
 
             <div class="tab-content" id="rankingTab">
                 <div class="card">
-                    <h2>Рейтинг игроков</h2>
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-trophy"></i> Рейтинг игроков
+                    </h2>
                     <table class="ranking-table">
                         <thead>
                             <tr>
@@ -534,23 +983,41 @@
     <div id="dealModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2 id="dealUsername">Предложить сделку</h2>
-            <div class="user-avatar" id="dealAvatar"></div>
-            <p><strong>Игрок:</strong> <span id="dealPlayerName"></span></p>
-            <p><strong>Класс:</strong> <span id="dealPlayerClass"></span></p>
-            <p><strong>Монеты:</strong> <span id="dealPlayerCoins"></span></p>
-            <p><strong>Репутация:</strong> <span id="dealPlayerReputation"></span></p>
+            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <i class="fas fa-handshake"></i> Предложить сделку
+            </h2>
+            <div class="user-info">
+                <div class="user-avatar" id="dealAvatar"></div>
+                <div>
+                    <h3 id="dealPlayerName">Игрок</h3>
+                    <p id="dealPlayerClass">Класс: -</p>
+                </div>
+            </div>
+            <div class="user-details" style="justify-content: space-around; margin: 20px 0;">
+                <div class="user-detail">
+                    <i class="fas fa-coins"></i>
+                    <span id="dealPlayerCoins">0</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-star"></i>
+                    <span id="dealPlayerReputation">0</span>
+                </div>
+            </div>
             
             <div class="deal-info">
-                <h3>Выберите вашу стратегию:</h3>
-                <p><strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
-                <p><strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
-                <p>Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
+                <h3 style="margin-bottom: 10px;">Выберите вашу стратегию:</h3>
+                <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
+                <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
+                <p style="margin-top: 10px; font-style: italic;">Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
             </div>
             
             <div class="choice-buttons">
-                <button id="cooperateBtn" class="btn-success">Сотрудничать</button>
-                <button id="cheatBtn" class="btn-danger">Жульничать</button>
+                <button id="cooperateBtn" class="btn-success">
+                    <i class="fas fa-handshake"></i> Сотрудничать
+                </button>
+                <button id="cheatBtn" class="btn-danger">
+                    <i class="fas fa-user-secret"></i> Жульничать
+                </button>
             </div>
         </div>
     </div>
@@ -559,14 +1026,20 @@
     <div id="responseModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2>Ответить на сделку</h2>
-            <div class="deal-info" id="responseDealInfo">
+            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <i class="fas fa-reply"></i> Ответить на сделку
+            </h2>
+            <div id="responseDealInfo">
                 <!-- Информация о сделке будет загружена здесь -->
             </div>
             
             <div class="choice-buttons">
-                <button id="respondCooperateBtn" class="btn-success">Сотрудничать</button>
-                <button id="respondCheatBtn" class="btn-danger">Жульничать</button>
+                <button id="respondCooperateBtn" class="btn-success">
+                    <i class="fas fa-handshake"></i> Сотрудничать
+                </button>
+                <button id="respondCheatBtn" class="btn-danger">
+                    <i class="fas fa-user-secret"></i> Жульничать
+                </button>
             </div>
         </div>
     </div>
@@ -575,11 +1048,15 @@
     <div id="resultModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2>Результат сделки</h2>
+            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <i class="fas fa-chart-line"></i> Результат сделки
+            </h2>
             <div id="resultContent">
                 <!-- Результат сделки будет загружен здесь -->
             </div>
-            <button id="closeResultBtn" class="btn-primary" style="margin-top: 15px;">Закрыть</button>
+            <button id="closeResultBtn" style="margin-top: 20px;">
+                <i class="fas fa-check"></i> Понятно
+            </button>
         </div>
     </div>
 
@@ -597,7 +1074,7 @@
         let incomingDeals, outgoingDeals, rankingTable, dealModal, responseModal, resultModal, closeModal;
         let dealUsername, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation;
         let cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo;
-        let resultContent, closeResultBtn;
+        let resultContent, closeResultBtn, userAvatar;
         let loadingMessage, errorMessage, authError;
 
         // Конфигурация Supabase
@@ -667,6 +1144,7 @@
             authBtn = document.getElementById('authBtn');
             userInfo = document.getElementById('userInfo');
             userGreeting = document.getElementById('userGreeting');
+            userAvatar = document.getElementById('userAvatar');
             logoutBtn = document.getElementById('logoutBtn');
             coinsValue = document.getElementById('coinsValue');
             reputationValue = document.getElementById('reputationValue');
@@ -682,7 +1160,6 @@
             responseModal = document.getElementById('responseModal');
             resultModal = document.getElementById('resultModal');
             closeModal = document.querySelectorAll('.close-modal');
-            dealUsername = document.getElementById('dealUsername');
             dealAvatar = document.getElementById('dealAvatar');
             dealPlayerName = document.getElementById('dealPlayerName');
             dealPlayerClass = document.getElementById('dealPlayerClass');
@@ -1000,9 +1477,13 @@
                 
                 // Обновление интерфейса
                 if (userGreeting) userGreeting.textContent = `Привет, ${profile.username}!`;
+                if (userAvatar) userAvatar.textContent = profile.username.charAt(0).toUpperCase();
                 if (coinsValue) coinsValue.textContent = profile.coins;
                 if (reputationValue) reputationValue.textContent = profile.reputation;
-                if (classValue) classValue.textContent = profile.class;
+                if (classValue) {
+                    classValue.textContent = profile.class;
+                    document.getElementById('userClass').textContent = `Класс: ${profile.class}`;
+                }
                 
                 // Загрузка данных для вкладок
                 loadUsers();
@@ -1119,7 +1600,12 @@
                     usersList.innerHTML = '';
                     
                     if (users.length === 0) {
-                        usersList.innerHTML = '<p>Пользователи не найдены</p>';
+                        usersList.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <p>Пользователи не найдены</p>
+                            </div>
+                        `;
                         return;
                     }
                     
@@ -1128,11 +1614,24 @@
                         userCard.className = 'user-card';
                         userCard.innerHTML = `
                             <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                            <h3>${user.username}</h3>
-                            <p>Класс: ${user.class}</p>
-                            <p>Монеты: ${user.coins}</p>
-                            <p>Репутация: ${user.reputation}</p>
-                            <button class="btn-secondary propose-deal-btn" data-user-id="${user.id}">Сделка</button>
+                            <div class="user-name">${user.username}</div>
+                            <div class="user-details">
+                                <div class="user-detail">
+                                    <i class="fas fa-users"></i>
+                                    <span>${user.class}</span>
+                                </div>
+                                <div class="user-detail">
+                                    <i class="fas fa-coins"></i>
+                                    <span>${user.coins}</span>
+                                </div>
+                                <div class="user-detail">
+                                    <i class="fas fa-star"></i>
+                                    <span>${user.reputation}</span>
+                                </div>
+                            </div>
+                            <button class="btn-secondary propose-deal-btn" data-user-id="${user.id}">
+                                <i class="fas fa-handshake"></i> Сделка
+                            </button>
                         `;
                         
                         usersList.appendChild(userCard);
@@ -1174,7 +1673,7 @@
                 
                 if (dealPlayerName) dealPlayerName.textContent = user.username;
                 if (dealAvatar) dealAvatar.textContent = user.username.charAt(0).toUpperCase();
-                if (dealPlayerClass) dealPlayerClass.textContent = user.class;
+                if (dealPlayerClass) dealPlayerClass.textContent = `Класс: ${user.class}`;
                 if (dealPlayerCoins) dealPlayerCoins.textContent = user.coins;
                 if (dealPlayerReputation) dealPlayerReputation.textContent = user.reputation;
                 
@@ -1246,15 +1745,28 @@
                 
                 if (responseDealInfo) {
                     responseDealInfo.innerHTML = `
-                        <p><strong>Игрок:</strong> ${deal.from_user.username}</p>
-                        <p><strong>Класс:</strong> ${deal.from_user.class}</p>
-                        <p><strong>Монеты:</strong> ${deal.from_user.coins}</p>
-                        <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
+                        <div class="user-info">
+                            <div class="user-avatar">${deal.from_user.username.charAt(0).toUpperCase()}</div>
+                            <div>
+                                <h3>${deal.from_user.username}</h3>
+                                <p>Класс: ${deal.from_user.class}</p>
+                            </div>
+                        </div>
+                        <div class="user-details" style="justify-content: space-around; margin: 15px 0;">
+                            <div class="user-detail">
+                                <i class="fas fa-coins"></i>
+                                <span>${deal.from_user.coins}</span>
+                            </div>
+                            <div class="user-detail">
+                                <i class="fas fa-star"></i>
+                                <span>${deal.from_user.reputation}</span>
+                            </div>
+                        </div>
                         <div class="deal-info">
-                            <h3>Выберите вашу стратегию:</h3>
-                            <p><strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
-                            <p><strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
-                            <p>Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
+                            <h3 style="margin-bottom: 10px;">Выберите вашу стратегию:</h3>
+                            <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
+                            <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
+                            <p style="margin-top: 10px; font-style: italic;">Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
                         </div>
                     `;
                 }
@@ -1315,6 +1827,9 @@
                 if (deal.from_choice === 'cooperate' && userChoice === 'cooperate') {
                     resultHtml = `
                         <div class="result-message result-success">
+                            <div class="result-icon">
+                                <i class="fas fa-handshake"></i>
+                            </div>
                             <p>Оба игрока выбрали "Сотрудничать"!</p>
                             <p>Вы получили: +${toCoinsChange} монет</p>
                             <p>Другой игрок получил: +${fromCoinsChange} монет</p>
@@ -1324,6 +1839,9 @@
                 } else if (deal.from_choice === 'cooperate' && userChoice === 'cheat') {
                     resultHtml = `
                         <div class="result-message ${toCoinsChange > 0 ? 'result-success' : 'result-danger'}">
+                            <div class="result-icon">
+                                <i class="fas fa-user-secret"></i>
+                            </div>
                             <p>Вы выбрали "Жульничать", другой игрок выбрал "Сотрудничать"</p>
                             <p>Вы получили: +${toCoinsChange} монет</p>
                             <p>Другой игрок потерял: ${fromCoinsChange} монет</p>
@@ -1333,6 +1851,9 @@
                 } else if (deal.from_choice === 'cheat' && userChoice === 'cooperate') {
                     resultHtml = `
                         <div class="result-message result-danger">
+                            <div class="result-icon">
+                                <i class="fas fa-sad-tear"></i>
+                            </div>
                             <p>Вы выбрали "Сотрудничать", другой игрок выбрал "Жульничать"</p>
                             <p>Вы потеряли: ${toCoinsChange} монет</p>
                             <p>Другой игрок получил: +${fromCoinsChange} монет</p>
@@ -1341,7 +1862,10 @@
                     `;
                 } else if (deal.from_choice === 'cheat' && userChoice === 'cheat') {
                     resultHtml = `
-                        <div class="result-message result-danger">
+                        <div class="result-message result-warning">
+                            <div class="result-icon">
+                                <i class="fas fa-angry"></i>
+                            </div>
                             <p>Оба игрока выбрали "Жульничать"!</p>
                             <p>Вы потеряли: ${Math.abs(toCoinsChange)} монет</p>
                             <p>Другой игрок потерял: ${Math.abs(fromCoinsChange)} монет</p>
@@ -1366,7 +1890,7 @@
                     return;
                 }
                 
-                // Входящие сделки - показываем только информацию об отправителе, без его выбора
+                // Входящие сделки
                 const { data: incoming, error: incomingError } = await supabase
                     .from('deals')
                     .select(`
@@ -1382,7 +1906,12 @@
                     incomingDeals.innerHTML = '';
                     
                     if (incoming.length === 0) {
-                        incomingDeals.innerHTML = '<p>Нет входящих сделок</p>';
+                        incomingDeals.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-inbox"></i>
+                                <p>Нет входящих сделок</p>
+                            </div>
+                        `;
                     } else {
                         incoming.forEach(deal => {
                             const dealItem = document.createElement('div');
@@ -1394,7 +1923,9 @@
                                     <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
                                 </div>
                                 <div class="deal-actions">
-                                    <button class="btn-success respond-deal" data-deal-id="${deal.id}">Ответить</button>
+                                    <button class="btn-success respond-deal" data-deal-id="${deal.id}">
+                                        <i class="fas fa-reply"></i> Ответить
+                                    </button>
                                 </div>
                             `;
                             
@@ -1426,7 +1957,12 @@
                     outgoingDeals.innerHTML = '';
                     
                     if (outgoing.length === 0) {
-                        outgoingDeals.innerHTML = '<p>Нет исходящих сделок</p>';
+                        outgoingDeals.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-paper-plane"></i>
+                                <p>Нет исходящих сделок</p>
+                            </div>
+                        `;
                     } else {
                         outgoing.forEach(deal => {
                             const statusBadge = deal.status === 'pending' ? 
@@ -1459,6 +1995,7 @@
                 console.error('Ошибка загрузки сделок:', error);
             }
         }
+
         // Загрузка рейтинга
         async function loadRanking() {
             try {
@@ -1480,23 +2017,36 @@
                 if (rankingTable) {
                     rankingTable.innerHTML = '';
                     
-                    users.forEach((user, index) => {
-                        const row = document.createElement('tr');
-                        
-                        if (user.id === currentUser.id) {
-                            row.style.backgroundColor = '#e6f7ff';
-                        }
-                        
-                        row.innerHTML = `
-                            <td>${index + 1}</td>
-                            <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
-                            <td>${user.class}</td>
-                            <td>${user.coins}</td>
-                            <td>${user.reputation}</td>
+                    if (users.length === 0) {
+                        rankingTable.innerHTML = `
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">
+                                    <div class="empty-state">
+                                        <i class="fas fa-trophy"></i>
+                                        <p>Нет данных для рейтинга</p>
+                                    </div>
+                                </td>
+                            </tr>
                         `;
-                        
-                        rankingTable.appendChild(row);
-                    });
+                    } else {
+                        users.forEach((user, index) => {
+                            const row = document.createElement('tr');
+                            
+                            if (user.id === currentUser.id) {
+                                row.style.backgroundColor = '#e6f7ff';
+                            }
+                            
+                            row.innerHTML = `
+                                <td>${index + 1}</td>
+                                <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
+                                <td>${user.class}</td>
+                                <td>${user.coins}</td>
+                                <td>${user.reputation}</td>
+                            `;
+                            
+                            rankingTable.appendChild(row);
+                        });
+                    }
                 }
             } catch (error) {
                 console.error('Ошибка загрузки рейтинга:', error);
@@ -1507,6 +2057,20 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Даем время для загрузки всех скриптов
             setTimeout(initApp, 100);
+            
+            // Закрытие модальных окон при клике вне области
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.classList.remove('active');
+                }
+            });
+            
+            // Предотвращение закрытия при клике внутри модального окна
+            document.querySelectorAll('.modal-content').forEach(content => {
+                content.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                });
+            });
         });
     </script>
 </body>
