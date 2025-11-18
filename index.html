@@ -6,6 +6,7 @@
     <title>Эволюция доверия</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Ваши стили остаются без изменений */
         :root {
             --primary: #4361ee;
             --secondary: #3a0ca3;
@@ -490,7 +491,7 @@
     </div>
 
     <script>
-        // Инициализация Supabase
+        // Инициализация Supabase - ДОЛЖНА БЫТЬ ПЕРВОЙ!
         const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
@@ -572,15 +573,20 @@
 
         // Проверка авторизации
         async function checkAuth() {
-            const { data: { user } } = await supabase.auth.getUser();
-            
-            if (user) {
-                // Пользователь авторизован
-                await loadUserProfile(user.id);
-                currentUser = user;
-                showProfileSection();
-            } else {
-                // Пользователь не авторизован
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (user) {
+                    // Пользователь авторизован
+                    await loadUserProfile(user.id);
+                    currentUser = user;
+                    showProfileSection();
+                } else {
+                    // Пользователь не авторизован
+                    showAuthSection();
+                }
+            } catch (error) {
+                console.error('Ошибка проверки авторизации:', error);
                 showAuthSection();
             }
         }
@@ -653,34 +659,42 @@
 
         // Выход из системы
         async function handleLogout() {
-            await supabase.auth.signOut();
-            currentUser = null;
-            showAuthSection();
+            try {
+                await supabase.auth.signOut();
+                currentUser = null;
+                showAuthSection();
+            } catch (error) {
+                console.error('Ошибка выхода:', error);
+            }
         }
 
         // Загрузка профиля пользователя
         async function loadUserProfile(userId) {
-            const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-            
-            if (error) {
+            try {
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+                
+                if (error) {
+                    console.error('Ошибка загрузки профиля:', error);
+                    return;
+                }
+                
+                // Обновление интерфейса
+                userGreeting.textContent = `Привет, ${profile.username}!`;
+                coinsValue.textContent = profile.coins;
+                reputationValue.textContent = profile.reputation;
+                classValue.textContent = profile.class;
+                
+                // Загрузка данных для вкладок
+                loadUsers();
+                loadDeals();
+                loadRanking();
+            } catch (error) {
                 console.error('Ошибка загрузки профиля:', error);
-                return;
             }
-            
-            // Обновление интерфейса
-            userGreeting.textContent = `Привет, ${profile.username}!`;
-            coinsValue.textContent = profile.coins;
-            reputationValue.textContent = profile.reputation;
-            classValue.textContent = profile.class;
-            
-            // Загрузка данных для вкладок
-            loadUsers();
-            loadDeals();
-            loadRanking();
         }
 
         // Показать секцию аутентификации
@@ -699,95 +713,108 @@
 
         // Загрузка списка пользователей
         async function loadUsers() {
-            const searchTerm = searchInput.value;
-            const selectedClass = classFilter.value;
-            
-            let query = supabase
-                .from('profiles')
-                .select('*')
-                .neq('id', currentUser.id);
-            
-            if (searchTerm) {
-                query = query.ilike('username', `%${searchTerm}%`);
-            }
-            
-            if (selectedClass) {
-                query = query.eq('class', selectedClass);
-            }
-            
-            const { data: users, error } = await query;
-            
-            if (error) {
-                console.error('Ошибка загрузки пользователей:', error);
-                return;
-            }
-            
-            usersList.innerHTML = '';
-            
-            users.forEach(user => {
-                const userCard = document.createElement('div');
-                userCard.className = 'user-card';
-                userCard.innerHTML = `
-                    <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <h3>${user.username}</h3>
-                    <p>Класс: ${user.class}</p>
-                    <p>Монеты: ${user.coins}</p>
-                    <p>Репутация: ${user.reputation}</p>
-                    <button class="btn-secondary view-profile-btn" data-user-id="${user.id}">Посмотреть профиль</button>
-                `;
+            try {
+                const searchTerm = searchInput.value;
+                const selectedClass = classFilter.value;
                 
-                usersList.appendChild(userCard);
-            });
-            
-            // Добавляем обработчики для кнопок просмотра профиля
-            document.querySelectorAll('.view-profile-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const userId = this.dataset.userId;
-                    showUserModal(userId);
+                let query = supabase
+                    .from('profiles')
+                    .select('*')
+                    .neq('id', currentUser.id);
+                
+                if (searchTerm) {
+                    query = query.ilike('username', `%${searchTerm}%`);
+                }
+                
+                if (selectedClass) {
+                    query = query.eq('class', selectedClass);
+                }
+                
+                const { data: users, error } = await query;
+                
+                if (error) {
+                    console.error('Ошибка загрузки пользователей:', error);
+                    return;
+                }
+                
+                usersList.innerHTML = '';
+                
+                if (users.length === 0) {
+                    usersList.innerHTML = '<p>Пользователи не найдены</p>';
+                    return;
+                }
+                
+                users.forEach(user => {
+                    const userCard = document.createElement('div');
+                    userCard.className = 'user-card';
+                    userCard.innerHTML = `
+                        <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                        <h3>${user.username}</h3>
+                        <p>Класс: ${user.class}</p>
+                        <p>Монеты: ${user.coins}</p>
+                        <p>Репутация: ${user.reputation}</p>
+                        <button class="btn-secondary view-profile-btn" data-user-id="${user.id}">Посмотреть профиль</button>
+                    `;
+                    
+                    usersList.appendChild(userCard);
                 });
-            });
+                
+                // Добавляем обработчики для кнопок просмотра профиля
+                document.querySelectorAll('.view-profile-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const userId = this.dataset.userId;
+                        showUserModal(userId);
+                    });
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки пользователей:', error);
+            }
         }
 
         // Показать модальное окно пользователя
         async function showUserModal(userId) {
-            const { data: user, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-            
-            if (error) {
-                console.error('Ошибка загрузки профиля пользователя:', error);
-                return;
+            try {
+                const { data: user, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', userId)
+                    .single();
+                
+                if (error) {
+                    console.error('Ошибка загрузки профиля пользователя:', error);
+                    return;
+                }
+                
+                selectedUser = user;
+                
+                modalUsername.textContent = user.username;
+                modalAvatar.textContent = user.username.charAt(0).toUpperCase();
+                modalClass.textContent = user.class;
+                modalCoins.textContent = user.coins;
+                modalReputation.textContent = user.reputation;
+                
+                userModal.classList.add('active');
+            } catch (error) {
+                console.error('Ошибка показа модального окна:', error);
             }
-            
-            selectedUser = user;
-            
-            modalUsername.textContent = user.username;
-            modalAvatar.textContent = user.username.charAt(0).toUpperCase();
-            modalClass.textContent = user.class;
-            modalCoins.textContent = user.coins;
-            modalReputation.textContent = user.reputation;
-            
-            userModal.classList.add('active');
         }
 
         // Предложить сделку
         async function proposeDeal() {
-            const amount = parseInt(dealAmount.value);
-            
-            if (!amount || amount < 1) {
-                alert('Пожалуйста, введите корректную сумму');
-                return;
-            }
-            
-            // Проверяем, достаточно ли монет у текущего пользователя
-            if (currentUser.coins < amount) {
-                alert('Недостаточно монет для предложения сделки');
-                return;
-            }
-            
             try {
+                const amount = parseInt(dealAmount.value);
+                
+                if (!amount || amount < 1) {
+                    alert('Пожалуйста, введите корректную сумму');
+                    return;
+                }
+                
+                // Проверяем, достаточно ли монет у текущего пользователя
+                if (currentUser.coins < amount) {
+                    alert('Недостаточно монет для предложения сделки');
+                    return;
+                }
+                
                 const { data, error } = await supabase
                     .from('deals')
                     .insert([
@@ -814,95 +841,99 @@
 
         // Загрузка сделок
         async function loadDeals() {
-            // Входящие сделки
-            const { data: incoming, error: incomingError } = await supabase
-                .from('deals')
-                .select(`
-                    *,
-                    from_user:profiles!deals_from_user_fkey(username, class)
-                `)
-                .eq('to_user', currentUser.id)
-                .eq('status', 'pending');
-            
-            if (incomingError) {
-                console.error('Ошибка загрузки входящих сделок:', incomingError);
-            } else {
-                incomingDeals.innerHTML = '';
+            try {
+                // Входящие сделки
+                const { data: incoming, error: incomingError } = await supabase
+                    .from('deals')
+                    .select(`
+                        *,
+                        from_user:profiles!deals_from_user_fkey(username, class)
+                    `)
+                    .eq('to_user', currentUser.id)
+                    .eq('status', 'pending');
                 
-                if (incoming.length === 0) {
-                    incomingDeals.innerHTML = '<p>Нет входящих сделок</p>';
+                if (incomingError) {
+                    console.error('Ошибка загрузки входящих сделок:', incomingError);
                 } else {
-                    incoming.forEach(deal => {
-                        const dealItem = document.createElement('div');
-                        dealItem.className = 'deal-item';
-                        dealItem.innerHTML = `
-                            <div>
-                                <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                                <p><strong>Сумма:</strong> ${deal.amount} монет</p>
-                            </div>
-                            <div class="deal-actions">
-                                <button class="btn-success accept-deal" data-deal-id="${deal.id}">Принять</button>
-                                <button class="btn-danger reject-deal" data-deal-id="${deal.id}">Отклонить</button>
-                            </div>
-                        `;
+                    incomingDeals.innerHTML = '';
+                    
+                    if (incoming.length === 0) {
+                        incomingDeals.innerHTML = '<p>Нет входящих сделок</p>';
+                    } else {
+                        incoming.forEach(deal => {
+                            const dealItem = document.createElement('div');
+                            dealItem.className = 'deal-item';
+                            dealItem.innerHTML = `
+                                <div>
+                                    <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
+                                    <p><strong>Сумма:</strong> ${deal.amount} монет</p>
+                                </div>
+                                <div class="deal-actions">
+                                    <button class="btn-success accept-deal" data-deal-id="${deal.id}">Принять</button>
+                                    <button class="btn-danger reject-deal" data-deal-id="${deal.id}">Отклонить</button>
+                                </div>
+                            `;
+                            
+                            incomingDeals.appendChild(dealItem);
+                        });
                         
-                        incomingDeals.appendChild(dealItem);
-                    });
-                    
-                    // Добавляем обработчики для кнопок принятия/отклонения сделок
-                    document.querySelectorAll('.accept-deal').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const dealId = this.dataset.dealId;
-                            acceptDeal(dealId);
+                        // Добавляем обработчики для кнопок принятия/отклонения сделок
+                        document.querySelectorAll('.accept-deal').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const dealId = this.dataset.dealId;
+                                acceptDeal(dealId);
+                            });
                         });
-                    });
-                    
-                    document.querySelectorAll('.reject-deal').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const dealId = this.dataset.dealId;
-                            rejectDeal(dealId);
+                        
+                        document.querySelectorAll('.reject-deal').forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const dealId = this.dataset.dealId;
+                                rejectDeal(dealId);
+                            });
                         });
-                    });
+                    }
                 }
-            }
-            
-            // Исходящие сделки
-            const { data: outgoing, error: outgoingError } = await supabase
-                .from('deals')
-                .select(`
-                    *,
-                    to_user:profiles!deals_to_user_fkey(username, class)
-                `)
-                .eq('from_user', currentUser.id);
-            
-            if (outgoingError) {
-                console.error('Ошибка загрузки исходящих сделок:', outgoingError);
-            } else {
-                outgoingDeals.innerHTML = '';
                 
-                if (outgoing.length === 0) {
-                    outgoingDeals.innerHTML = '<p>Нет исходящих сделок</p>';
+                // Исходящие сделки
+                const { data: outgoing, error: outgoingError } = await supabase
+                    .from('deals')
+                    .select(`
+                        *,
+                        to_user:profiles!deals_to_user_fkey(username, class)
+                    `)
+                    .eq('from_user', currentUser.id);
+                
+                if (outgoingError) {
+                    console.error('Ошибка загрузки исходящих сделок:', outgoingError);
                 } else {
-                    outgoing.forEach(deal => {
-                        const statusBadge = deal.status === 'pending' ? 
-                            '<span class="badge badge-warning">Ожидание</span>' : 
-                            deal.status === 'accepted' ? 
-                            '<span class="badge badge-success">Принята</span>' : 
-                            '<span class="badge badge-danger">Отклонена</span>';
-                        
-                        const dealItem = document.createElement('div');
-                        dealItem.className = 'deal-item';
-                        dealItem.innerHTML = `
-                            <div>
-                                <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                                <p><strong>Сумма:</strong> ${deal.amount} монет</p>
-                                <p><strong>Статус:</strong> ${statusBadge}</p>
-                            </div>
-                        `;
-                        
-                        outgoingDeals.appendChild(dealItem);
-                    });
+                    outgoingDeals.innerHTML = '';
+                    
+                    if (outgoing.length === 0) {
+                        outgoingDeals.innerHTML = '<p>Нет исходящих сделок</p>';
+                    } else {
+                        outgoing.forEach(deal => {
+                            const statusBadge = deal.status === 'pending' ? 
+                                '<span class="badge badge-warning">Ожидание</span>' : 
+                                deal.status === 'accepted' ? 
+                                '<span class="badge badge-success">Принята</span>' : 
+                                '<span class="badge badge-danger">Отклонена</span>';
+                            
+                            const dealItem = document.createElement('div');
+                            dealItem.className = 'deal-item';
+                            dealItem.innerHTML = `
+                                <div>
+                                    <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
+                                    <p><strong>Сумма:</strong> ${deal.amount} монет</p>
+                                    <p><strong>Статус:</strong> ${statusBadge}</p>
+                                </div>
+                            `;
+                            
+                            outgoingDeals.appendChild(dealItem);
+                        });
+                    }
                 }
+            } catch (error) {
+                console.error('Ошибка загрузки сделок:', error);
             }
         }
 
@@ -944,35 +975,39 @@
 
         // Загрузка рейтинга
         async function loadRanking() {
-            const { data: users, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('coins', { ascending: false });
-            
-            if (error) {
-                console.error('Ошибка загрузки рейтинга:', error);
-                return;
-            }
-            
-            rankingTable.innerHTML = '';
-            
-            users.forEach((user, index) => {
-                const row = document.createElement('tr');
+            try {
+                const { data: users, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .order('coins', { ascending: false });
                 
-                if (user.id === currentUser.id) {
-                    row.style.backgroundColor = '#e6f7ff';
+                if (error) {
+                    console.error('Ошибка загрузки рейтинга:', error);
+                    return;
                 }
                 
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
-                    <td>${user.class}</td>
-                    <td>${user.coins}</td>
-                    <td>${user.reputation}</td>
-                `;
+                rankingTable.innerHTML = '';
                 
-                rankingTable.appendChild(row);
-            });
+                users.forEach((user, index) => {
+                    const row = document.createElement('tr');
+                    
+                    if (user.id === currentUser.id) {
+                        row.style.backgroundColor = '#e6f7ff';
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
+                        <td>${user.class}</td>
+                        <td>${user.coins}</td>
+                        <td>${user.reputation}</td>
+                    `;
+                    
+                    rankingTable.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки рейтинга:', error);
+            }
         }
     </script>
 </body>
