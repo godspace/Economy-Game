@@ -6,7 +6,7 @@
     <title>Эволюция доверия</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Ваши стили остаются без изменений */
+        /* Все стили остаются без изменений */
         :root {
             --primary: #4361ee;
             --secondary: #3a0ca3;
@@ -491,49 +491,73 @@
     </div>
 
     <script>
-        // Инициализация Supabase - ДОЛЖНА БЫТЬ ПЕРВОЙ!
-        const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
-        // Глобальные переменные
+        // Сначала объявляем все переменные
+        let supabase;
         let currentUser = null;
         let selectedUser = null;
 
         // DOM элементы
-        const authSection = document.getElementById('authSection');
-        const profileSection = document.getElementById('profileSection');
-        const authForm = document.getElementById('authForm');
-        const authBtn = document.getElementById('authBtn');
-        const userInfo = document.getElementById('userInfo');
-        const userGreeting = document.getElementById('userGreeting');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const coinsValue = document.getElementById('coinsValue');
-        const reputationValue = document.getElementById('reputationValue');
-        const classValue = document.getElementById('classValue');
-        const usersList = document.getElementById('usersList');
-        const searchInput = document.getElementById('searchInput');
-        const classFilter = document.getElementById('classFilter');
-        const searchBtn = document.getElementById('searchBtn');
-        const incomingDeals = document.getElementById('incomingDeals');
-        const outgoingDeals = document.getElementById('outgoingDeals');
-        const rankingTable = document.getElementById('rankingTable');
-        const userModal = document.getElementById('userModal');
-        const closeModal = document.querySelector('.close-modal');
-        const modalUsername = document.getElementById('modalUsername');
-        const modalAvatar = document.getElementById('modalAvatar');
-        const modalClass = document.getElementById('modalClass');
-        const modalCoins = document.getElementById('modalCoins');
-        const modalReputation = document.getElementById('modalReputation');
-        const dealAmount = document.getElementById('dealAmount');
-        const proposeDealBtn = document.getElementById('proposeDealBtn');
+        let authSection, profileSection, authForm, authBtn, userInfo, userGreeting, logoutBtn;
+        let coinsValue, reputationValue, classValue, usersList, searchInput, classFilter, searchBtn;
+        let incomingDeals, outgoingDeals, rankingTable, userModal, closeModal;
+        let modalUsername, modalAvatar, modalClass, modalCoins, modalReputation, dealAmount, proposeDealBtn;
 
-        // Инициализация приложения
-        document.addEventListener('DOMContentLoaded', function() {
-            // Проверка авторизации
-            checkAuth();
-            
-            // Обработчики событий
+        // Основная функция инициализации
+        async function initApp() {
+            try {
+                // Инициализация Supabase
+                const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
+                supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                
+                console.log('Supabase initialized successfully');
+                
+                // Инициализация DOM элементов после загрузки страницы
+                initDOMElements();
+                
+                // Настройка обработчиков событий
+                setupEventListeners();
+                
+                // Проверка авторизации
+                await checkAuth();
+                
+            } catch (error) {
+                console.error('Error initializing app:', error);
+            }
+        }
+
+        // Инициализация DOM элементов
+        function initDOMElements() {
+            authSection = document.getElementById('authSection');
+            profileSection = document.getElementById('profileSection');
+            authForm = document.getElementById('authForm');
+            authBtn = document.getElementById('authBtn');
+            userInfo = document.getElementById('userInfo');
+            userGreeting = document.getElementById('userGreeting');
+            logoutBtn = document.getElementById('logoutBtn');
+            coinsValue = document.getElementById('coinsValue');
+            reputationValue = document.getElementById('reputationValue');
+            classValue = document.getElementById('classValue');
+            usersList = document.getElementById('usersList');
+            searchInput = document.getElementById('searchInput');
+            classFilter = document.getElementById('classFilter');
+            searchBtn = document.getElementById('searchBtn');
+            incomingDeals = document.getElementById('incomingDeals');
+            outgoingDeals = document.getElementById('outgoingDeals');
+            rankingTable = document.getElementById('rankingTable');
+            userModal = document.getElementById('userModal');
+            closeModal = document.querySelector('.close-modal');
+            modalUsername = document.getElementById('modalUsername');
+            modalAvatar = document.getElementById('modalAvatar');
+            modalClass = document.getElementById('modalClass');
+            modalCoins = document.getElementById('modalCoins');
+            modalReputation = document.getElementById('modalReputation');
+            dealAmount = document.getElementById('dealAmount');
+            proposeDealBtn = document.getElementById('proposeDealBtn');
+        }
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
             authForm.addEventListener('submit', handleAuth);
             logoutBtn.addEventListener('click', handleLogout);
             searchBtn.addEventListener('click', loadUsers);
@@ -569,12 +593,21 @@
             });
             
             proposeDealBtn.addEventListener('click', proposeDeal);
-        });
+        }
 
         // Проверка авторизации
         async function checkAuth() {
             try {
-                const { data: { user } } = await supabase.auth.getUser();
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error) {
+                    throw error;
+                }
                 
                 if (user) {
                     // Пользователь авторизован
@@ -594,6 +627,11 @@
         // Обработка авторизации/регистрации
         async function handleAuth(e) {
             e.preventDefault();
+            
+            if (!supabase) {
+                alert('Система не инициализирована. Пожалуйста, обновите страницу.');
+                return;
+            }
             
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -660,6 +698,11 @@
         // Выход из системы
         async function handleLogout() {
             try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
                 await supabase.auth.signOut();
                 currentUser = null;
                 showAuthSection();
@@ -671,6 +714,11 @@
         // Загрузка профиля пользователя
         async function loadUserProfile(userId) {
             try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
                 const { data: profile, error } = await supabase
                     .from('profiles')
                     .select('*')
@@ -714,6 +762,11 @@
         // Загрузка списка пользователей
         async function loadUsers() {
             try {
+                if (!supabase || !currentUser) {
+                    console.error('Supabase or current user not initialized');
+                    return;
+                }
+                
                 const searchTerm = searchInput.value;
                 const selectedClass = classFilter.value;
                 
@@ -774,6 +827,11 @@
         // Показать модальное окно пользователя
         async function showUserModal(userId) {
             try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
                 const { data: user, error } = await supabase
                     .from('profiles')
                     .select('*')
@@ -802,6 +860,11 @@
         // Предложить сделку
         async function proposeDeal() {
             try {
+                if (!supabase || !currentUser || !selectedUser) {
+                    console.error('Required data not initialized');
+                    return;
+                }
+                
                 const amount = parseInt(dealAmount.value);
                 
                 if (!amount || amount < 1) {
@@ -842,6 +905,11 @@
         // Загрузка сделок
         async function loadDeals() {
             try {
+                if (!supabase || !currentUser) {
+                    console.error('Supabase or current user not initialized');
+                    return;
+                }
+                
                 // Входящие сделки
                 const { data: incoming, error: incomingError } = await supabase
                     .from('deals')
@@ -940,6 +1008,11 @@
         // Принять сделку
         async function acceptDeal(dealId) {
             try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
                 const { data, error } = await supabase.rpc('accept_deal', { deal_id: dealId });
                 
                 if (error) {
@@ -958,6 +1031,11 @@
         // Отклонить сделку
         async function rejectDeal(dealId) {
             try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
                 const { data, error } = await supabase.rpc('reject_deal', { deal_id: dealId });
                 
                 if (error) {
@@ -976,6 +1054,11 @@
         // Загрузка рейтинга
         async function loadRanking() {
             try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
                 const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
@@ -1009,6 +1092,11 @@
                 console.error('Ошибка загрузки рейтинга:', error);
             }
         }
+
+        // Запуск приложения после загрузки DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+        });
     </script>
 </body>
 </html>
