@@ -322,6 +322,23 @@
             margin: 20px 0;
             text-align: center;
         }
+        
+        .choice-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .choice-buttons button {
+            flex: 1;
+        }
+        
+        .deal-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -495,19 +512,43 @@
         </section>
     </div>
 
-    <!-- Модальное окно профиля пользователя -->
-    <div id="userModal" class="modal">
+    <!-- Модальное окно сделки -->
+    <div id="dealModal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2 id="modalUsername">Профиль пользователя</h2>
-            <div class="user-avatar" id="modalAvatar"></div>
-            <p><strong>Класс:</strong> <span id="modalClass"></span></p>
-            <p><strong>Монеты:</strong> <span id="modalCoins"></span></p>
-            <p><strong>Репутация:</strong> <span id="modalReputation"></span></p>
-            <div class="form-group" id="dealFormContainer">
-                <h3>Предложить сделку</h3>
-                <input type="number" id="dealAmount" placeholder="Сумма сделки" min="1">
-                <button id="proposeDealBtn" class="btn-success">Предложить сделку</button>
+            <h2 id="dealUsername">Предложить сделку</h2>
+            <div class="user-avatar" id="dealAvatar"></div>
+            <p><strong>Игрок:</strong> <span id="dealPlayerName"></span></p>
+            <p><strong>Класс:</strong> <span id="dealPlayerClass"></span></p>
+            <p><strong>Монеты:</strong> <span id="dealPlayerCoins"></span></p>
+            <p><strong>Репутация:</strong> <span id="dealPlayerReputation"></span></p>
+            
+            <div class="deal-info">
+                <h3>Выберите вашу стратегию:</h3>
+                <p><strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
+                <p><strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
+                <p>Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
+            </div>
+            
+            <div class="choice-buttons">
+                <button id="cooperateBtn" class="btn-success">Сотрудничать</button>
+                <button id="cheatBtn" class="btn-danger">Жульничать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно ответа на сделку -->
+    <div id="responseModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Ответить на сделку</h2>
+            <div class="deal-info" id="responseDealInfo">
+                <!-- Информация о сделке будет загружена здесь -->
+            </div>
+            
+            <div class="choice-buttons">
+                <button id="respondCooperateBtn" class="btn-success">Сотрудничать</button>
+                <button id="respondCheatBtn" class="btn-danger">Жульничать</button>
             </div>
         </div>
     </div>
@@ -518,12 +559,14 @@
         let supabase = null;
         let currentUser = null;
         let selectedUser = null;
+        let selectedDeal = null;
 
         // DOM элементы
         let authSection, profileSection, authForm, authBtn, userInfo, userGreeting, logoutBtn;
         let coinsValue, reputationValue, classValue, usersList, searchInput, classFilter, searchBtn;
-        let incomingDeals, outgoingDeals, rankingTable, userModal, closeModal;
-        let modalUsername, modalAvatar, modalClass, modalCoins, modalReputation, dealAmount, proposeDealBtn;
+        let incomingDeals, outgoingDeals, rankingTable, dealModal, responseModal, closeModal;
+        let dealUsername, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation;
+        let cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo;
         let loadingMessage, errorMessage, authError;
 
         // Конфигурация Supabase
@@ -604,15 +647,20 @@
             incomingDeals = document.getElementById('incomingDeals');
             outgoingDeals = document.getElementById('outgoingDeals');
             rankingTable = document.getElementById('rankingTable');
-            userModal = document.getElementById('userModal');
-            closeModal = document.querySelector('.close-modal');
-            modalUsername = document.getElementById('modalUsername');
-            modalAvatar = document.getElementById('modalAvatar');
-            modalClass = document.getElementById('modalClass');
-            modalCoins = document.getElementById('modalCoins');
-            modalReputation = document.getElementById('modalReputation');
-            dealAmount = document.getElementById('dealAmount');
-            proposeDealBtn = document.getElementById('proposeDealBtn');
+            dealModal = document.getElementById('dealModal');
+            responseModal = document.getElementById('responseModal');
+            closeModal = document.querySelectorAll('.close-modal');
+            dealUsername = document.getElementById('dealUsername');
+            dealAvatar = document.getElementById('dealAvatar');
+            dealPlayerName = document.getElementById('dealPlayerName');
+            dealPlayerClass = document.getElementById('dealPlayerClass');
+            dealPlayerCoins = document.getElementById('dealPlayerCoins');
+            dealPlayerReputation = document.getElementById('dealPlayerReputation');
+            cooperateBtn = document.getElementById('cooperateBtn');
+            cheatBtn = document.getElementById('cheatBtn');
+            respondCooperateBtn = document.getElementById('respondCooperateBtn');
+            respondCheatBtn = document.getElementById('respondCheatBtn');
+            responseDealInfo = document.getElementById('responseDealInfo');
             loadingMessage = document.getElementById('loadingMessage');
             errorMessage = document.getElementById('errorMessage');
             authError = document.getElementById('authError');
@@ -699,21 +747,48 @@
                 });
             });
             
-            // Модальное окно
+            // Модальные окна
             if (closeModal) {
-                closeModal.addEventListener('click', function() {
-                    userModal.classList.remove('active');
+                closeModal.forEach(closeBtn => {
+                    closeBtn.addEventListener('click', function() {
+                        dealModal.classList.remove('active');
+                        responseModal.classList.remove('active');
+                    });
                 });
             }
             
             window.addEventListener('click', function(event) {
-                if (event.target === userModal) {
-                    userModal.classList.remove('active');
+                if (event.target === dealModal) {
+                    dealModal.classList.remove('active');
+                }
+                if (event.target === responseModal) {
+                    responseModal.classList.remove('active');
                 }
             });
             
-            if (proposeDealBtn) {
-                proposeDealBtn.addEventListener('click', proposeDeal);
+            // Кнопки выбора стратегии
+            if (cooperateBtn) {
+                cooperateBtn.addEventListener('click', function() {
+                    proposeDeal('cooperate');
+                });
+            }
+            
+            if (cheatBtn) {
+                cheatBtn.addEventListener('click', function() {
+                    proposeDeal('cheat');
+                });
+            }
+            
+            if (respondCooperateBtn) {
+                respondCooperateBtn.addEventListener('click', function() {
+                    respondToDeal('cooperate');
+                });
+            }
+            
+            if (respondCheatBtn) {
+                respondCheatBtn.addEventListener('click', function() {
+                    respondToDeal('cheat');
+                });
             }
         }
 
@@ -1013,17 +1088,17 @@
                             <p>Класс: ${user.class}</p>
                             <p>Монеты: ${user.coins}</p>
                             <p>Репутация: ${user.reputation}</p>
-                            <button class="btn-secondary view-profile-btn" data-user-id="${user.id}">Посмотреть профиль</button>
+                            <button class="btn-secondary propose-deal-btn" data-user-id="${user.id}">Сделка</button>
                         `;
                         
                         usersList.appendChild(userCard);
                     });
                     
-                    // Добавляем обработчики для кнопок просмотра профиля
-                    document.querySelectorAll('.view-profile-btn').forEach(btn => {
+                    // Добавляем обработчики для кнопок предложения сделки
+                    document.querySelectorAll('.propose-deal-btn').forEach(btn => {
                         btn.addEventListener('click', function() {
                             const userId = this.dataset.userId;
-                            showUserModal(userId);
+                            showDealModal(userId);
                         });
                     });
                 }
@@ -1032,8 +1107,8 @@
             }
         }
 
-        // Показать модальное окно пользователя
-        async function showUserModal(userId) {
+        // Показать модальное окно сделки
+        async function showDealModal(userId) {
             try {
                 if (!supabase) {
                     console.error('Supabase not initialized');
@@ -1053,14 +1128,14 @@
                 
                 selectedUser = user;
                 
-                if (modalUsername) modalUsername.textContent = user.username;
-                if (modalAvatar) modalAvatar.textContent = user.username.charAt(0).toUpperCase();
-                if (modalClass) modalClass.textContent = user.class;
-                if (modalCoins) modalCoins.textContent = user.coins;
-                if (modalReputation) modalReputation.textContent = user.reputation;
+                if (dealPlayerName) dealPlayerName.textContent = user.username;
+                if (dealAvatar) dealAvatar.textContent = user.username.charAt(0).toUpperCase();
+                if (dealPlayerClass) dealPlayerClass.textContent = user.class;
+                if (dealPlayerCoins) dealPlayerCoins.textContent = user.coins;
+                if (dealPlayerReputation) dealPlayerReputation.textContent = user.reputation;
                 
-                if (userModal) {
-                    userModal.classList.add('active');
+                if (dealModal) {
+                    dealModal.classList.add('active');
                 }
             } catch (error) {
                 console.error('Ошибка показа модального окна:', error);
@@ -1068,23 +1143,10 @@
         }
 
         // Предложить сделку
-        async function proposeDeal() {
+        async function proposeDeal(choice) {
             try {
                 if (!supabase || !currentUser || !selectedUser) {
                     console.error('Required data not initialized');
-                    return;
-                }
-                
-                const amount = parseInt(dealAmount ? dealAmount.value : 0);
-                
-                if (!amount || amount < 1) {
-                    alert('Пожалуйста, введите корректную сумму');
-                    return;
-                }
-                
-                // Проверяем, достаточно ли монет у текущего пользователя
-                if (currentUser.coins < amount) {
-                    alert('Недостаточно монет для предложения сделки');
                     return;
                 }
                 
@@ -1094,7 +1156,8 @@
                         {
                             from_user: currentUser.id,
                             to_user: selectedUser.id,
-                            amount: amount
+                            from_choice: choice,
+                            status: 'pending'
                         }
                     ]);
                 
@@ -1103,15 +1166,129 @@
                 }
                 
                 alert('Сделка предложена успешно!');
-                if (userModal) {
-                    userModal.classList.remove('active');
-                }
-                if (dealAmount) {
-                    dealAmount.value = '';
+                if (dealModal) {
+                    dealModal.classList.remove('active');
                 }
                 loadDeals();
             } catch (error) {
                 console.error('Ошибка предложения сделки:', error);
+                alert('Ошибка: ' + error.message);
+            }
+        }
+
+        // Показать модальное окно ответа на сделку
+        async function showResponseModal(dealId) {
+            try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
+                const { data: deal, error } = await supabase
+                    .from('deals')
+                    .select(`
+                        *,
+                        from_user:profiles!deals_from_user_fkey(username, class)
+                    `)
+                    .eq('id', dealId)
+                    .single();
+                
+                if (error) {
+                    console.error('Ошибка загрузки сделки:', error);
+                    return;
+                }
+                
+                selectedDeal = deal;
+                
+                if (responseDealInfo) {
+                    responseDealInfo.innerHTML = `
+                        <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
+                        <p><strong>Выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                    `;
+                }
+                
+                if (responseModal) {
+                    responseModal.classList.add('active');
+                }
+            } catch (error) {
+                console.error('Ошибка показа модального окна ответа:', error);
+            }
+        }
+
+        // Ответить на сделку
+        async function respondToDeal(choice) {
+            try {
+                if (!supabase || !selectedDeal) {
+                    console.error('Required data not initialized');
+                    return;
+                }
+                
+                // Обновляем сделку с ответом
+                const { data, error } = await supabase
+                    .from('deals')
+                    .update({
+                        to_choice: choice,
+                        status: 'completed'
+                    })
+                    .eq('id', selectedDeal.id);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Вычисляем результат сделки
+                let fromCoinsChange = 0;
+                let toCoinsChange = 0;
+                
+                if (selectedDeal.from_choice === 'cooperate' && choice === 'cooperate') {
+                    // Оба сотрудничают
+                    fromCoinsChange = 2;
+                    toCoinsChange = 2;
+                } else if (selectedDeal.from_choice === 'cooperate' && choice === 'cheat') {
+                    // Отправитель сотрудничает, получатель жульничает
+                    fromCoinsChange = -1;
+                    toCoinsChange = 3;
+                } else if (selectedDeal.from_choice === 'cheat' && choice === 'cooperate') {
+                    // Отправитель жульничает, получатель сотрудничает
+                    fromCoinsChange = 3;
+                    toCoinsChange = -1;
+                } else if (selectedDeal.from_choice === 'cheat' && choice === 'cheat') {
+                    // Оба жульничают
+                    fromCoinsChange = -1;
+                    toCoinsChange = -1;
+                }
+                
+                // Обновляем монеты у обоих пользователей
+                if (fromCoinsChange !== 0) {
+                    const { error: fromError } = await supabase
+                        .from('profiles')
+                        .update({ coins: selectedDeal.from_user.coins + fromCoinsChange })
+                        .eq('id', selectedDeal.from_user);
+                    
+                    if (fromError) {
+                        console.error('Ошибка обновления монет отправителя:', fromError);
+                    }
+                }
+                
+                if (toCoinsChange !== 0) {
+                    const { error: toError } = await supabase
+                        .from('profiles')
+                        .update({ coins: currentUser.coins + toCoinsChange })
+                        .eq('id', currentUser.id);
+                    
+                    if (toError) {
+                        console.error('Ошибка обновления монет получателя:', toError);
+                    }
+                }
+                
+                alert('Ответ на сделку отправлен!');
+                if (responseModal) {
+                    responseModal.classList.remove('active');
+                }
+                loadDeals();
+                loadUserProfile(currentUser.id);
+            } catch (error) {
+                console.error('Ошибка ответа на сделку:', error);
                 alert('Ошибка: ' + error.message);
             }
         }
@@ -1148,29 +1325,21 @@
                             dealItem.innerHTML = `
                                 <div>
                                     <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                                    <p><strong>Сумма:</strong> ${deal.amount} монет</p>
+                                    <p><strong>Выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
                                 </div>
                                 <div class="deal-actions">
-                                    <button class="btn-success accept-deal" data-deal-id="${deal.id}">Принять</button>
-                                    <button class="btn-danger reject-deal" data-deal-id="${deal.id}">Отклонить</button>
+                                    <button class="btn-success respond-deal" data-deal-id="${deal.id}">Ответить</button>
                                 </div>
                             `;
                             
                             incomingDeals.appendChild(dealItem);
                         });
                         
-                        // Добавляем обработчики для кнопок принятия/отклонения сделок
-                        document.querySelectorAll('.accept-deal').forEach(btn => {
+                        // Добавляем обработчики для кнопок ответа на сделки
+                        document.querySelectorAll('.respond-deal').forEach(btn => {
                             btn.addEventListener('click', function() {
                                 const dealId = this.dataset.dealId;
-                                acceptDeal(dealId);
-                            });
-                        });
-                        
-                        document.querySelectorAll('.reject-deal').forEach(btn => {
-                            btn.addEventListener('click', function() {
-                                const dealId = this.dataset.dealId;
-                                rejectDeal(dealId);
+                                showResponseModal(dealId);
                             });
                         });
                     }
@@ -1196,16 +1365,15 @@
                         outgoing.forEach(deal => {
                             const statusBadge = deal.status === 'pending' ? 
                                 '<span class="badge badge-warning">Ожидание</span>' : 
-                                deal.status === 'accepted' ? 
-                                '<span class="badge badge-success">Принята</span>' : 
-                                '<span class="badge badge-danger">Отклонена</span>';
+                                '<span class="badge badge-success">Завершена</span>';
                             
                             const dealItem = document.createElement('div');
                             dealItem.className = 'deal-item';
                             dealItem.innerHTML = `
                                 <div>
                                     <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                                    <p><strong>Сумма:</strong> ${deal.amount} монет</p>
+                                    <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                                    ${deal.to_choice ? `<p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>` : ''}
                                     <p><strong>Статус:</strong> ${statusBadge}</p>
                                 </div>
                             `;
@@ -1216,52 +1384,6 @@
                 }
             } catch (error) {
                 console.error('Ошибка загрузки сделок:', error);
-            }
-        }
-
-        // Принять сделку
-        async function acceptDeal(dealId) {
-            try {
-                if (!supabase) {
-                    console.error('Supabase not initialized');
-                    return;
-                }
-                
-                const { data, error } = await supabase.rpc('accept_deal', { deal_id: dealId });
-                
-                if (error) {
-                    throw error;
-                }
-                
-                alert('Сделка принята успешно!');
-                loadDeals();
-                loadUserProfile(currentUser.id);
-            } catch (error) {
-                console.error('Ошибка принятия сделки:', error);
-                alert('Ошибка: ' + error.message);
-            }
-        }
-
-        // Отклонить сделку
-        async function rejectDeal(dealId) {
-            try {
-                if (!supabase) {
-                    console.error('Supabase not initialized');
-                    return;
-                }
-                
-                const { data, error } = await supabase.rpc('reject_deal', { deal_id: dealId });
-                
-                if (error) {
-                    throw error;
-                }
-                
-                alert('Сделка отклонена');
-                loadDeals();
-                loadUserProfile(currentUser.id);
-            } catch (error) {
-                console.error('Ошибка отклонения сделки:', error);
-                alert('Ошибка: ' + error.message);
             }
         }
 
