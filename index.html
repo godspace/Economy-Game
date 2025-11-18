@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Эволюция доверия</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Все стили остаются без изменений */
         :root {
@@ -309,6 +308,20 @@
                 grid-template-columns: 1fr;
             }
         }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -326,8 +339,16 @@
             </div>
         </header>
 
+        <div id="loadingMessage" class="loading">
+            <p>Загрузка приложения...</p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <p>Произошла ошибка при загрузке приложения. Пожалуйста, обновите страницу.</p>
+        </div>
+
         <!-- Секция аутентификации -->
-        <section id="authSection" class="auth-section active">
+        <section id="authSection" class="auth-section">
             <div class="card">
                 <h2>Вход / Регистрация</h2>
                 <form id="authForm">
@@ -490,9 +511,10 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Сначала объявляем все переменные
-        let supabase;
+        let supabase = null;
         let currentUser = null;
         let selectedUser = null;
 
@@ -501,19 +523,21 @@
         let coinsValue, reputationValue, classValue, usersList, searchInput, classFilter, searchBtn;
         let incomingDeals, outgoingDeals, rankingTable, userModal, closeModal;
         let modalUsername, modalAvatar, modalClass, modalCoins, modalReputation, dealAmount, proposeDealBtn;
+        let loadingMessage, errorMessage;
 
         // Основная функция инициализации
         async function initApp() {
             try {
-                // Инициализация Supabase
-                const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
-                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
-                supabase = supabase.createClient(supabaseUrl, supabaseKey);
+                console.log('Starting app initialization...');
                 
-                console.log('Supabase initialized successfully');
-                
-                // Инициализация DOM элементов после загрузки страницы
+                // Сначала инициализируем DOM элементы
                 initDOMElements();
+                
+                // Показываем сообщение о загрузке
+                showLoading();
+                
+                // Затем инициализируем Supabase
+                await initSupabase();
                 
                 // Настройка обработчиков событий
                 setupEventListeners();
@@ -521,9 +545,40 @@
                 // Проверка авторизации
                 await checkAuth();
                 
+                // Скрываем сообщение о загрузке
+                hideLoading();
+                
+                console.log('App initialized successfully');
+                
             } catch (error) {
                 console.error('Error initializing app:', error);
+                showError('Не удалось загрузить приложение: ' + error.message);
             }
+        }
+
+        // Инициализация Supabase
+        async function initSupabase() {
+            return new Promise((resolve, reject) => {
+                try {
+                    console.log('Initializing Supabase...');
+                    
+                    // Проверяем, доступен ли Supabase
+                    if (typeof window.supabase === 'undefined') {
+                        throw new Error('Supabase library not loaded');
+                    }
+                    
+                    const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
+                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
+                    
+                    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    
+                    console.log('Supabase initialized successfully');
+                    resolve();
+                } catch (error) {
+                    console.error('Error initializing Supabase:', error);
+                    reject(error);
+                }
+            });
         }
 
         // Инициализация DOM элементов
@@ -554,13 +609,52 @@
             modalReputation = document.getElementById('modalReputation');
             dealAmount = document.getElementById('dealAmount');
             proposeDealBtn = document.getElementById('proposeDealBtn');
+            loadingMessage = document.getElementById('loadingMessage');
+            errorMessage = document.getElementById('errorMessage');
+        }
+
+        // Показать сообщение о загрузке
+        function showLoading() {
+            if (loadingMessage) {
+                loadingMessage.style.display = 'block';
+            }
+            if (authSection) {
+                authSection.style.display = 'none';
+            }
+            if (profileSection) {
+                profileSection.style.display = 'none';
+            }
+        }
+
+        // Скрыть сообщение о загрузке
+        function hideLoading() {
+            if (loadingMessage) {
+                loadingMessage.style.display = 'none';
+            }
+        }
+
+        // Показать сообщение об ошибке
+        function showError(message) {
+            hideLoading();
+            if (errorMessage) {
+                errorMessage.innerHTML = `<p>${message}</p>`;
+                errorMessage.style.display = 'block';
+            }
         }
 
         // Настройка обработчиков событий
         function setupEventListeners() {
-            authForm.addEventListener('submit', handleAuth);
-            logoutBtn.addEventListener('click', handleLogout);
-            searchBtn.addEventListener('click', loadUsers);
+            if (authForm) {
+                authForm.addEventListener('submit', handleAuth);
+            }
+            
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', handleLogout);
+            }
+            
+            if (searchBtn) {
+                searchBtn.addEventListener('click', loadUsers);
+            }
             
             // Табы
             document.querySelectorAll('.tab').forEach(tab => {
@@ -569,7 +663,11 @@
                     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                     
                     this.classList.add('active');
-                    document.getElementById(this.dataset.tab + 'Tab').classList.add('active');
+                    const tabId = this.dataset.tab + 'Tab';
+                    const tabContent = document.getElementById(tabId);
+                    if (tabContent) {
+                        tabContent.classList.add('active');
+                    }
                     
                     if (this.dataset.tab === 'ranking') {
                         loadRanking();
@@ -582,9 +680,11 @@
             });
             
             // Модальное окно
-            closeModal.addEventListener('click', function() {
-                userModal.classList.remove('active');
-            });
+            if (closeModal) {
+                closeModal.addEventListener('click', function() {
+                    userModal.classList.remove('active');
+                });
+            }
             
             window.addEventListener('click', function(event) {
                 if (event.target === userModal) {
@@ -592,15 +692,16 @@
                 }
             });
             
-            proposeDealBtn.addEventListener('click', proposeDeal);
+            if (proposeDealBtn) {
+                proposeDealBtn.addEventListener('click', proposeDeal);
+            }
         }
 
         // Проверка авторизации
         async function checkAuth() {
             try {
                 if (!supabase) {
-                    console.error('Supabase not initialized');
-                    return;
+                    throw new Error('Supabase not initialized');
                 }
                 
                 const { data: { user }, error } = await supabase.auth.getUser();
@@ -731,10 +832,10 @@
                 }
                 
                 // Обновление интерфейса
-                userGreeting.textContent = `Привет, ${profile.username}!`;
-                coinsValue.textContent = profile.coins;
-                reputationValue.textContent = profile.reputation;
-                classValue.textContent = profile.class;
+                if (userGreeting) userGreeting.textContent = `Привет, ${profile.username}!`;
+                if (coinsValue) coinsValue.textContent = profile.coins;
+                if (reputationValue) reputationValue.textContent = profile.reputation;
+                if (classValue) classValue.textContent = profile.class;
                 
                 // Загрузка данных для вкладок
                 loadUsers();
@@ -747,16 +848,32 @@
 
         // Показать секцию аутентификации
         function showAuthSection() {
-            authSection.classList.add('active');
-            profileSection.classList.remove('active');
-            userInfo.style.display = 'none';
+            if (authSection) {
+                authSection.style.display = 'block';
+                authSection.classList.add('active');
+            }
+            if (profileSection) {
+                profileSection.style.display = 'none';
+                profileSection.classList.remove('active');
+            }
+            if (userInfo) {
+                userInfo.style.display = 'none';
+            }
         }
 
         // Показать секцию профиля
         function showProfileSection() {
-            authSection.classList.remove('active');
-            profileSection.classList.add('active');
-            userInfo.style.display = 'block';
+            if (authSection) {
+                authSection.style.display = 'none';
+                authSection.classList.remove('active');
+            }
+            if (profileSection) {
+                profileSection.style.display = 'block';
+                profileSection.classList.add('active');
+            }
+            if (userInfo) {
+                userInfo.style.display = 'block';
+            }
         }
 
         // Загрузка списка пользователей
@@ -767,8 +884,8 @@
                     return;
                 }
                 
-                const searchTerm = searchInput.value;
-                const selectedClass = classFilter.value;
+                const searchTerm = searchInput ? searchInput.value : '';
+                const selectedClass = classFilter ? classFilter.value : '';
                 
                 let query = supabase
                     .from('profiles')
@@ -790,35 +907,37 @@
                     return;
                 }
                 
-                usersList.innerHTML = '';
-                
-                if (users.length === 0) {
-                    usersList.innerHTML = '<p>Пользователи не найдены</p>';
-                    return;
-                }
-                
-                users.forEach(user => {
-                    const userCard = document.createElement('div');
-                    userCard.className = 'user-card';
-                    userCard.innerHTML = `
-                        <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                        <h3>${user.username}</h3>
-                        <p>Класс: ${user.class}</p>
-                        <p>Монеты: ${user.coins}</p>
-                        <p>Репутация: ${user.reputation}</p>
-                        <button class="btn-secondary view-profile-btn" data-user-id="${user.id}">Посмотреть профиль</button>
-                    `;
+                if (usersList) {
+                    usersList.innerHTML = '';
                     
-                    usersList.appendChild(userCard);
-                });
-                
-                // Добавляем обработчики для кнопок просмотра профиля
-                document.querySelectorAll('.view-profile-btn').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const userId = this.dataset.userId;
-                        showUserModal(userId);
+                    if (users.length === 0) {
+                        usersList.innerHTML = '<p>Пользователи не найдены</p>';
+                        return;
+                    }
+                    
+                    users.forEach(user => {
+                        const userCard = document.createElement('div');
+                        userCard.className = 'user-card';
+                        userCard.innerHTML = `
+                            <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                            <h3>${user.username}</h3>
+                            <p>Класс: ${user.class}</p>
+                            <p>Монеты: ${user.coins}</p>
+                            <p>Репутация: ${user.reputation}</p>
+                            <button class="btn-secondary view-profile-btn" data-user-id="${user.id}">Посмотреть профиль</button>
+                        `;
+                        
+                        usersList.appendChild(userCard);
                     });
-                });
+                    
+                    // Добавляем обработчики для кнопок просмотра профиля
+                    document.querySelectorAll('.view-profile-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const userId = this.dataset.userId;
+                            showUserModal(userId);
+                        });
+                    });
+                }
             } catch (error) {
                 console.error('Ошибка загрузки пользователей:', error);
             }
@@ -845,13 +964,15 @@
                 
                 selectedUser = user;
                 
-                modalUsername.textContent = user.username;
-                modalAvatar.textContent = user.username.charAt(0).toUpperCase();
-                modalClass.textContent = user.class;
-                modalCoins.textContent = user.coins;
-                modalReputation.textContent = user.reputation;
+                if (modalUsername) modalUsername.textContent = user.username;
+                if (modalAvatar) modalAvatar.textContent = user.username.charAt(0).toUpperCase();
+                if (modalClass) modalClass.textContent = user.class;
+                if (modalCoins) modalCoins.textContent = user.coins;
+                if (modalReputation) modalReputation.textContent = user.reputation;
                 
-                userModal.classList.add('active');
+                if (userModal) {
+                    userModal.classList.add('active');
+                }
             } catch (error) {
                 console.error('Ошибка показа модального окна:', error);
             }
@@ -865,7 +986,7 @@
                     return;
                 }
                 
-                const amount = parseInt(dealAmount.value);
+                const amount = parseInt(dealAmount ? dealAmount.value : 0);
                 
                 if (!amount || amount < 1) {
                     alert('Пожалуйста, введите корректную сумму');
@@ -893,8 +1014,12 @@
                 }
                 
                 alert('Сделка предложена успешно!');
-                userModal.classList.remove('active');
-                dealAmount.value = '';
+                if (userModal) {
+                    userModal.classList.remove('active');
+                }
+                if (dealAmount) {
+                    dealAmount.value = '';
+                }
                 loadDeals();
             } catch (error) {
                 console.error('Ошибка предложения сделки:', error);
@@ -922,7 +1047,7 @@
                 
                 if (incomingError) {
                     console.error('Ошибка загрузки входящих сделок:', incomingError);
-                } else {
+                } else if (incomingDeals) {
                     incomingDeals.innerHTML = '';
                     
                     if (incoming.length === 0) {
@@ -973,7 +1098,7 @@
                 
                 if (outgoingError) {
                     console.error('Ошибка загрузки исходящих сделок:', outgoingError);
-                } else {
+                } else if (outgoingDeals) {
                     outgoingDeals.innerHTML = '';
                     
                     if (outgoing.length === 0) {
@@ -1069,25 +1194,27 @@
                     return;
                 }
                 
-                rankingTable.innerHTML = '';
-                
-                users.forEach((user, index) => {
-                    const row = document.createElement('tr');
+                if (rankingTable) {
+                    rankingTable.innerHTML = '';
                     
-                    if (user.id === currentUser.id) {
-                        row.style.backgroundColor = '#e6f7ff';
-                    }
-                    
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
-                        <td>${user.class}</td>
-                        <td>${user.coins}</td>
-                        <td>${user.reputation}</td>
-                    `;
-                    
-                    rankingTable.appendChild(row);
-                });
+                    users.forEach((user, index) => {
+                        const row = document.createElement('tr');
+                        
+                        if (user.id === currentUser.id) {
+                            row.style.backgroundColor = '#e6f7ff';
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
+                            <td>${user.class}</td>
+                            <td>${user.coins}</td>
+                            <td>${user.reputation}</td>
+                        `;
+                        
+                        rankingTable.appendChild(row);
+                    });
+                }
             } catch (error) {
                 console.error('Ошибка загрузки рейтинга:', error);
             }
@@ -1095,7 +1222,8 @@
 
         // Запуск приложения после загрузки DOM
         document.addEventListener('DOMContentLoaded', function() {
-            initApp();
+            // Даем время для загрузки всех скриптов
+            setTimeout(initApp, 100);
         });
     </script>
 </body>
