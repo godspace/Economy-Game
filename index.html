@@ -351,6 +351,7 @@
         <section id="authSection" class="auth-section">
             <div class="card">
                 <h2>Вход / Регистрация</h2>
+                <div id="authError" class="error-message" style="display: none;"></div>
                 <form id="authForm">
                     <div class="form-group">
                         <label for="username">Никнейм</label>
@@ -523,7 +524,13 @@
         let coinsValue, reputationValue, classValue, usersList, searchInput, classFilter, searchBtn;
         let incomingDeals, outgoingDeals, rankingTable, userModal, closeModal;
         let modalUsername, modalAvatar, modalClass, modalCoins, modalReputation, dealAmount, proposeDealBtn;
-        let loadingMessage, errorMessage;
+        let loadingMessage, errorMessage, authError;
+
+        // Конфигурация Supabase
+        const SUPABASE_CONFIG = {
+            url: 'https://isugrtihjmbrzwflybrr.supabase.co',
+            key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI'
+        };
 
         // Основная функция инициализации
         async function initApp() {
@@ -567,10 +574,7 @@
                         throw new Error('Supabase library not loaded');
                     }
                     
-                    const supabaseUrl = 'https://isugrtihjmbrzwflybrr.supabase.co';
-                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI';
-                    
-                    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
                     
                     console.log('Supabase initialized successfully');
                     resolve();
@@ -611,6 +615,7 @@
             proposeDealBtn = document.getElementById('proposeDealBtn');
             loadingMessage = document.getElementById('loadingMessage');
             errorMessage = document.getElementById('errorMessage');
+            authError = document.getElementById('authError');
         }
 
         // Показать сообщение о загрузке
@@ -639,6 +644,21 @@
             if (errorMessage) {
                 errorMessage.innerHTML = `<p>${message}</p>`;
                 errorMessage.style.display = 'block';
+            }
+        }
+
+        // Показать сообщение об ошибке аутентификации
+        function showAuthError(message) {
+            if (authError) {
+                authError.innerHTML = `<p>${message}</p>`;
+                authError.style.display = 'block';
+            }
+        }
+
+        // Скрыть сообщение об ошибке аутентификации
+        function hideAuthError() {
+            if (authError) {
+                authError.style.display = 'none';
             }
         }
 
@@ -707,7 +727,10 @@
                 const { data: { user }, error } = await supabase.auth.getUser();
                 
                 if (error) {
-                    throw error;
+                    console.warn('Auth check error:', error);
+                    // Это нормально, если пользователь не авторизован
+                    showAuthSection();
+                    return;
                 }
                 
                 if (user) {
@@ -739,57 +762,80 @@
             const userClass = document.getElementById('class').value;
             
             if (!username || !password || !userClass) {
-                alert('Пожалуйста, заполните все поля');
+                showAuthError('Пожалуйста, заполните все поля');
                 return;
             }
+            
+            // Скрываем предыдущие ошибки
+            hideAuthError();
             
             authBtn.disabled = true;
             authBtn.textContent = 'Загрузка...';
             
             try {
-                // Попытка входа
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                // Сначала пробуем зарегистрироваться
+                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                     email: `${username}@school.game`,
-                    password: password
+                    password: password,
+                    options: {
+                        data: {
+                            username: username,
+                            class: userClass
+                        }
+                    }
                 });
                 
-                if (signInError) {
-                    // Если вход не удался, пробуем зарегистрироваться
-                    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                        email: `${username}@school.game`,
-                        password: password
-                    });
-                    
-                    if (signUpError) {
+                if (signUpError) {
+                    // Если регистрация не удалась, пробуем войти
+                    if (signUpError.message.includes('already registered')) {
+                        console.log('User exists, trying to sign in...');
+                        
+                        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                            email: `${username}@school.game`,
+                            password: password
+                        });
+                        
+                        if (signInError) {
+                            throw signInError;
+                        }
+                        
+                        currentUser = signInData.user;
+                        await loadUserProfile(currentUser.id);
+                        showProfileSection();
+                    } else {
                         throw signUpError;
                     }
+                } else {
+                    // Регистрация успешна
+                    currentUser = signUpData.user;
                     
                     // Создаем профиль пользователя
-                    const { error: profileError } = await supabase
-                        .from('profiles')
-                        .insert([
-                            { 
-                                id: signUpData.user.id, 
-                                username: username, 
-                                class: userClass 
-                            }
-                        ]);
-                    
-                    if (profileError) {
-                        throw profileError;
+                    try {
+                        const { error: profileError } = await supabase
+                            .from('profiles')
+                            .insert([
+                                { 
+                                    id: currentUser.id, 
+                                    username: username, 
+                                    class: userClass 
+                                }
+                            ]);
+                        
+                        if (profileError) {
+                            console.warn('Profile creation error (might already exist):', profileError);
+                            // Продолжаем, даже если профиль уже существует
+                        }
+                    } catch (profileError) {
+                        console.warn('Profile creation error:', profileError);
+                        // Продолжаем, даже если есть ошибка создания профиля
                     }
                     
-                    currentUser = signUpData.user;
-                    await loadUserProfile(currentUser.id);
-                    showProfileSection();
-                } else {
-                    currentUser = signInData.user;
                     await loadUserProfile(currentUser.id);
                     showProfileSection();
                 }
             } catch (error) {
                 console.error('Ошибка аутентификации:', error);
-                alert('Ошибка: ' + error.message);
+                showAuthError('Ошибка: ' + (error.message || 'Неизвестная ошибка'));
             } finally {
                 authBtn.disabled = false;
                 authBtn.textContent = 'Войти / Зарегистрироваться';
@@ -828,6 +874,8 @@
                 
                 if (error) {
                     console.error('Ошибка загрузки профиля:', error);
+                    // Создаем профиль, если он не существует
+                    await createUserProfile(userId);
                     return;
                 }
                 
@@ -846,18 +894,55 @@
             }
         }
 
+        // Создание профиля пользователя
+        async function createUserProfile(userId) {
+            try {
+                if (!supabase || !currentUser) {
+                    return;
+                }
+                
+                const username = document.getElementById('username').value;
+                const userClass = document.getElementById('class').value;
+                
+                if (!username || !userClass) {
+                    return;
+                }
+                
+                const { error } = await supabase
+                    .from('profiles')
+                    .insert([
+                        { 
+                            id: userId, 
+                            username: username, 
+                            class: userClass 
+                        }
+                    ]);
+                
+                if (error) {
+                    console.error('Ошибка создания профиля:', error);
+                    return;
+                }
+                
+                // Перезагружаем профиль
+                await loadUserProfile(userId);
+            } catch (error) {
+                console.error('Ошибка создания профиля:', error);
+            }
+        }
+
         // Показать секцию аутентификации
         function showAuthSection() {
             if (authSection) {
                 authSection.style.display = 'block';
-                authSection.classList.add('active');
             }
             if (profileSection) {
                 profileSection.style.display = 'none';
-                profileSection.classList.remove('active');
             }
             if (userInfo) {
                 userInfo.style.display = 'none';
+            }
+            if (errorMessage) {
+                errorMessage.style.display = 'none';
             }
         }
 
@@ -865,14 +950,18 @@
         function showProfileSection() {
             if (authSection) {
                 authSection.style.display = 'none';
-                authSection.classList.remove('active');
             }
             if (profileSection) {
                 profileSection.style.display = 'block';
-                profileSection.classList.add('active');
             }
             if (userInfo) {
                 userInfo.style.display = 'block';
+            }
+            if (errorMessage) {
+                errorMessage.style.display = 'none';
+            }
+            if (authError) {
+                authError.style.display = 'none';
             }
         }
 
