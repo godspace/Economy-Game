@@ -187,7 +187,7 @@
         
         .stats {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
             margin: 20px 0;
         }
@@ -230,7 +230,7 @@
         }
         
         .stat-value {
-            font-size: 1.6rem;
+            font-size: 2rem;
             font-weight: bold;
             color: var(--dark);
         }
@@ -640,6 +640,104 @@
             border-left: 4px solid #ffc107;
         }
         
+        /* Стили для вкладов */
+        .deposit-category {
+            margin-bottom: 25px;
+        }
+        
+        .deposit-category h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        
+        .deposit-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .deposit-option {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            transition: var(--transition);
+            border-left: 4px solid var(--primary);
+        }
+        
+        .deposit-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+        }
+        
+        .deposit-option.safe {
+            border-left-color: var(--success);
+        }
+        
+        .deposit-option.risky {
+            border-left-color: var(--warning);
+        }
+        
+        .deposit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .deposit-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .deposit-duration {
+            background: var(--primary-light);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .deposit-profit {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--success);
+            margin: 8px 0;
+        }
+        
+        .deposit-description {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .deposit-example {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .profit-positive {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .profit-negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .deal-result {
+            margin-top: 8px;
+            font-weight: bold;
+        }
+        
         /* Мобильные стили */
         @media (max-width: 768px) {
             .container {
@@ -670,7 +768,7 @@
             }
             
             .stat-value {
-                font-size: 1.4rem;
+                font-size: 1.8rem;
             }
             
             .user-list {
@@ -724,6 +822,10 @@
                 text-align: center;
                 gap: 10px;
             }
+            
+            .deposit-options {
+                grid-template-columns: 1fr;
+            }
         }
         
         @media (max-width: 480px) {
@@ -769,7 +871,7 @@
                 color: var(--dark);
             }
             
-            .card, .stat-card, .user-card, .deal-item {
+            .card, .stat-card, .user-card, .deal-item, .deposit-option {
                 background: #1e1e1e;
                 color: var(--dark);
             }
@@ -780,7 +882,7 @@
                 color: var(--dark);
             }
             
-            .deal-info, .user-info {
+            .deal-info, .user-info, .deposit-example {
                 background: #2a2a2a;
             }
             
@@ -905,13 +1007,6 @@
                     <div class="stat-label">Репутация</div>
                     <div class="stat-value" id="reputationValue">0</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-label">Класс</div>
-                    <div class="stat-value" id="classValue">-</div>
-                </div>
             </div>
 
             <div class="tabs">
@@ -920,6 +1015,9 @@
                 </div>
                 <div class="tab" data-tab="deals">
                     <i class="fas fa-handshake"></i> Мои сделки
+                </div>
+                <div class="tab" data-tab="investments">
+                    <i class="fas fa-piggy-bank"></i> Мои вклады
                 </div>
                 <div class="tab" data-tab="ranking">
                     <i class="fas fa-trophy"></i> Рейтинг
@@ -992,6 +1090,101 @@
                     </h2>
                     <div id="outgoingDeals">
                         <!-- Исходящие сделки будут загружены здесь -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="investmentsTab">
+                <div class="card">
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <i class="fas fa-piggy-bank"></i> Мои вклады
+                    </h2>
+                    
+                    <div class="deposit-category">
+                        <h3><i class="fas fa-shield-alt"></i> Безрисковые вклады (гарантированная доходность)</h3>
+                        <p style="margin-bottom: 15px; color: var(--gray);">Идеальны для стабильного роста. Чем дольше срок — тем выше прибыль.</p>
+                        
+                        <div class="deposit-options">
+                            <div class="deposit-option safe">
+                                <div class="deposit-header">
+                                    <div class="deposit-name">«По звонку»</div>
+                                    <div class="deposit-duration">45 минут</div>
+                                </div>
+                                <div class="deposit-profit">Доходность: +3%</div>
+                                <div class="deposit-description">
+                                    Сделай вклад перед уроком — забери прибыль после звонка.
+                                </div>
+                                <div class="deposit-example">
+                                    <strong>Пример:</strong> 100 монет → <span class="profit-positive">103 монеты</span>
+                                </div>
+                                <button class="btn-success">
+                                    <i class="fas fa-lock-open"></i> Открыть вклад
+                                </button>
+                            </div>
+                            
+                            <div class="deposit-option safe">
+                                <div class="deposit-header">
+                                    <div class="deposit-name">«Спокойная ночь»</div>
+                                    <div class="deposit-duration">12 часов</div>
+                                </div>
+                                <div class="deposit-profit">Доходность: +8%</div>
+                                <div class="deposit-description">
+                                    Вложи перед сном — утром получи прибыль перед школой.
+                                </div>
+                                <div class="deposit-example">
+                                    <strong>Пример:</strong> 100 монет → <span class="profit-positive">108 монет</span>
+                                </div>
+                                <button class="btn-success">
+                                    <i class="fas fa-lock-open"></i> Открыть вклад
+                                </button>
+                            </div>
+                            
+                            <div class="deposit-option safe">
+                                <div class="deposit-header">
+                                    <div class="deposit-name">«Чемпион»</div>
+                                    <div class="deposit-duration">24 часа</div>
+                                </div>
+                                <div class="deposit-profit">Доходность: +15%</div>
+                                <div class="deposit-description">
+                                    Для самых терпеливых. Максимальная надёжность и доход за сутки.
+                                </div>
+                                <div class="deposit-example">
+                                    <strong>Пример:</strong> 100 монет → <span class="profit-positive">115 монет</span>
+                                </div>
+                                <button class="btn-success">
+                                    <i class="fas fa-lock-open"></i> Открыть вклад
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="deposit-category">
+                        <h3><i class="fas fa-dice"></i> Рисковые вклады (высокая доходность с риском потери)</h3>
+                        <p style="margin-bottom: 15px; color: var(--gray);">Подходят для азартных игроков. При удаче — крупный выигрыш, при неудаче — потери.</p>
+                        
+                        <div class="deposit-options">
+                            <div class="deposit-option risky">
+                                <div class="deposit-header">
+                                    <div class="deposit-name">«Крипта»</div>
+                                    <div class="deposit-duration">45 минут</div>
+                                </div>
+                                <div class="deposit-description">
+                                    Рискни на перемене! Сможешь ли ты обогнать одноклассников?
+                                </div>
+                                <div style="margin: 10px 0;">
+                                    <div><span class="profit-positive">Доходность: +20% с вероятностью 40%</span></div>
+                                    <div><span class="profit-negative">Убыточность: -10% с вероятностью 60%</span></div>
+                                </div>
+                                <div class="deposit-example">
+                                    <strong>Примеры:</strong><br>
+                                    <span class="profit-positive">Удача: 100 монет → 120 монет</span><br>
+                                    <span class="profit-negative">Провал: 100 монет → 90 монет</span>
+                                </div>
+                                <button class="btn-warning">
+                                    <i class="fas fa-dice"></i> Испытать удачу
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2094,6 +2287,30 @@
                                 '<span class="badge badge-success">Завершена</span>' :
                                 '<span class="badge badge-danger">Отклонена</span>';
                             
+                            // Вычисляем результат сделки для текущего пользователя
+                            let resultHtml = '';
+                            if (deal.status === 'completed') {
+                                let coinsChange = 0;
+                                let resultClass = '';
+                                
+                                if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                                    coinsChange = 2;
+                                    resultClass = 'profit-positive';
+                                } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                                    coinsChange = -1;
+                                    resultClass = 'profit-negative';
+                                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                                    coinsChange = 3;
+                                    resultClass = 'profit-positive';
+                                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                                    coinsChange = -1;
+                                    resultClass = 'profit-negative';
+                                }
+                                
+                                const sign = coinsChange > 0 ? '+' : '';
+                                resultHtml = `<div class="deal-result ${resultClass}">Результат: ${sign}${coinsChange} монет</div>`;
+                            }
+                            
                             const dealItem = document.createElement('div');
                             dealItem.className = 'deal-item';
                             
@@ -2107,7 +2324,9 @@
                                 dealInfo += `<p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>`;
                             }
                             
-                            dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p></div>`;
+                            dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
+                            dealInfo += resultHtml;
+                            dealInfo += `</div>`;
                             
                             dealItem.innerHTML = dealInfo;
                             outgoingDeals.appendChild(dealItem);
