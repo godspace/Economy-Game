@@ -611,6 +611,35 @@
             font-size: 1.5rem;
         }
         
+        /* Исправление для выделения текущего пользователя в рейтинге */
+        .ranking-table tr.current-user {
+            background-color: #e6f7ff !important;
+            color: var(--dark);
+            font-weight: bold;
+        }
+        
+        /* Стиль для заблокированной кнопки сделки */
+        .btn-disabled {
+            background-color: var(--gray) !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+        
+        .btn-disabled:hover {
+            transform: none !important;
+            background-color: var(--gray) !important;
+        }
+        
+        .deal-limit-info {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            border-left: 4px solid #ffc107;
+        }
+        
         /* Мобильные стили */
         @media (max-width: 768px) {
             .container {
@@ -757,6 +786,18 @@
             
             .ranking-table tr:hover {
                 background-color: #2a2a2a;
+            }
+            
+            /* Исправление для выделения текущего пользователя в темной теме */
+            .ranking-table tr.current-user {
+                background-color: #2a4d6e !important;
+                color: white;
+            }
+            
+            .deal-limit-info {
+                background-color: #332701;
+                color: #ffd54f;
+                border-left-color: #ffc107;
             }
         }
     </style>
@@ -1011,6 +1052,11 @@
                 <p style="margin-top: 10px; font-style: italic;">Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
             </div>
             
+            <div id="dealLimitInfo" class="deal-limit-info" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="dealLimitText">Вы уже совершили 0 из 5 возможных сделок с этим игроком сегодня.</span>
+            </div>
+            
             <div class="choice-buttons">
                 <button id="cooperateBtn" class="btn-success">
                     <i class="fas fa-handshake"></i> Сотрудничать
@@ -1076,6 +1122,7 @@
         let cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo;
         let resultContent, closeResultBtn, userAvatar;
         let loadingMessage, errorMessage, authError;
+        let dealLimitInfo, dealLimitText;
 
         // Конфигурация Supabase
         const SUPABASE_CONFIG = {
@@ -1175,6 +1222,8 @@
             loadingMessage = document.getElementById('loadingMessage');
             errorMessage = document.getElementById('errorMessage');
             authError = document.getElementById('authError');
+            dealLimitInfo = document.getElementById('dealLimitInfo');
+            dealLimitText = document.getElementById('dealLimitText');
         }
 
         // Показать сообщение о загрузке
@@ -1677,11 +1726,75 @@
                 if (dealPlayerCoins) dealPlayerCoins.textContent = user.coins;
                 if (dealPlayerReputation) dealPlayerReputation.textContent = user.reputation;
                 
+                // Проверяем лимит сделок с этим пользователем за сегодня
+                const todayDealsCount = await getTodayDealsCount(userId);
+                if (dealLimitInfo && dealLimitText) {
+                    if (todayDealsCount >= 5) {
+                        dealLimitText.textContent = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
+                        dealLimitInfo.style.display = 'block';
+                        
+                        // Блокируем кнопки
+                        if (cooperateBtn) {
+                            cooperateBtn.disabled = true;
+                            cooperateBtn.classList.add('btn-disabled');
+                        }
+                        if (cheatBtn) {
+                            cheatBtn.disabled = true;
+                            cheatBtn.classList.add('btn-disabled');
+                        }
+                    } else {
+                        dealLimitText.textContent = `Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.`;
+                        dealLimitInfo.style.display = 'block';
+                        
+                        // Разблокируем кнопки
+                        if (cooperateBtn) {
+                            cooperateBtn.disabled = false;
+                            cooperateBtn.classList.remove('btn-disabled');
+                        }
+                        if (cheatBtn) {
+                            cheatBtn.disabled = false;
+                            cheatBtn.classList.remove('btn-disabled');
+                        }
+                    }
+                }
+                
                 if (dealModal) {
                     dealModal.classList.add('active');
                 }
             } catch (error) {
                 console.error('Ошибка показа модального окна:', error);
+            }
+        }
+
+        // Получить количество сделок с пользователем за сегодня
+        async function getTodayDealsCount(targetUserId) {
+            try {
+                if (!supabase || !currentUser) {
+                    return 0;
+                }
+                
+                const today = new Date().toISOString().split('T')[0];
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                
+                const { data: todayDeals, error } = await supabase
+                    .from('deals')
+                    .select('id, created_at')
+                    .eq('from_user', currentUser.id)
+                    .eq('to_user', targetUserId)
+                    .gte('created_at', today)
+                    .lt('created_at', tomorrowStr);
+                
+                if (error) {
+                    console.error('Ошибка проверки лимита сделок:', error);
+                    return 0;
+                }
+                
+                return todayDeals ? todayDeals.length : 0;
+            } catch (error) {
+                console.error('Ошибка проверки лимита сделок:', error);
+                return 0;
             }
         }
 
@@ -1693,6 +1806,16 @@
                     return;
                 }
                 
+                // Проверяем лимит сделок с этим пользователем за сегодня
+                const todayDealsCount = await getTodayDealsCount(selectedUser.id);
+                
+                // Если уже есть 5 или более сделок сегодня
+                if (todayDealsCount >= 5) {
+                    alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
+                    return;
+                }
+                
+                // Если сделок меньше 5, создаем новую
                 const { data, error } = await supabase
                     .from('deals')
                     .insert([
@@ -2032,8 +2155,9 @@
                         users.forEach((user, index) => {
                             const row = document.createElement('tr');
                             
+                            // Используем класс вместо inline стиля для лучшего управления в темной теме
                             if (user.id === currentUser.id) {
-                                row.style.backgroundColor = '#e6f7ff';
+                                row.classList.add('current-user');
                             }
                             
                             row.innerHTML = `
