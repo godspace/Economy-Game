@@ -6,6 +6,7 @@
     <title>Эволюция доверия</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Все стили остаются без изменений */
         :root {
             --primary: #4361ee;
             --primary-light: #4895ef;
@@ -1051,6 +1052,27 @@
                     </button>
                 </form>
             </div>
+            
+            <!-- Добавлен рейтинг на страницу авторизации -->
+            <div class="card">
+                <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-trophy"></i> Топ-10 игроков
+                </h2>
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>Место</th>
+                            <th>Игрок</th>
+                            <th>Класс</th>
+                            <th>Монеты</th>
+                            <th>Репутация</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topRankingTable">
+                        <!-- Топ-10 рейтинга будет загружен здесь -->
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <!-- Секция профиля -->
@@ -1189,15 +1211,7 @@
                         </div>
                     </div>
                     
-                    <div class="deposit-history">
-                        <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <i class="fas fa-history"></i> История вкладов
-                        </h3>
-                        <div id="depositHistoryList">
-                            <!-- История вкладов будет загружена здесь -->
-                        </div>
-                    </div>
-                    
+                    <!-- Перемещен раздел с вкладами перед историей -->
                     <div class="deposit-category">
                         <h3><i class="fas fa-shield-alt"></i> Безрисковые вклады (гарантированная доходность)</h3>
                         <p style="margin-bottom: 15px; color: var(--gray);">Идеальны для стабильного роста. Чем дольше срок — тем выше прибыль.</p>
@@ -1282,6 +1296,16 @@
                                     <i class="fas fa-dice"></i> Испытать удачу
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- История вкладов перенесена в конец -->
+                    <div class="deposit-history">
+                        <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                            <i class="fas fa-history"></i> История вкладов
+                        </h3>
+                        <div id="depositHistoryList">
+                            <!-- История вкладов будет загружена здесь -->
                         </div>
                     </div>
                 </div>
@@ -1446,6 +1470,7 @@
         let dealLimitInfo, dealLimitText;
         let depositModal, depositModalContent, depositResultModal, depositResultContent, closeDepositResultBtn;
         let activeDepositsList, depositHistoryList;
+        let topRankingTable; // Новый элемент для топа рейтинга на странице авторизации
 
         // Конфигурация Supabase
         const SUPABASE_CONFIG = {
@@ -1469,6 +1494,9 @@
                 
                 // Настройка обработчиков событий
                 setupEventListeners();
+                
+                // Загружаем топ рейтинга для страницы авторизации
+                await loadTopRanking();
                 
                 // Проверка авторизации
                 await checkAuth();
@@ -1555,6 +1583,7 @@
             closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
             activeDepositsList = document.getElementById('activeDepositsList');
             depositHistoryList = document.getElementById('depositHistoryList');
+            topRankingTable = document.getElementById('topRankingTable'); // Новый элемент
         }
 
         // Показать сообщение о загрузке
@@ -2475,14 +2504,15 @@
                     }
                 }
                 
-                // Все сделки (история)
+                // Все сделки (история) - теперь показываем как входящие, так и исходящие
                 const { data: all, error: allError } = await supabase
                     .from('deals')
                     .select(`
                         *,
+                        from_user:profiles!deals_from_user_fkey(username, class),
                         to_user:profiles!deals_to_user_fkey(username, class)
                     `)
-                    .eq('from_user', currentUser.id)
+                    .or(`from_user.eq.${currentUser.id},to_user.eq.${currentUser.id}`)
                     .order('created_at', { ascending: false });
                 
                 if (allError) {
@@ -2499,6 +2529,10 @@
                         `;
                     } else {
                         all.forEach(deal => {
+                            const isOutgoing = deal.from_user.id === currentUser.id;
+                            const otherUser = isOutgoing ? deal.to_user : deal.from_user;
+                            const directionText = isOutgoing ? "Кому:" : "От кого:";
+                            
                             const statusBadge = deal.status === 'pending' ? 
                                 '<span class="badge badge-warning">Ожидание</span>' : 
                                 deal.status === 'completed' ? 
@@ -2511,18 +2545,37 @@
                                 let coinsChange = 0;
                                 let resultClass = '';
                                 
-                                if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                                    coinsChange = 2;
-                                    resultClass = 'profit-positive';
-                                } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                                    coinsChange = -1;
-                                    resultClass = 'profit-negative';
-                                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                                    coinsChange = 3;
-                                    resultClass = 'profit-positive';
-                                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                                    coinsChange = -1;
-                                    resultClass = 'profit-negative';
+                                // Определяем изменение монет для текущего пользователя
+                                if (isOutgoing) {
+                                    // Для исходящих сделок
+                                    if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                                        coinsChange = 2;
+                                        resultClass = 'profit-positive';
+                                    } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                                        coinsChange = -1;
+                                        resultClass = 'profit-negative';
+                                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                                        coinsChange = 3;
+                                        resultClass = 'profit-positive';
+                                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                                        coinsChange = -1;
+                                        resultClass = 'profit-negative';
+                                    }
+                                } else {
+                                    // Для входящих сделок
+                                    if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                                        coinsChange = 2;
+                                        resultClass = 'profit-positive';
+                                    } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                                        coinsChange = 3;
+                                        resultClass = 'profit-positive';
+                                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                                        coinsChange = -1;
+                                        resultClass = 'profit-negative';
+                                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                                        coinsChange = -1;
+                                        resultClass = 'profit-negative';
+                                    }
                                 }
                                 
                                 const sign = coinsChange > 0 ? '+' : '';
@@ -2534,12 +2587,12 @@
                             
                             let dealInfo = `
                                 <div>
-                                    <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                                    <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                                    <p><strong>${directionText}</strong> ${otherUser.username} (${otherUser.class})</p>
+                                    <p><strong>Ваш выбор:</strong> ${isOutgoing ? deal.from_choice : deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
                             `;
                             
                             if (deal.status === 'completed') {
-                                dealInfo += `<p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>`;
+                                dealInfo += `<p><strong>Ответ:</strong> ${isOutgoing ? (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>`;
                             }
                             
                             dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
@@ -2593,13 +2646,13 @@
                             const row = document.createElement('tr');
                             
                             // Используем класс вместо inline стиля для лучшего управления в темной теме
-                            if (user.id === currentUser.id) {
+                            if (currentUser && user.id === currentUser.id) {
                                 row.classList.add('current-user');
                             }
                             
                             row.innerHTML = `
                                 <td>${index + 1}</td>
-                                <td>${user.username} ${user.id === currentUser.id ? '(Вы)' : ''}</td>
+                                <td>${user.username} ${currentUser && user.id === currentUser.id ? '(Вы)' : ''}</td>
                                 <td>${user.class}</td>
                                 <td>${user.coins}</td>
                                 <td>${user.reputation}</td>
@@ -2611,6 +2664,58 @@
                 }
             } catch (error) {
                 console.error('Ошибка загрузки рейтинга:', error);
+            }
+        }
+
+        // Загрузка топа рейтинга для страницы авторизации
+        async function loadTopRanking() {
+            try {
+                if (!supabase) {
+                    console.error('Supabase not initialized');
+                    return;
+                }
+                
+                const { data: users, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .order('coins', { ascending: false })
+                    .limit(10);
+                
+                if (error) {
+                    console.error('Ошибка загрузки топа рейтинга:', error);
+                    return;
+                }
+                
+                if (topRankingTable) {
+                    topRankingTable.innerHTML = '';
+                    
+                    if (users.length === 0) {
+                        topRankingTable.innerHTML = `
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">
+                                    <div class="empty-state">
+                                        <i class="fas fa-trophy"></i>
+                                        <p>Нет данных для рейтинга</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    } else {
+                        users.forEach((user, index) => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${index + 1}</td>
+                                <td>${user.username}</td>
+                                <td>${user.class}</td>
+                                <td>${user.coins}</td>
+                                <td>${user.reputation}</td>
+                            `;
+                            topRankingTable.appendChild(row);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки топа рейтинга:', error);
             }
         }
 
