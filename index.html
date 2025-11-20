@@ -1059,7 +1059,7 @@
                 <div class="user-info-avatar" id="userAvatar"></div>
                 <div>
                     <h3 id="userGreeting">Привет, игрок!</h3>
-                    <p id="userClass">Класс: -</p>
+                    <!-- Убрано отображение класса здесь -->
                 </div>
             </div>
 
@@ -1157,10 +1157,19 @@
 
                 <div class="card">
                     <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-paper-plane"></i> Исходящие сделки
+                        <i class="fas fa-clock"></i> Ожидающие ответа
                     </h2>
-                    <div id="outgoingDeals">
-                        <!-- Исходящие сделки будут загружены здесь -->
+                    <div id="pendingDeals">
+                        <!-- Ожидающие ответа сделки будут загружены здесь -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-history"></i> Все сделки
+                    </h2>
+                    <div id="allDeals">
+                        <!-- Все сделки будут загружены здесь -->
                     </div>
                 </div>
             </div>
@@ -1177,6 +1186,15 @@
                         </h3>
                         <div id="activeDepositsList">
                             <!-- Активные вклады будут загружены здесь -->
+                        </div>
+                    </div>
+                    
+                    <div class="deposit-history">
+                        <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                            <i class="fas fa-history"></i> История вкладов
+                        </h3>
+                        <div id="depositHistoryList">
+                            <!-- История вкладов будет загружена здесь -->
                         </div>
                     </div>
                     
@@ -1420,14 +1438,14 @@
         // DOM элементы
         let authSection, profileSection, authForm, authBtn, userInfo, userGreeting, logoutBtn;
         let coinsValue, reputationValue, classValue, usersList, searchInput, classFilter, searchBtn;
-        let incomingDeals, outgoingDeals, rankingTable, dealModal, responseModal, resultModal, closeModal;
+        let incomingDeals, pendingDeals, allDeals, rankingTable, dealModal, responseModal, resultModal, closeModal;
         let dealUsername, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation;
         let cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo;
         let resultContent, closeResultBtn, userAvatar;
         let loadingMessage, errorMessage, authError;
         let dealLimitInfo, dealLimitText;
         let depositModal, depositModalContent, depositResultModal, depositResultContent, closeDepositResultBtn;
-        let activeDepositsList;
+        let activeDepositsList, depositHistoryList;
 
         // Конфигурация Supabase
         const SUPABASE_CONFIG = {
@@ -1506,7 +1524,8 @@
             classFilter = document.getElementById('classFilter');
             searchBtn = document.getElementById('searchBtn');
             incomingDeals = document.getElementById('incomingDeals');
-            outgoingDeals = document.getElementById('outgoingDeals');
+            pendingDeals = document.getElementById('pendingDeals');
+            allDeals = document.getElementById('allDeals');
             rankingTable = document.getElementById('rankingTable');
             dealModal = document.getElementById('dealModal');
             responseModal = document.getElementById('responseModal');
@@ -1535,6 +1554,7 @@
             depositResultContent = document.getElementById('depositResultContent');
             closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
             activeDepositsList = document.getElementById('activeDepositsList');
+            depositHistoryList = document.getElementById('depositHistoryList');
         }
 
         // Показать сообщение о загрузке
@@ -1875,10 +1895,6 @@
                 if (userAvatar) userAvatar.textContent = profile.username.charAt(0).toUpperCase();
                 if (coinsValue) coinsValue.textContent = profile.coins;
                 if (reputationValue) reputationValue.textContent = profile.reputation;
-                if (classValue) {
-                    classValue.textContent = profile.class;
-                    document.getElementById('userClass').textContent = `Класс: ${profile.class}`;
-                }
                 
                 // Загрузка данных для вкладок
                 loadUsers();
@@ -2008,6 +2024,12 @@
                     users.forEach(user => {
                         const userCard = document.createElement('div');
                         userCard.className = 'user-card';
+                        
+                        // Проверяем баланс пользователя для активации кнопки
+                        const canMakeDeal = user.coins > 0;
+                        const buttonClass = canMakeDeal ? 'btn-secondary' : 'btn-secondary btn-disabled';
+                        const buttonText = canMakeDeal ? 'Сделка' : 'Нет монет';
+                        
                         userCard.innerHTML = `
                             <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
                             <div class="user-name">${user.username}</div>
@@ -2025,8 +2047,8 @@
                                     <span>${user.reputation}</span>
                                 </div>
                             </div>
-                            <button class="btn-secondary propose-deal-btn" data-user-id="${user.id}">
-                                <i class="fas fa-handshake"></i> Сделка
+                            <button class="${buttonClass} propose-deal-btn" data-user-id="${user.id}" ${!canMakeDeal ? 'disabled' : ''}>
+                                <i class="fas fa-handshake"></i> ${buttonText}
                             </button>
                         `;
                         
@@ -2035,10 +2057,12 @@
                     
                     // Добавляем обработчики для кнопок предложения сделки
                     document.querySelectorAll('.propose-deal-btn').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            const userId = this.dataset.userId;
-                            showDealModal(userId);
-                        });
+                        if (!btn.disabled) {
+                            btn.addEventListener('click', function() {
+                                const userId = this.dataset.userId;
+                                showDealModal(userId);
+                            });
+                        }
                     });
                 }
             } catch (error) {
@@ -2412,29 +2436,69 @@
                     }
                 }
                 
-                // Исходящие сделки
-                const { data: outgoing, error: outgoingError } = await supabase
+                // Ожидающие ответа сделки
+                const { data: pending, error: pendingError } = await supabase
                     .from('deals')
                     .select(`
                         *,
                         to_user:profiles!deals_to_user_fkey(username, class)
                     `)
-                    .eq('from_user', currentUser.id);
+                    .eq('from_user', currentUser.id)
+                    .eq('status', 'pending');
                 
-                if (outgoingError) {
-                    console.error('Ошибка загрузки исходящих сделок:', outgoingError);
-                } else if (outgoingDeals) {
-                    outgoingDeals.innerHTML = '';
+                if (pendingError) {
+                    console.error('Ошибка загрузки ожидающих сделок:', pendingError);
+                } else if (pendingDeals) {
+                    pendingDeals.innerHTML = '';
                     
-                    if (outgoing.length === 0) {
-                        outgoingDeals.innerHTML = `
+                    if (pending.length === 0) {
+                        pendingDeals.innerHTML = `
                             <div class="empty-state">
-                                <i class="fas fa-paper-plane"></i>
-                                <p>Нет исходящих сделок</p>
+                                <i class="fas fa-clock"></i>
+                                <p>Нет ожидающих ответа сделок</p>
                             </div>
                         `;
                     } else {
-                        outgoing.forEach(deal => {
+                        pending.forEach(deal => {
+                            const dealItem = document.createElement('div');
+                            dealItem.className = 'deal-item';
+                            dealItem.innerHTML = `
+                                <div>
+                                    <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
+                                    <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                                    <p><strong>Статус:</strong> <span class="badge badge-warning">Ожидание</span></p>
+                                </div>
+                            `;
+                            
+                            pendingDeals.appendChild(dealItem);
+                        });
+                    }
+                }
+                
+                // Все сделки (история)
+                const { data: all, error: allError } = await supabase
+                    .from('deals')
+                    .select(`
+                        *,
+                        to_user:profiles!deals_to_user_fkey(username, class)
+                    `)
+                    .eq('from_user', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (allError) {
+                    console.error('Ошибка загрузки всех сделок:', allError);
+                } else if (allDeals) {
+                    allDeals.innerHTML = '';
+                    
+                    if (all.length === 0) {
+                        allDeals.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>Нет завершенных сделок</p>
+                            </div>
+                        `;
+                    } else {
+                        all.forEach(deal => {
                             const statusBadge = deal.status === 'pending' ? 
                                 '<span class="badge badge-warning">Ожидание</span>' : 
                                 deal.status === 'completed' ? 
@@ -2483,7 +2547,7 @@
                             dealInfo += `</div>`;
                             
                             dealItem.innerHTML = dealInfo;
-                            outgoingDeals.appendChild(dealItem);
+                            allDeals.appendChild(dealItem);
                         });
                     }
                 }
@@ -2559,36 +2623,89 @@
                 }
                 
                 // Загружаем активные вклады пользователя
-                const { data: deposits, error } = await supabase
+                const { data: activeDeposits, error: activeError } = await supabase
                     .from('deposits')
                     .select('*')
                     .eq('user_id', currentUser.id)
                     .eq('status', 'active');
                 
-                if (error) {
-                    console.error('Ошибка загрузки вкладов:', error);
-                    return;
+                if (activeError) {
+                    console.error('Ошибка загрузки активных вкладов:', activeError);
+                } else {
+                    // Останавливаем все предыдущие таймеры
+                    Object.values(depositTimers).forEach(timer => clearInterval(timer));
+                    depositTimers = {};
+                    
+                    if (activeDepositsList) {
+                        activeDepositsList.innerHTML = '';
+                        
+                        if (activeDeposits.length === 0) {
+                            activeDepositsList.innerHTML = `
+                                <div class="empty-state">
+                                    <i class="fas fa-clock"></i>
+                                    <p>Нет активных вкладов</p>
+                                </div>
+                            `;
+                        } else {
+                            activeDeposits.forEach(deposit => {
+                                const depositItem = document.createElement('div');
+                                depositItem.className = 'deposit-item';
+                                depositItem.id = `deposit-${deposit.id}`;
+                                
+                                const depositTypeNames = {
+                                    'call': '«По звонку»',
+                                    'night': '«Спокойная ночь»',
+                                    'champion': '«Чемпион»',
+                                    'crypto': '«Крипта»'
+                                };
+                                
+                                depositItem.innerHTML = `
+                                    <div class="deposit-info">
+                                        <div class="deposit-type">${depositTypeNames[deposit.type] || deposit.type}</div>
+                                        <div class="deposit-details">
+                                            <div class="deposit-amount">${deposit.amount} монет</div>
+                                            <div>Доходность: ${deposit.expected_profit}%</div>
+                                        </div>
+                                    </div>
+                                    <div class="deposit-timer">
+                                        <div class="timer-value" id="timer-${deposit.id}">--:--:--</div>
+                                        <div class="timer-label">До завершения</div>
+                                    </div>
+                                `;
+                                
+                                activeDepositsList.appendChild(depositItem);
+                                
+                                // Запускаем таймер для этого вклада
+                                startDepositTimer(deposit.id, deposit.end_time);
+                            });
+                        }
+                    }
                 }
                 
-                // Останавливаем все предыдущие таймеры
-                Object.values(depositTimers).forEach(timer => clearInterval(timer));
-                depositTimers = {};
+                // Загружаем историю завершенных вкладов
+                const { data: depositHistory, error: historyError } = await supabase
+                    .from('deposits')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .eq('status', 'completed')
+                    .order('updated_at', { ascending: false });
                 
-                if (activeDepositsList) {
-                    activeDepositsList.innerHTML = '';
+                if (historyError) {
+                    console.error('Ошибка загрузки истории вкладов:', historyError);
+                } else if (depositHistoryList) {
+                    depositHistoryList.innerHTML = '';
                     
-                    if (deposits.length === 0) {
-                        activeDepositsList.innerHTML = `
+                    if (depositHistory.length === 0) {
+                        depositHistoryList.innerHTML = `
                             <div class="empty-state">
-                                <i class="fas fa-clock"></i>
-                                <p>Нет активных вкладов</p>
+                                <i class="fas fa-history"></i>
+                                <p>Нет завершенных вкладов</p>
                             </div>
                         `;
                     } else {
-                        deposits.forEach(deposit => {
+                        depositHistory.forEach(deposit => {
                             const depositItem = document.createElement('div');
                             depositItem.className = 'deposit-item';
-                            depositItem.id = `deposit-${deposit.id}`;
                             
                             const depositTypeNames = {
                                 'call': '«По звонку»',
@@ -2597,24 +2714,28 @@
                                 'crypto': '«Крипта»'
                             };
                             
+                            const profitClass = deposit.actual_profit > 0 ? 'profit-positive' : 
+                                              deposit.actual_profit < 0 ? 'profit-negative' : '';
+                            const profitSign = deposit.actual_profit > 0 ? '+' : '';
+                            
                             depositItem.innerHTML = `
                                 <div class="deposit-info">
                                     <div class="deposit-type">${depositTypeNames[deposit.type] || deposit.type}</div>
                                     <div class="deposit-details">
                                         <div class="deposit-amount">${deposit.amount} монет</div>
-                                        <div>Доходность: ${deposit.expected_profit}%</div>
+                                        <div>Сумма возврата: ${deposit.amount + deposit.actual_profit} монет</div>
+                                        <div class="${profitClass}">Прибыль: ${profitSign}${deposit.actual_profit} монет</div>
                                     </div>
                                 </div>
-                                <div class="deposit-timer">
-                                    <div class="timer-value" id="timer-${deposit.id}">--:--:--</div>
-                                    <div class="timer-label">До завершения</div>
+                                <div style="text-align: right;">
+                                    <div>Завершен</div>
+                                    <div style="font-size: 0.8rem; color: var(--gray);">
+                                        ${new Date(deposit.updated_at).toLocaleDateString()}
+                                    </div>
                                 </div>
                             `;
                             
-                            activeDepositsList.appendChild(depositItem);
-                            
-                            // Запускаем таймер для этого вклада
-                            startDepositTimer(deposit.id, deposit.end_time);
+                            depositHistoryList.appendChild(depositItem);
                         });
                     }
                 }
