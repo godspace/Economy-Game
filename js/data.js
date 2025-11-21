@@ -1,5 +1,4 @@
 import { state, dom } from './config.js';
-import { loadRanking } from './deals.js';
 
 export async function loadTopRanking() {
     try {

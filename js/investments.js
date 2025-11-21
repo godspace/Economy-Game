@@ -1,29 +1,29 @@
-import { supabaseClient, currentUser, depositTimers, activeDepositsList, depositHistoryList, depositModal, depositModalContent, depositResultModal, depositResultContent, coinsValue } from './config.js';
+import { state, dom } from './config.js';
 
 export async function loadInvestments() {
     try {
-        if (!supabaseClient || !currentUser) {
+        if (!state.supabase || !state.currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const { data: activeDeposits, error: activeError } = await supabaseClient
+        const { data: activeDeposits, error: activeError } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', currentUser.id)
+            .eq('user_id', state.currentUser.id)
             .eq('status', 'active');
         
         if (activeError) {
             console.error('Ошибка загрузки активных вкладов:', activeError);
         } else {
-            Object.values(depositTimers).forEach(timer => clearInterval(timer));
-            depositTimers = {};
+            Object.values(state.depositTimers).forEach(timer => clearInterval(timer));
+            state.depositTimers = {};
             
-            if (activeDepositsList) {
-                activeDepositsList.innerHTML = '';
+            if (dom.activeDepositsList) {
+                dom.activeDepositsList.innerHTML = '';
                 
                 if (activeDeposits.length === 0) {
-                    activeDepositsList.innerHTML = `
+                    dom.activeDepositsList.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-clock"></i>
                             <p>Нет активных вкладов</p>
@@ -56,7 +56,7 @@ export async function loadInvestments() {
                             </div>
                         `;
                         
-                        activeDepositsList.appendChild(depositItem);
+                        dom.activeDepositsList.appendChild(depositItem);
                         
                         startDepositTimer(deposit.id, deposit.end_time);
                     });
@@ -64,20 +64,20 @@ export async function loadInvestments() {
             }
         }
         
-        const { data: depositHistory, error: historyError } = await supabaseClient
+        const { data: depositHistory, error: historyError } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', currentUser.id)
+            .eq('user_id', state.currentUser.id)
             .eq('status', 'completed')
             .order('updated_at', { ascending: false });
         
         if (historyError) {
             console.error('Ошибка загрузки истории вкладов:', historyError);
-        } else if (depositHistoryList) {
-            depositHistoryList.innerHTML = '';
+        } else if (dom.depositHistoryList) {
+            dom.depositHistoryList.innerHTML = '';
             
             if (depositHistory.length === 0) {
-                depositHistoryList.innerHTML = `
+                dom.depositHistoryList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-history"></i>
                         <p>Нет завершенных вкладов</p>
@@ -116,7 +116,7 @@ export async function loadInvestments() {
                         </div>
                     `;
                     
-                    depositHistoryList.appendChild(depositItem);
+                    dom.depositHistoryList.appendChild(depositItem);
                 });
             }
         }
@@ -136,7 +136,7 @@ export function startDepositTimer(depositId, endTime) {
         
         if (timeLeft <= 0) {
             timerElement.textContent = '00:00:00';
-            clearInterval(depositTimers[depositId]);
+            clearInterval(state.depositTimers[depositId]);
             completeDeposit(depositId);
             return;
         }
@@ -150,11 +150,11 @@ export function startDepositTimer(depositId, endTime) {
     };
     
     updateTimer();
-    depositTimers[depositId] = setInterval(updateTimer, 1000);
+    state.depositTimers[depositId] = setInterval(updateTimer, 1000);
 }
 
 export function openDepositModal(type, duration, profit, isRisky) {
-    if (!currentUser) {
+    if (!state.currentUser) {
         alert('Необходимо авторизоваться');
         return;
     }
@@ -182,7 +182,7 @@ export function openDepositModal(type, duration, profit, isRisky) {
         `;
     }
     
-    depositModalContent.innerHTML = `
+    dom.depositModalContent.innerHTML = `
         <div class="deposit-info">
             <h3>${depositTypeNames[type]}</h3>
             <p><strong>Длительность:</strong> ${durationTexts[duration]}</p>
@@ -207,20 +207,20 @@ export function openDepositModal(type, duration, profit, isRisky) {
         createDeposit(type, amount, duration, profit, isRisky);
     });
     
-    depositModal.classList.add('active');
+    dom.depositModal.classList.add('active');
 }
 
 async function createDeposit(type, amount, duration, profit, isRisky) {
     try {
-        if (!supabaseClient || !currentUser) {
+        if (!state.supabase || !state.currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const { data: profile, error: profileError } = await supabaseClient
+        const { data: profile, error: profileError } = await state.supabase
             .from('profiles')
             .select('coins')
-            .eq('id', currentUser.id)
+            .eq('id', state.currentUser.id)
             .single();
         
         if (profileError) {
@@ -241,11 +241,11 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
             expectedProfit = 2;
         }
         
-        const { data: deposit, error } = await supabaseClient
+        const { data: deposit, error } = await state.supabase
             .from('deposits')
             .insert([
                 {
-                    user_id: currentUser.id,
+                    user_id: state.currentUser.id,
                     type: type,
                     amount: amount,
                     expected_profit: expectedProfit,
@@ -263,20 +263,20 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
         }
         
         const newCoins = profile.coins - amount;
-        const { error: updateError } = await supabaseClient
+        const { error: updateError } = await state.supabase
             .from('profiles')
             .update({ coins: newCoins })
-            .eq('id', currentUser.id);
+            .eq('id', state.currentUser.id);
         
         if (updateError) {
             console.error('Ошибка обновления баланса:', updateError);
             return;
         }
         
-        coinsValue.textContent = newCoins;
+        dom.coinsValue.textContent = newCoins;
         
         alert('Вклад успешно открыт!');
-        depositModal.classList.remove('active');
+        dom.depositModal.classList.remove('active');
         
         loadInvestments();
         
@@ -288,12 +288,12 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
 
 async function completeDeposit(depositId) {
     try {
-        if (!supabaseClient || !currentUser) {
+        if (!state.supabase || !state.currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const { data: deposit, error: depositError } = await supabaseClient
+        const { data: deposit, error: depositError } = await state.supabase
             .from('deposits')
             .select('*')
             .eq('id', depositId)
@@ -316,10 +316,10 @@ async function completeDeposit(depositId) {
             profit = Math.floor(deposit.amount * (deposit.expected_profit / 100));
         }
         
-        const { data: profile, error: profileError } = await supabaseClient
+        const { data: profile, error: profileError } = await state.supabase
             .from('profiles')
             .select('coins')
-            .eq('id', currentUser.id)
+            .eq('id', state.currentUser.id)
             .single();
         
         if (profileError) {
@@ -328,17 +328,17 @@ async function completeDeposit(depositId) {
         }
         
         const newCoins = profile.coins + deposit.amount + profit;
-        const { error: updateError } = await supabaseClient
+        const { error: updateError } = await state.supabase
             .from('profiles')
             .update({ coins: newCoins })
-            .eq('id', currentUser.id);
+            .eq('id', state.currentUser.id);
         
         if (updateError) {
             console.error('Ошибка обновления баланса:', updateError);
             return;
         }
         
-        const { error: updateDepositError } = await supabaseClient
+        const { error: updateDepositError } = await state.supabase
             .from('deposits')
             .update({ 
                 status: 'completed',
@@ -351,7 +351,7 @@ async function completeDeposit(depositId) {
             return;
         }
         
-        coinsValue.textContent = newCoins;
+        dom.coinsValue.textContent = newCoins;
         
         showDepositResult(deposit, profit);
         
@@ -364,7 +364,7 @@ async function completeDeposit(depositId) {
 
 function showDepositResult(deposit, profit) {
     try {
-        if (!depositResultModal || !depositResultContent) {
+        if (!dom.depositResultModal || !dom.depositResultContent) {
             return;
         }
         
@@ -414,8 +414,8 @@ function showDepositResult(deposit, profit) {
             `;
         }
         
-        depositResultContent.innerHTML = resultHtml;
-        depositResultModal.classList.add('active');
+        dom.depositResultContent.innerHTML = resultHtml;
+        dom.depositResultModal.classList.add('active');
         
     } catch (error) {
         console.error('Ошибка показа результата вклада:', error);

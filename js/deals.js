@@ -1,18 +1,18 @@
-import { supabaseClient, currentUser, currentUserProfile, selectedUser, selectedDeal, dealModal, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation, dealLimitInfo, dealLimitText, responseModal, responseDealInfo, resultModal, resultContent, incomingDeals, pendingDeals, allDeals, rankingTable } from './config.js';
+import { state, dom } from './config.js';
 
 export async function showDealModal(userId) {
     try {
-        if (!supabaseClient || !currentUserProfile) {
+        if (!state.supabase || !state.currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        if (currentUserProfile.coins <= 0) {
+        if (state.currentUserProfile.coins <= 0) {
             alert('У вас недостаточно монет для совершения сделки');
             return;
         }
         
-        const { data: user, error } = await supabaseClient
+        const { data: user, error } = await state.supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
@@ -23,45 +23,45 @@ export async function showDealModal(userId) {
             return;
         }
         
-        selectedUser = user;
+        state.selectedUser = user;
         
-        if (dealPlayerName) dealPlayerName.textContent = user.username;
-        if (dealAvatar) dealAvatar.textContent = user.username.charAt(0).toUpperCase();
-        if (dealPlayerClass) dealPlayerClass.textContent = `Класс: ${user.class}`;
-        if (dealPlayerCoins) dealPlayerCoins.textContent = user.coins;
-        if (dealPlayerReputation) dealPlayerReputation.textContent = user.reputation;
+        if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
+        if (dom.dealAvatar) dom.dealAvatar.textContent = user.username.charAt(0).toUpperCase();
+        if (dom.dealPlayerClass) dom.dealPlayerClass.textContent = `Класс: ${user.class}`;
+        if (dom.dealPlayerCoins) dom.dealPlayerCoins.textContent = user.coins;
+        if (dom.dealPlayerReputation) dom.dealPlayerReputation.textContent = user.reputation;
         
         const todayDealsCount = await getTodayDealsCount(userId);
-        if (dealLimitInfo && dealLimitText) {
+        if (dom.dealLimitInfo && dom.dealLimitText) {
             if (todayDealsCount >= 5) {
-                dealLimitText.textContent = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
-                dealLimitInfo.style.display = 'block';
+                dom.dealLimitText.textContent = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
+                dom.dealLimitInfo.style.display = 'block';
                 
-                if (document.getElementById('cooperateBtn')) {
-                    document.getElementById('cooperateBtn').disabled = true;
-                    document.getElementById('cooperateBtn').classList.add('btn-disabled');
+                if (dom.cooperateBtn) {
+                    dom.cooperateBtn.disabled = true;
+                    dom.cooperateBtn.classList.add('btn-disabled');
                 }
-                if (document.getElementById('cheatBtn')) {
-                    document.getElementById('cheatBtn').disabled = true;
-                    document.getElementById('cheatBtn').classList.add('btn-disabled');
+                if (dom.cheatBtn) {
+                    dom.cheatBtn.disabled = true;
+                    dom.cheatBtn.classList.add('btn-disabled');
                 }
             } else {
-                dealLimitText.textContent = `Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.`;
-                dealLimitInfo.style.display = 'block';
+                dom.dealLimitText.textContent = `Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.`;
+                dom.dealLimitInfo.style.display = 'block';
                 
-                if (document.getElementById('cooperateBtn')) {
-                    document.getElementById('cooperateBtn').disabled = false;
-                    document.getElementById('cooperateBtn').classList.remove('btn-disabled');
+                if (dom.cooperateBtn) {
+                    dom.cooperateBtn.disabled = false;
+                    dom.cooperateBtn.classList.remove('btn-disabled');
                 }
-                if (document.getElementById('cheatBtn')) {
-                    document.getElementById('cheatBtn').disabled = false;
-                    document.getElementById('cheatBtn').classList.remove('btn-disabled');
+                if (dom.cheatBtn) {
+                    dom.cheatBtn.disabled = false;
+                    dom.cheatBtn.classList.remove('btn-disabled');
                 }
             }
         }
         
-        if (dealModal) {
-            dealModal.classList.add('active');
+        if (dom.dealModal) {
+            dom.dealModal.classList.add('active');
         }
     } catch (error) {
         console.error('Ошибка показа модального окна:', error);
@@ -70,7 +70,7 @@ export async function showDealModal(userId) {
 
 async function getTodayDealsCount(targetUserId) {
     try {
-        if (!supabaseClient || !currentUser) {
+        if (!state.supabase || !state.currentUser) {
             return 0;
         }
         
@@ -79,10 +79,10 @@ async function getTodayDealsCount(targetUserId) {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         
-        const { data: todayDeals, error } = await supabaseClient
+        const { data: todayDeals, error } = await state.supabase
             .from('deals')
             .select('id, created_at')
-            .eq('from_user', currentUser.id)
+            .eq('from_user', state.currentUser.id)
             .eq('to_user', targetUserId)
             .gte('created_at', today)
             .lt('created_at', tomorrowStr);
@@ -101,32 +101,32 @@ async function getTodayDealsCount(targetUserId) {
 
 export async function proposeDeal(choice) {
     try {
-        if (!supabaseClient || !currentUser || !selectedUser || !currentUserProfile) {
+        if (!state.supabase || !state.currentUser || !state.selectedUser || !state.currentUserProfile) {
             console.error('Required data not initialized');
             return;
         }
         
-        if (currentUserProfile.coins <= 0) {
+        if (state.currentUserProfile.coins <= 0) {
             alert('У вас недостаточно монет для совершения сделки');
-            if (dealModal) {
-                dealModal.classList.remove('active');
+            if (dom.dealModal) {
+                dom.dealModal.classList.remove('active');
             }
             return;
         }
         
-        const todayDealsCount = await getTodayDealsCount(selectedUser.id);
+        const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
         
         if (todayDealsCount >= 5) {
-            alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
+            alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${state.selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
             return;
         }
         
-        const { data, error } = await supabaseClient
+        const { data, error } = await state.supabase
             .from('deals')
             .insert([
                 {
-                    from_user: currentUser.id,
-                    to_user: selectedUser.id,
+                    from_user: state.currentUser.id,
+                    to_user: state.selectedUser.id,
                     from_choice: choice,
                     status: 'pending'
                 }
@@ -137,8 +137,8 @@ export async function proposeDeal(choice) {
         }
         
         alert('Сделка предложена успешно!');
-        if (dealModal) {
-            dealModal.classList.remove('active');
+        if (dom.dealModal) {
+            dom.dealModal.classList.remove('active');
         }
         loadDeals();
     } catch (error) {
@@ -149,12 +149,12 @@ export async function proposeDeal(choice) {
 
 export async function showResponseModal(dealId) {
     try {
-        if (!supabaseClient) {
+        if (!state.supabase) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: deal, error } = await supabaseClient
+        const { data: deal, error } = await state.supabase
             .from('deals')
             .select(`
                 *,
@@ -168,10 +168,10 @@ export async function showResponseModal(dealId) {
             return;
         }
         
-        selectedDeal = deal;
+        state.selectedDeal = deal;
         
-        if (responseDealInfo) {
-            responseDealInfo.innerHTML = `
+        if (dom.responseDealInfo) {
+            dom.responseDealInfo.innerHTML = `
                 <div class="user-info">
                     <div class="user-avatar">${deal.from_user.username.charAt(0).toUpperCase()}</div>
                     <div>
@@ -198,8 +198,8 @@ export async function showResponseModal(dealId) {
             `;
         }
         
-        if (responseModal) {
-            responseModal.classList.add('active');
+        if (dom.responseModal) {
+            dom.responseModal.classList.add('active');
         }
     } catch (error) {
         console.error('Ошибка показа модального окна ответа:', error);
@@ -208,13 +208,13 @@ export async function showResponseModal(dealId) {
 
 export async function respondToDeal(choice) {
     try {
-        if (!supabaseClient || !selectedDeal) {
+        if (!state.supabase || !state.selectedDeal) {
             console.error('Required data not initialized');
             return;
         }
         
-        const { data: result, error } = await supabaseClient.rpc('process_deal', {
-            deal_id: selectedDeal.id,
+        const { data: result, error } = await state.supabase.rpc('process_deal', {
+            deal_id: state.selectedDeal.id,
             response_choice: choice
         });
         
@@ -222,16 +222,16 @@ export async function respondToDeal(choice) {
             throw error;
         }
         
-        await showDealResult(selectedDeal, choice, result);
+        await showDealResult(state.selectedDeal, choice, result);
         
-        if (responseModal) {
-            responseModal.classList.remove('active');
+        if (dom.responseModal) {
+            dom.responseModal.classList.remove('active');
         }
         
         loadDeals();
-        if (currentUser) {
+        if (state.currentUser) {
             const { loadUserProfile } = await import('./users.js');
-            loadUserProfile(currentUser.id);
+            loadUserProfile(state.currentUser.id);
         }
     } catch (error) {
         console.error('Ошибка ответа на сделку:', error);
@@ -241,7 +241,7 @@ export async function respondToDeal(choice) {
 
 async function showDealResult(deal, userChoice, result) {
     try {
-        if (!resultModal || !resultContent) {
+        if (!dom.resultModal || !dom.resultContent) {
             return;
         }
         
@@ -299,8 +299,8 @@ async function showDealResult(deal, userChoice, result) {
             `;
         }
         
-        resultContent.innerHTML = resultHtml;
-        resultModal.classList.add('active');
+        dom.resultContent.innerHTML = resultHtml;
+        dom.resultModal.classList.add('active');
         
     } catch (error) {
         console.error('Ошибка показа результата сделки:', error);
@@ -309,28 +309,28 @@ async function showDealResult(deal, userChoice, result) {
 
 export async function loadDeals() {
     try {
-        if (!supabaseClient || !currentUser) {
+        if (!state.supabase || !state.currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
         // Входящие сделки
-        const { data: incoming, error: incomingError } = await supabaseClient
+        const { data: incoming, error: incomingError } = await state.supabase
             .from('deals')
             .select(`
                 *,
                 from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
             `)
-            .eq('to_user', currentUser.id)
+            .eq('to_user', state.currentUser.id)
             .eq('status', 'pending');
         
         if (incomingError) {
             console.error('Ошибка загрузки входящих сделок:', incomingError);
-        } else if (incomingDeals) {
-            incomingDeals.innerHTML = '';
+        } else if (dom.incomingDeals) {
+            dom.incomingDeals.innerHTML = '';
             
             if (incoming.length === 0) {
-                incomingDeals.innerHTML = `
+                dom.incomingDeals.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
                         <p>Нет входящих сделок</p>
@@ -353,7 +353,7 @@ export async function loadDeals() {
                         </div>
                     `;
                     
-                    incomingDeals.appendChild(dealItem);
+                    dom.incomingDeals.appendChild(dealItem);
                 });
                 
                 document.querySelectorAll('.respond-deal').forEach(btn => {
@@ -366,22 +366,22 @@ export async function loadDeals() {
         }
         
         // Ожидающие ответа сделки
-        const { data: pending, error: pendingError } = await supabaseClient
+        const { data: pending, error: pendingError } = await state.supabase
             .from('deals')
             .select(`
                 *,
                 to_user:profiles!deals_to_user_fkey(username, class)
             `)
-            .eq('from_user', currentUser.id)
+            .eq('from_user', state.currentUser.id)
             .eq('status', 'pending');
         
         if (pendingError) {
             console.error('Ошибка загрузки ожидающих сделок:', pendingError);
-        } else if (pendingDeals) {
-            pendingDeals.innerHTML = '';
+        } else if (dom.pendingDeals) {
+            dom.pendingDeals.innerHTML = '';
             
             if (pending.length === 0) {
-                pendingDeals.innerHTML = `
+                dom.pendingDeals.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-clock"></i>
                         <p>Нет ожидающих ответа сделок</p>
@@ -399,29 +399,29 @@ export async function loadDeals() {
                         </div>
                     `;
                     
-                    pendingDeals.appendChild(dealItem);
+                    dom.pendingDeals.appendChild(dealItem);
                 });
             }
         }
         
         // Все сделки (история)
-        const { data: all, error: allError } = await supabaseClient
+        const { data: all, error: allError } = await state.supabase
             .from('deals')
             .select(`
                 *,
                 from_user:profiles!deals_from_user_fkey(username, class),
                 to_user:profiles!deals_to_user_fkey(username, class)
             `)
-            .or(`from_user.eq.${currentUser.id},to_user.eq.${currentUser.id}`)
+            .or(`from_user.eq.${state.currentUser.id},to_user.eq.${state.currentUser.id}`)
             .order('created_at', { ascending: false });
         
         if (allError) {
             console.error('Ошибка загрузки всех сделок:', allError);
-        } else if (allDeals) {
-            allDeals.innerHTML = '';
+        } else if (dom.allDeals) {
+            dom.allDeals.innerHTML = '';
             
             if (all.length === 0) {
-                allDeals.innerHTML = `
+                dom.allDeals.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-history"></i>
                         <p>Нет завершенных сделок</p>
@@ -429,7 +429,7 @@ export async function loadDeals() {
                 `;
             } else {
                 all.forEach(deal => {
-                    const isOutgoing = deal.from_user.id === currentUser.id;
+                    const isOutgoing = deal.from_user.id === state.currentUser.id;
                     const otherUser = isOutgoing ? deal.to_user : deal.from_user;
                     const directionText = isOutgoing ? "Кому:" : "От кого:";
                     
@@ -504,7 +504,7 @@ export async function loadDeals() {
                     dealInfo += `</div>`;
                     
                     dealItem.innerHTML = dealInfo;
-                    allDeals.appendChild(dealItem);
+                    dom.allDeals.appendChild(dealItem);
                 });
             }
         }
@@ -515,12 +515,12 @@ export async function loadDeals() {
 
 export async function loadRanking() {
     try {
-        if (!supabaseClient) {
+        if (!state.supabase) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: users, error } = await supabaseClient
+        const { data: users, error } = await state.supabase
             .from('profiles')
             .select('*')
             .order('coins', { ascending: false });
@@ -530,11 +530,11 @@ export async function loadRanking() {
             return;
         }
         
-        if (rankingTable) {
-            rankingTable.innerHTML = '';
+        if (dom.rankingTable) {
+            dom.rankingTable.innerHTML = '';
             
             if (users.length === 0) {
-                rankingTable.innerHTML = `
+                dom.rankingTable.innerHTML = `
                     <tr>
                         <td colspan="5" style="text-align: center; padding: 20px;">
                             <div class="empty-state">
@@ -548,19 +548,19 @@ export async function loadRanking() {
                 users.forEach((user, index) => {
                     const row = document.createElement('tr');
                     
-                    if (currentUser && user.id === currentUser.id) {
+                    if (state.currentUser && user.id === state.currentUser.id) {
                         row.classList.add('current-user');
                     }
                     
                     row.innerHTML = `
                         <td>${index + 1}</td>
-                        <td>${user.username} ${currentUser && user.id === currentUser.id ? '(Вы)' : ''}</td>
+                        <td>${user.username} ${state.currentUser && user.id === state.currentUser.id ? '(Вы)' : ''}</td>
                         <td>${user.class}</td>
                         <td>${user.coins}</td>
                         <td>${user.reputation}</td>
                     `;
                     
-                    rankingTable.appendChild(row);
+                    dom.rankingTable.appendChild(row);
                 });
             }
         }
