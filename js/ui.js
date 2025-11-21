@@ -1,4 +1,4 @@
-import { state, dom } from './config.js';
+import { dom, state } from './config.js';
 
 export function initDOMElements() {
     // Инициализируем свойства объекта dom, а не переопределяем переменные

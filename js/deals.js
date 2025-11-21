@@ -314,7 +314,7 @@ export async function loadDeals() {
             return;
         }
         
-        // Входящие сделки (ожидающие ответа)
+        // Входящие сделки
         const { data: incoming, error: incomingError } = await state.supabase
             .from('deals')
             .select(`
@@ -409,36 +409,19 @@ export async function loadDeals() {
             .from('deals')
             .select(`
                 *,
-                from_user:profiles!deals_from_user_fkey(username, class)
+                from_user:profiles!deals_from_user_fkey(username, class),
+                to_user:profiles!deals_to_user_fkey(username, class)
             `)
             .eq('to_user', state.currentUser.id)
             .eq('status', 'completed')
-            .order('updated_at', { ascending: false });
+            .order('created_at', { ascending: false });
         
-        // Завершённые исходящие сделки
-        const { data: completedOutgoing, error: completedOutgoingError } = await state.supabase
-            .from('deals')
-            .select(`
-                *,
-                to_user:profiles!deals_to_user_fkey(username, class)
-            `)
-            .eq('from_user', state.currentUser.id)
-            .eq('status', 'completed')
-            .order('updated_at', { ascending: false });
-        
-        // Отображаем завершённые входящие сделки
-        if (dom.completedIncomingDeals) {
+        if (completedIncomingError) {
+            console.error('Ошибка загрузки завершённых входящих сделок:', completedIncomingError);
+        } else if (dom.completedIncomingDeals) {
             dom.completedIncomingDeals.innerHTML = '';
             
-            if (completedIncomingError) {
-                console.error('Ошибка загрузки завершённых входящих сделок:', completedIncomingError);
-                dom.completedIncomingDeals.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Ошибка загрузки</p>
-                    </div>
-                `;
-            } else if (completedIncoming.length === 0) {
+            if (completedIncoming.length === 0) {
                 dom.completedIncomingDeals.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-inbox"></i>
@@ -450,7 +433,6 @@ export async function loadDeals() {
                     const dealItem = document.createElement('div');
                     dealItem.className = 'deal-item';
                     
-                    let resultHtml = '';
                     let coinsChange = 0;
                     let resultClass = '';
                     let resultText = '';
@@ -473,17 +455,14 @@ export async function loadDeals() {
                         resultText = `${coinsChange} монет`;
                     }
                     
-                    resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
+                    const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
                     
                     dealItem.innerHTML = `
                         <div>
-                            <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                            <p><strong>Их выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            <p><strong>От кого:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
                             <p><strong>Ваш выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            <p><strong>Ответ:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
                             ${resultHtml}
-                            <p style="font-size: 0.8rem; color: var(--gray); margin-top: 5px;">
-                                ${new Date(deal.updated_at).toLocaleDateString()}
-                            </p>
                         </div>
                     `;
                     
@@ -492,22 +471,27 @@ export async function loadDeals() {
             }
         }
         
-        // Отображаем завершённые исходящие сделки
-        if (dom.completedOutgoingDeals) {
+        // Завершённые исходящие сделки
+        const { data: completedOutgoing, error: completedOutgoingError } = await state.supabase
+            .from('deals')
+            .select(`
+                *,
+                from_user:profiles!deals_from_user_fkey(username, class),
+                to_user:profiles!deals_to_user_fkey(username, class)
+            `)
+            .eq('from_user', state.currentUser.id)
+            .eq('status', 'completed')
+            .order('created_at', { ascending: false });
+        
+        if (completedOutgoingError) {
+            console.error('Ошибка загрузки завершённых исходящих сделок:', completedOutgoingError);
+        } else if (dom.completedOutgoingDeals) {
             dom.completedOutgoingDeals.innerHTML = '';
             
-            if (completedOutgoingError) {
-                console.error('Ошибка загрузки завершённых исходящих сделок:', completedOutgoingError);
+            if (completedOutgoing.length === 0) {
                 dom.completedOutgoingDeals.innerHTML = `
                     <div class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Ошибка загрузки</p>
-                    </div>
-                `;
-            } else if (completedOutgoing.length === 0) {
-                dom.completedOutgoingDeals.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-share"></i>
+                        <i class="fas fa-paper-plane"></i>
                         <p>Нет завершённых исходящих сделок</p>
                     </div>
                 `;
@@ -516,7 +500,6 @@ export async function loadDeals() {
                     const dealItem = document.createElement('div');
                     dealItem.className = 'deal-item';
                     
-                    let resultHtml = '';
                     let coinsChange = 0;
                     let resultClass = '';
                     let resultText = '';
@@ -539,17 +522,14 @@ export async function loadDeals() {
                         resultText = `${coinsChange} монет`;
                     }
                     
-                    resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
+                    const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
                     
                     dealItem.innerHTML = `
                         <div>
                             <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
                             <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            <p><strong>Их выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            <p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
                             ${resultHtml}
-                            <p style="font-size: 0.8rem; color: var(--gray); margin-top: 5px;">
-                                ${new Date(deal.updated_at).toLocaleDateString()}
-                            </p>
                         </div>
                     `;
                     
