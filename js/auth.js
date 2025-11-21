@@ -1,4 +1,13 @@
 import { supabase, currentUser, currentUserProfile, authBtn } from './config.js';
+import { 
+    showAuthSection, showProfileSection, showAuthError, hideAuthError, 
+    showLoading, hideLoading 
+} from './ui.js';
+import { loadUserProfile } from './users.js';
+import { loadUsers, loadDeals, loadRanking, loadInvestments } from './data.js';
+
+// Остальной код без изменений...
+import { supabase, currentUser, currentUserProfile, authBtn } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError, showLoading, hideLoading } from './ui.js';
 import { loadUserProfile } from './users.js';
 import { loadUsers, loadDeals, loadRanking, loadInvestments } from './data.js';

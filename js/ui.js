@@ -1,17 +1,20 @@
 import { 
-    authSection, profileSection, userInfo, errorMessage, authError, 
-    loadingMessage, coinsValue, reputationValue,
-    authForm, authBtn, logoutBtn, searchBtn, cooperateBtn, cheatBtn,
-    respondCooperateBtn, respondCheatBtn, closeResultBtn, closeDepositResultBtn,
-    dealModal, responseModal, resultModal, depositModal, depositResultModal
+    // Импортируем все DOM элементы из config
+    authSection, profileSection, authForm, authBtn, userInfo, userGreeting, logoutBtn,
+    coinsValue, reputationValue, usersList, searchInput, classFilter, searchBtn,
+    incomingDeals, pendingDeals, allDeals, rankingTable, dealModal, responseModal, resultModal,
+    dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation,
+    cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo,
+    resultContent, closeResultBtn, userAvatar, loadingMessage, errorMessage, authError,
+    dealLimitInfo, dealLimitText, depositModal, depositModalContent, depositResultModal,
+    depositResultContent, closeDepositResultBtn, activeDepositsList, depositHistoryList,
+    topRankingTable
 } from './config.js';
-import { handleAuth, handleLogout } from './auth.js';
-import { loadUsers } from './users.js';
-import { loadDeals, loadRanking } from './deals.js';
-import { loadInvestments } from './investments.js';
-import { proposeDeal, respondToDeal } from './deals.js';
+
+// Убираем объявления переменных здесь - они уже импортированы из config
 
 export function initDOMElements() {
+    // Теперь просто присваиваем значения импортированным переменным
     authSection = document.getElementById('authSection');
     profileSection = document.getElementById('profileSection');
     authForm = document.getElementById('authForm');
@@ -60,6 +63,7 @@ export function initDOMElements() {
     topRankingTable = document.getElementById('topRankingTable');
 }
 
+// Остальные функции остаются без изменений
 export function showLoading() {
     if (loadingMessage) {
         loadingMessage.style.display = 'block';
@@ -175,24 +179,24 @@ export function setupEventListeners() {
     if (closeModalButtons) {
         closeModalButtons.forEach(closeBtn => {
             closeBtn.addEventListener('click', function() {
-                dealModal.classList.remove('active');
-                responseModal.classList.remove('active');
-                resultModal.classList.remove('active');
-                depositModal.classList.remove('active');
-                depositResultModal.classList.remove('active');
+                if (dealModal) dealModal.classList.remove('active');
+                if (responseModal) responseModal.classList.remove('active');
+                if (resultModal) resultModal.classList.remove('active');
+                if (depositModal) depositModal.classList.remove('active');
+                if (depositResultModal) depositResultModal.classList.remove('active');
             });
         });
     }
     
     if (closeResultBtn) {
         closeResultBtn.addEventListener('click', function() {
-            resultModal.classList.remove('active');
+            if (resultModal) resultModal.classList.remove('active');
         });
     }
     
     if (closeDepositResultBtn) {
         closeDepositResultBtn.addEventListener('click', function() {
-            depositResultModal.classList.remove('active');
+            if (depositResultModal) depositResultModal.classList.remove('active');
         });
     }
     
@@ -268,3 +272,9 @@ export function setupEventListeners() {
         });
     });
 }
+
+// Импортируем функции из других модулей
+import { handleAuth, handleLogout } from './auth.js';
+import { loadUsers } from './users.js';
+import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
+import { loadInvestments, openDepositModal } from './investments.js';
