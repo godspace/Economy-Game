@@ -1,4 +1,4 @@
-import { dom, state } from './config.js';
+import { state, dom } from './config.js';
 
 export function initDOMElements() {
     // Инициализируем свойства объекта dom, а не переопределяем переменные
@@ -18,7 +18,8 @@ export function initDOMElements() {
     dom.searchBtn = document.getElementById('searchBtn');
     dom.incomingDeals = document.getElementById('incomingDeals');
     dom.pendingDeals = document.getElementById('pendingDeals');
-    dom.allDeals = document.getElementById('allDeals');
+    dom.completedIncomingDeals = document.getElementById('completedIncomingDeals');
+    dom.completedOutgoingDeals = document.getElementById('completedOutgoingDeals');
     dom.rankingTable = document.getElementById('rankingTable');
     dom.dealModal = document.getElementById('dealModal');
     dom.responseModal = document.getElementById('responseModal');

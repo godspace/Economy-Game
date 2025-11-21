@@ -314,7 +314,7 @@ export async function loadDeals() {
             return;
         }
         
-        // Входящие сделки
+        // Входящие сделки (ожидающие ответа)
         const { data: incoming, error: incomingError } = await state.supabase
             .from('deals')
             .select(`
@@ -404,107 +404,156 @@ export async function loadDeals() {
             }
         }
         
-        // Все сделки (история)
-        const { data: all, error: allError } = await state.supabase
+        // Завершённые входящие сделки
+        const { data: completedIncoming, error: completedIncomingError } = await state.supabase
             .from('deals')
             .select(`
                 *,
-                from_user:profiles!deals_from_user_fkey(username, class),
+                from_user:profiles!deals_from_user_fkey(username, class)
+            `)
+            .eq('to_user', state.currentUser.id)
+            .eq('status', 'completed')
+            .order('updated_at', { ascending: false });
+        
+        // Завершённые исходящие сделки
+        const { data: completedOutgoing, error: completedOutgoingError } = await state.supabase
+            .from('deals')
+            .select(`
+                *,
                 to_user:profiles!deals_to_user_fkey(username, class)
             `)
-            .or(`from_user.eq.${state.currentUser.id},to_user.eq.${state.currentUser.id}`)
-            .order('created_at', { ascending: false });
+            .eq('from_user', state.currentUser.id)
+            .eq('status', 'completed')
+            .order('updated_at', { ascending: false });
         
-        if (allError) {
-            console.error('Ошибка загрузки всех сделок:', allError);
-        } else if (dom.allDeals) {
-            dom.allDeals.innerHTML = '';
+        // Отображаем завершённые входящие сделки
+        if (dom.completedIncomingDeals) {
+            dom.completedIncomingDeals.innerHTML = '';
             
-            if (all.length === 0) {
-                dom.allDeals.innerHTML = `
+            if (completedIncomingError) {
+                console.error('Ошибка загрузки завершённых входящих сделок:', completedIncomingError);
+                dom.completedIncomingDeals.innerHTML = `
                     <div class="empty-state">
-                        <i class="fas fa-history"></i>
-                        <p>Нет завершенных сделок</p>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Ошибка загрузки</p>
+                    </div>
+                `;
+            } else if (completedIncoming.length === 0) {
+                dom.completedIncomingDeals.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>Нет завершённых входящих сделок</p>
                     </div>
                 `;
             } else {
-                all.forEach(deal => {
-                    const isOutgoing = deal.from_user.id === state.currentUser.id;
-                    const otherUser = isOutgoing ? deal.to_user : deal.from_user;
-                    const directionText = isOutgoing ? "Кому:" : "От кого:";
-                    
-                    const statusBadge = deal.status === 'pending' ? 
-                        '<span class="badge badge-warning">Ожидание</span>' : 
-                        deal.status === 'completed' ? 
-                        '<span class="badge badge-success">Завершена</span>' :
-                        '<span class="badge badge-danger">Отклонена</span>';
-                    
-                    let resultHtml = '';
-                    if (deal.status === 'completed') {
-                        let coinsChange = 0;
-                        let resultClass = '';
-                        let resultText = '';
-                        
-                        if (isOutgoing) {
-                            if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                                coinsChange = 2;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                                coinsChange = 3;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            }
-                        } else {
-                            if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                                coinsChange = 2;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                                coinsChange = 3;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            }
-                        }
-                        
-                        resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
-                    }
-                    
+                completedIncoming.forEach(deal => {
                     const dealItem = document.createElement('div');
                     dealItem.className = 'deal-item';
                     
-                    let dealInfo = `
-                        <div>
-                            <p><strong>${directionText}</strong> ${otherUser.username} (${otherUser.class})</p>
-                            <p><strong>Ваш выбор:</strong> ${isOutgoing ? (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>
-                    `;
+                    let resultHtml = '';
+                    let coinsChange = 0;
+                    let resultClass = '';
+                    let resultText = '';
                     
-                    if (deal.status === 'completed') {
-                        dealInfo += `<p><strong>Ответ:</strong> ${isOutgoing ? (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>`;
+                    if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                        coinsChange = 2;
+                        resultClass = 'profit-positive';
+                        resultText = `+${coinsChange} монет`;
+                    } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                        coinsChange = 3;
+                        resultClass = 'profit-positive';
+                        resultText = `+${coinsChange} монет`;
+                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                        coinsChange = -1;
+                        resultClass = 'profit-negative';
+                        resultText = `${coinsChange} монет`;
+                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                        coinsChange = -1;
+                        resultClass = 'profit-negative';
+                        resultText = `${coinsChange} монет`;
                     }
                     
-                    dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
-                    dealInfo += resultHtml;
-                    dealInfo += `</div>`;
+                    resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
                     
-                    dealItem.innerHTML = dealInfo;
-                    dom.allDeals.appendChild(dealItem);
+                    dealItem.innerHTML = `
+                        <div>
+                            <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
+                            <p><strong>Их выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            <p><strong>Ваш выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            ${resultHtml}
+                            <p style="font-size: 0.8rem; color: var(--gray); margin-top: 5px;">
+                                ${new Date(deal.updated_at).toLocaleDateString()}
+                            </p>
+                        </div>
+                    `;
+                    
+                    dom.completedIncomingDeals.appendChild(dealItem);
+                });
+            }
+        }
+        
+        // Отображаем завершённые исходящие сделки
+        if (dom.completedOutgoingDeals) {
+            dom.completedOutgoingDeals.innerHTML = '';
+            
+            if (completedOutgoingError) {
+                console.error('Ошибка загрузки завершённых исходящих сделок:', completedOutgoingError);
+                dom.completedOutgoingDeals.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Ошибка загрузки</p>
+                    </div>
+                `;
+            } else if (completedOutgoing.length === 0) {
+                dom.completedOutgoingDeals.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-share"></i>
+                        <p>Нет завершённых исходящих сделок</p>
+                    </div>
+                `;
+            } else {
+                completedOutgoing.forEach(deal => {
+                    const dealItem = document.createElement('div');
+                    dealItem.className = 'deal-item';
+                    
+                    let resultHtml = '';
+                    let coinsChange = 0;
+                    let resultClass = '';
+                    let resultText = '';
+                    
+                    if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                        coinsChange = 2;
+                        resultClass = 'profit-positive';
+                        resultText = `+${coinsChange} монет`;
+                    } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                        coinsChange = -1;
+                        resultClass = 'profit-negative';
+                        resultText = `${coinsChange} монет`;
+                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                        coinsChange = 3;
+                        resultClass = 'profit-positive';
+                        resultText = `+${coinsChange} монет`;
+                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                        coinsChange = -1;
+                        resultClass = 'profit-negative';
+                        resultText = `${coinsChange} монет`;
+                    }
+                    
+                    resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
+                    
+                    dealItem.innerHTML = `
+                        <div>
+                            <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
+                            <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            <p><strong>Их выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            ${resultHtml}
+                            <p style="font-size: 0.8rem; color: var(--gray); margin-top: 5px;">
+                                ${new Date(deal.updated_at).toLocaleDateString()}
+                            </p>
+                        </div>
+                    `;
+                    
+                    dom.completedOutgoingDeals.appendChild(dealItem);
                 });
             }
         }
