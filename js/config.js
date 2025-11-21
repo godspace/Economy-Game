@@ -5,14 +5,14 @@ export const SUPABASE_CONFIG = {
 };
 
 // Глобальные переменные
-export let supabase = null;
+export let supabaseClient = null;
 export let currentUser = null;
 export let currentUserProfile = null;
 export let selectedUser = null;
 export let selectedDeal = null;
 export let depositTimers = {};
 
-// DOM элементы - объявляем как let чтобы можно было переопределять
+// DOM элементы
 export let authSection = null;
 export let profileSection = null;
 export let authForm = null;

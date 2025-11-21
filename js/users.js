@@ -1,14 +1,14 @@
-import { supabase, currentUser, currentUserProfile, selectedUser, usersList, userGreeting, userAvatar, coinsValue, reputationValue } from './config.js';
+import { supabaseClient, currentUser, currentUserProfile, selectedUser, usersList, userGreeting, userAvatar, coinsValue, reputationValue } from './config.js';
 import { showDealModal } from './deals.js';
 
 export async function loadUserProfile(userId) {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: profile, error } = await supabase
+        const { data: profile, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', userId)
@@ -34,7 +34,7 @@ export async function loadUserProfile(userId) {
 
 export async function createUserProfile(userId) {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabaseClient || !currentUser) {
             return;
         }
         
@@ -45,7 +45,7 @@ export async function createUserProfile(userId) {
             return;
         }
         
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('profiles')
             .insert([
                 { 
@@ -68,7 +68,7 @@ export async function createUserProfile(userId) {
 
 export async function loadUsers() {
     try {
-        if (!supabase || !currentUser || !currentUserProfile) {
+        if (!supabaseClient || !currentUser || !currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
@@ -76,7 +76,7 @@ export async function loadUsers() {
         const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
         const selectedClass = document.getElementById('classFilter') ? document.getElementById('classFilter').value : '';
         
-        let query = supabase
+        let query = supabaseClient
             .from('profiles')
             .select('*')
             .neq('id', currentUser.id);

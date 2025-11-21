@@ -1,14 +1,14 @@
-import { supabase, currentUser, topRankingTable } from './config.js';
+import { supabaseClient, currentUser, topRankingTable } from './config.js';
 import { loadRanking } from './deals.js';
 
 export async function loadTopRanking() {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: users, error } = await supabase
+        const { data: users, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .order('coins', { ascending: false })

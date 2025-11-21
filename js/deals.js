@@ -1,8 +1,8 @@
-import { supabase, currentUser, currentUserProfile, selectedUser, selectedDeal, dealModal, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation, dealLimitInfo, dealLimitText, responseModal, responseDealInfo, resultModal, resultContent, incomingDeals, pendingDeals, allDeals } from './config.js';
+import { supabaseClient, currentUser, currentUserProfile, selectedUser, selectedDeal, dealModal, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation, dealLimitInfo, dealLimitText, responseModal, responseDealInfo, resultModal, resultContent, incomingDeals, pendingDeals, allDeals, rankingTable } from './config.js';
 
 export async function showDealModal(userId) {
     try {
-        if (!supabase || !currentUserProfile) {
+        if (!supabaseClient || !currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
@@ -12,7 +12,7 @@ export async function showDealModal(userId) {
             return;
         }
         
-        const { data: user, error } = await supabase
+        const { data: user, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .eq('id', userId)
@@ -70,7 +70,7 @@ export async function showDealModal(userId) {
 
 async function getTodayDealsCount(targetUserId) {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabaseClient || !currentUser) {
             return 0;
         }
         
@@ -79,7 +79,7 @@ async function getTodayDealsCount(targetUserId) {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         
-        const { data: todayDeals, error } = await supabase
+        const { data: todayDeals, error } = await supabaseClient
             .from('deals')
             .select('id, created_at')
             .eq('from_user', currentUser.id)
@@ -101,7 +101,7 @@ async function getTodayDealsCount(targetUserId) {
 
 export async function proposeDeal(choice) {
     try {
-        if (!supabase || !currentUser || !selectedUser || !currentUserProfile) {
+        if (!supabaseClient || !currentUser || !selectedUser || !currentUserProfile) {
             console.error('Required data not initialized');
             return;
         }
@@ -121,7 +121,7 @@ export async function proposeDeal(choice) {
             return;
         }
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('deals')
             .insert([
                 {
@@ -149,12 +149,12 @@ export async function proposeDeal(choice) {
 
 export async function showResponseModal(dealId) {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: deal, error } = await supabase
+        const { data: deal, error } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -208,12 +208,12 @@ export async function showResponseModal(dealId) {
 
 export async function respondToDeal(choice) {
     try {
-        if (!supabase || !selectedDeal) {
+        if (!supabaseClient || !selectedDeal) {
             console.error('Required data not initialized');
             return;
         }
         
-        const { data: result, error } = await supabase.rpc('process_deal', {
+        const { data: result, error } = await supabaseClient.rpc('process_deal', {
             deal_id: selectedDeal.id,
             response_choice: choice
         });
@@ -309,13 +309,13 @@ async function showDealResult(deal, userChoice, result) {
 
 export async function loadDeals() {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabaseClient || !currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
         // Входящие сделки
-        const { data: incoming, error: incomingError } = await supabase
+        const { data: incoming, error: incomingError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -366,7 +366,7 @@ export async function loadDeals() {
         }
         
         // Ожидающие ответа сделки
-        const { data: pending, error: pendingError } = await supabase
+        const { data: pending, error: pendingError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -405,7 +405,7 @@ export async function loadDeals() {
         }
         
         // Все сделки (история)
-        const { data: all, error: allError } = await supabase
+        const { data: all, error: allError } = await supabaseClient
             .from('deals')
             .select(`
                 *,
@@ -515,12 +515,12 @@ export async function loadDeals() {
 
 export async function loadRanking() {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: users, error } = await supabase
+        const { data: users, error } = await supabaseClient
             .from('profiles')
             .select('*')
             .order('coins', { ascending: false });

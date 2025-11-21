@@ -1,16 +1,6 @@
-import { supabase, currentUser, currentUserProfile, authBtn } from './config.js';
-import { 
-    showAuthSection, showProfileSection, showAuthError, hideAuthError, 
-    showLoading, hideLoading 
-} from './ui.js';
+import { supabaseClient, currentUser, currentUserProfile, authBtn, SUPABASE_CONFIG } from './config.js';
+import { showAuthSection, showProfileSection, showAuthError, hideAuthError } from './ui.js';
 import { loadUserProfile } from './users.js';
-import { loadUsers, loadDeals, loadRanking, loadInvestments } from './data.js';
-
-// Остальной код без изменений...
-import { supabase, currentUser, currentUserProfile, authBtn } from './config.js';
-import { showAuthSection, showProfileSection, showAuthError, hideAuthError, showLoading, hideLoading } from './ui.js';
-import { loadUserProfile } from './users.js';
-import { loadUsers, loadDeals, loadRanking, loadInvestments } from './data.js';
 
 export async function initSupabase() {
     return new Promise((resolve, reject) => {
@@ -21,7 +11,8 @@ export async function initSupabase() {
                 throw new Error('Supabase library not loaded');
             }
             
-            supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+            // Используем другое имя переменной
+            supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
             
             console.log('Supabase initialized successfully');
             resolve();
@@ -34,11 +25,11 @@ export async function initSupabase() {
 
 export async function checkAuth() {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             throw new Error('Supabase not initialized');
         }
         
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await supabaseClient.auth.getUser();
         
         if (error) {
             console.warn('Auth check error:', error);
@@ -62,7 +53,7 @@ export async function checkAuth() {
 export async function handleAuth(e) {
     e.preventDefault();
     
-    if (!supabase) {
+    if (!supabaseClient) {
         alert('Система не инициализирована. Пожалуйста, обновите страницу.');
         return;
     }
@@ -83,7 +74,7 @@ export async function handleAuth(e) {
     
     try {
         // Сначала пробуем зарегистрироваться
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
             email: `${username}@school.game`,
             password: password,
             options: {
@@ -99,7 +90,7 @@ export async function handleAuth(e) {
             if (signUpError.message.includes('already registered')) {
                 console.log('User exists, trying to sign in...');
                 
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+                const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
                     email: `${username}@school.game`,
                     password: password
                 });
@@ -120,7 +111,7 @@ export async function handleAuth(e) {
             
             // Создаем профиль пользователя
             try {
-                const { error: profileError } = await supabase
+                const { error: profileError } = await supabaseClient
                     .from('profiles')
                     .insert([
                         { 
@@ -151,7 +142,7 @@ export async function handleAuth(e) {
 
 export async function handleLogout() {
     try {
-        if (!supabase) {
+        if (!supabaseClient) {
             console.error('Supabase not initialized');
             return;
         }
@@ -159,7 +150,7 @@ export async function handleLogout() {
         Object.values(depositTimers).forEach(timer => clearInterval(timer));
         depositTimers = {};
         
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         currentUser = null;
         currentUserProfile = null;
         showAuthSection();

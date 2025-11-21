@@ -1,13 +1,13 @@
-import { supabase, currentUser, depositTimers, activeDepositsList, depositHistoryList, depositModal, depositModalContent, depositResultModal, depositResultContent, coinsValue } from './config.js';
+import { supabaseClient, currentUser, depositTimers, activeDepositsList, depositHistoryList, depositModal, depositModalContent, depositResultModal, depositResultContent, coinsValue } from './config.js';
 
 export async function loadInvestments() {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabaseClient || !currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const { data: activeDeposits, error: activeError } = await supabase
+        const { data: activeDeposits, error: activeError } = await supabaseClient
             .from('deposits')
             .select('*')
             .eq('user_id', currentUser.id)
@@ -64,7 +64,7 @@ export async function loadInvestments() {
             }
         }
         
-        const { data: depositHistory, error: historyError } = await supabase
+        const { data: depositHistory, error: historyError } = await supabaseClient
             .from('deposits')
             .select('*')
             .eq('user_id', currentUser.id)
@@ -212,12 +212,12 @@ export function openDepositModal(type, duration, profit, isRisky) {
 
 async function createDeposit(type, amount, duration, profit, isRisky) {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabaseClient || !currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('coins')
             .eq('id', currentUser.id)
@@ -241,7 +241,7 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
             expectedProfit = 2;
         }
         
-        const { data: deposit, error } = await supabase
+        const { data: deposit, error } = await supabaseClient
             .from('deposits')
             .insert([
                 {
@@ -263,7 +263,7 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
         }
         
         const newCoins = profile.coins - amount;
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
             .from('profiles')
             .update({ coins: newCoins })
             .eq('id', currentUser.id);
@@ -288,12 +288,12 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
 
 async function completeDeposit(depositId) {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabaseClient || !currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const { data: deposit, error: depositError } = await supabase
+        const { data: deposit, error: depositError } = await supabaseClient
             .from('deposits')
             .select('*')
             .eq('id', depositId)
@@ -316,7 +316,7 @@ async function completeDeposit(depositId) {
             profit = Math.floor(deposit.amount * (deposit.expected_profit / 100));
         }
         
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('coins')
             .eq('id', currentUser.id)
@@ -328,7 +328,7 @@ async function completeDeposit(depositId) {
         }
         
         const newCoins = profile.coins + deposit.amount + profit;
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseClient
             .from('profiles')
             .update({ coins: newCoins })
             .eq('id', currentUser.id);
@@ -338,7 +338,7 @@ async function completeDeposit(depositId) {
             return;
         }
         
-        const { error: updateDepositError } = await supabase
+        const { error: updateDepositError } = await supabaseClient
             .from('deposits')
             .update({ 
                 status: 'completed',
