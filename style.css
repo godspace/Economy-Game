@@ -791,6 +791,44 @@ button:active {
     color: var(--gray);
 }
 
+/* Стили для колонок сделок */
+.deals-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.deals-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.deals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.deal-result {
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.profit-positive {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border-left: 3px solid #4caf50;
+}
+
+.profit-negative {
+    background-color: #ffebee;
+    color: #c62828;
+    border-left: 3px solid #f44336;
+}
+
 /* Мобильные стили */
 @media (max-width: 768px) {
     .container {
@@ -890,6 +928,16 @@ button:active {
         text-align: left;
         width: 100%;
     }
+    
+    /* Адаптивность для колонок сделок */
+    .deals-columns {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .deals-column {
+        margin-bottom: 20px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -964,5 +1012,18 @@ button:active {
         background-color: #332701;
         color: #ffd54f;
         border-left-color: #ffc107;
+    }
+    
+    /* Стили для колонок сделок в темной теме */
+    .profit-positive {
+        background-color: #1b3a1b;
+        color: #4caf50;
+        border-left-color: #4caf50;
+    }
+    
+    .profit-negative {
+        background-color: #3a1b1b;
+        color: #f44336;
+        border-left-color: #f44336;
     }
 }

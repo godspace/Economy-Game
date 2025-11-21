@@ -1,312 +1,3 @@
-import { state, dom } from './config.js';
-
-export async function showDealModal(userId) {
-    try {
-        if (!state.supabase || !state.currentUserProfile) {
-            console.error('Supabase or current user not initialized');
-            return;
-        }
-        
-        if (state.currentUserProfile.coins <= 0) {
-            alert('У вас недостаточно монет для совершения сделки');
-            return;
-        }
-        
-        const { data: user, error } = await state.supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-        
-        if (error) {
-            console.error('Ошибка загрузки профиля пользователя:', error);
-            return;
-        }
-        
-        state.selectedUser = user;
-        
-        if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
-        if (dom.dealAvatar) dom.dealAvatar.textContent = user.username.charAt(0).toUpperCase();
-        if (dom.dealPlayerClass) dom.dealPlayerClass.textContent = `Класс: ${user.class}`;
-        if (dom.dealPlayerCoins) dom.dealPlayerCoins.textContent = user.coins;
-        if (dom.dealPlayerReputation) dom.dealPlayerReputation.textContent = user.reputation;
-        
-        const todayDealsCount = await getTodayDealsCount(userId);
-        if (dom.dealLimitInfo && dom.dealLimitText) {
-            if (todayDealsCount >= 5) {
-                dom.dealLimitText.textContent = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
-                dom.dealLimitInfo.style.display = 'block';
-                
-                if (dom.cooperateBtn) {
-                    dom.cooperateBtn.disabled = true;
-                    dom.cooperateBtn.classList.add('btn-disabled');
-                }
-                if (dom.cheatBtn) {
-                    dom.cheatBtn.disabled = true;
-                    dom.cheatBtn.classList.add('btn-disabled');
-                }
-            } else {
-                dom.dealLimitText.textContent = `Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.`;
-                dom.dealLimitInfo.style.display = 'block';
-                
-                if (dom.cooperateBtn) {
-                    dom.cooperateBtn.disabled = false;
-                    dom.cooperateBtn.classList.remove('btn-disabled');
-                }
-                if (dom.cheatBtn) {
-                    dom.cheatBtn.disabled = false;
-                    dom.cheatBtn.classList.remove('btn-disabled');
-                }
-            }
-        }
-        
-        if (dom.dealModal) {
-            dom.dealModal.classList.add('active');
-        }
-    } catch (error) {
-        console.error('Ошибка показа модального окна:', error);
-    }
-}
-
-async function getTodayDealsCount(targetUserId) {
-    try {
-        if (!state.supabase || !state.currentUser) {
-            return 0;
-        }
-        
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        
-        const { data: todayDeals, error } = await state.supabase
-            .from('deals')
-            .select('id, created_at')
-            .eq('from_user', state.currentUser.id)
-            .eq('to_user', targetUserId)
-            .gte('created_at', today)
-            .lt('created_at', tomorrowStr);
-        
-        if (error) {
-            console.error('Ошибка проверки лимита сделок:', error);
-            return 0;
-        }
-        
-        return todayDeals ? todayDeals.length : 0;
-    } catch (error) {
-        console.error('Ошибка проверки лимита сделок:', error);
-        return 0;
-    }
-}
-
-export async function proposeDeal(choice) {
-    try {
-        if (!state.supabase || !state.currentUser || !state.selectedUser || !state.currentUserProfile) {
-            console.error('Required data not initialized');
-            return;
-        }
-        
-        if (state.currentUserProfile.coins <= 0) {
-            alert('У вас недостаточно монет для совершения сделки');
-            if (dom.dealModal) {
-                dom.dealModal.classList.remove('active');
-            }
-            return;
-        }
-        
-        const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
-        
-        if (todayDealsCount >= 5) {
-            alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${state.selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
-            return;
-        }
-        
-        const { data, error } = await state.supabase
-            .from('deals')
-            .insert([
-                {
-                    from_user: state.currentUser.id,
-                    to_user: state.selectedUser.id,
-                    from_choice: choice,
-                    status: 'pending'
-                }
-            ]);
-        
-        if (error) {
-            throw error;
-        }
-        
-        alert('Сделка предложена успешно!');
-        if (dom.dealModal) {
-            dom.dealModal.classList.remove('active');
-        }
-        loadDeals();
-    } catch (error) {
-        console.error('Ошибка предложения сделки:', error);
-        alert('Ошибка: ' + error.message);
-    }
-}
-
-export async function showResponseModal(dealId) {
-    try {
-        if (!state.supabase) {
-            console.error('Supabase not initialized');
-            return;
-        }
-        
-        const { data: deal, error } = await state.supabase
-            .from('deals')
-            .select(`
-                *,
-                from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
-            `)
-            .eq('id', dealId)
-            .single();
-        
-        if (error) {
-            console.error('Ошибка загрузки сделки:', error);
-            return;
-        }
-        
-        state.selectedDeal = deal;
-        
-        if (dom.responseDealInfo) {
-            dom.responseDealInfo.innerHTML = `
-                <div class="user-info">
-                    <div class="user-avatar">${deal.from_user.username.charAt(0).toUpperCase()}</div>
-                    <div>
-                        <h3>${deal.from_user.username}</h3>
-                        <p>Класс: ${deal.from_user.class}</p>
-                    </div>
-                </div>
-                <div class="user-details" style="justify-content: space-around; margin: 15px 0;">
-                    <div class="user-detail">
-                        <i class="fas fa-coins"></i>
-                        <span>${deal.from_user.coins}</span>
-                    </div>
-                    <div class="user-detail">
-                        <i class="fas fa-star"></i>
-                        <span>${deal.from_user.reputation}</span>
-                    </div>
-                </div>
-                <div class="deal-info">
-                    <h3 style="margin-bottom: 10px;">Выберите вашу стратегию:</h3>
-                    <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
-                    <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
-                    <p style="margin-top: 10px; font-style: italic;">Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
-                </div>
-            `;
-        }
-        
-        if (dom.responseModal) {
-            dom.responseModal.classList.add('active');
-        }
-    } catch (error) {
-        console.error('Ошибка показа модального окна ответа:', error);
-    }
-}
-
-export async function respondToDeal(choice) {
-    try {
-        if (!state.supabase || !state.selectedDeal) {
-            console.error('Required data not initialized');
-            return;
-        }
-        
-        const { data: result, error } = await state.supabase.rpc('process_deal', {
-            deal_id: state.selectedDeal.id,
-            response_choice: choice
-        });
-        
-        if (error) {
-            throw error;
-        }
-        
-        await showDealResult(state.selectedDeal, choice, result);
-        
-        if (dom.responseModal) {
-            dom.responseModal.classList.remove('active');
-        }
-        
-        loadDeals();
-        if (state.currentUser) {
-            const { loadUserProfile } = await import('./users.js');
-            loadUserProfile(state.currentUser.id);
-        }
-    } catch (error) {
-        console.error('Ошибка ответа на сделку:', error);
-        alert('Ошибка: ' + error.message);
-    }
-}
-
-async function showDealResult(deal, userChoice, result) {
-    try {
-        if (!dom.resultModal || !dom.resultContent) {
-            return;
-        }
-        
-        let resultHtml = '';
-        const fromCoinsChange = result.from_coins_change;
-        const toCoinsChange = result.to_coins_change;
-        
-        if (deal.from_choice === 'cooperate' && userChoice === 'cooperate') {
-            resultHtml = `
-                <div class="result-message result-success">
-                    <div class="result-icon">
-                        <i class="fas fa-handshake"></i>
-                    </div>
-                    <p>Оба игрока выбрали "Сотрудничать"!</p>
-                    <p>Вы получили: +${toCoinsChange} монет</p>
-                    <p>Другой игрок получил: +${fromCoinsChange} монет</p>
-                </div>
-                <p>Отличный результат взаимовыгодного сотрудничества!</p>
-            `;
-        } else if (deal.from_choice === 'cooperate' && userChoice === 'cheat') {
-            resultHtml = `
-                <div class="result-message ${toCoinsChange > 0 ? 'result-success' : 'result-danger'}">
-                    <div class="result-icon">
-                        <i class="fas fa-user-secret"></i>
-                    </div>
-                    <p>Вы выбрали "Жульничать", другой игрок выбрал "Сотрудничать"</p>
-                    <p>Вы получили: +${toCoinsChange} монет</p>
-                    <p>Другой игрок потерял: ${fromCoinsChange} монет</p>
-                </div>
-                <p>Вы получили преимущество, но ваша репутация может пострадать.</p>
-            `;
-        } else if (deal.from_choice === 'cheat' && userChoice === 'cooperate') {
-            resultHtml = `
-                <div class="result-message result-danger">
-                    <div class="result-icon">
-                        <i class="fas fa-sad-tear"></i>
-                    </div>
-                    <p>Вы выбрали "Сотрудничать", другой игрок выбрал "Жульничать"</p>
-                    <p>Вы потеряли: ${toCoinsChange} монет</p>
-                    <p>Другой игрок получил: +${fromCoinsChange} монет</p>
-                </div>
-                <p>К сожалению, другой игрок воспользовался вашим доверием.</p>
-            `;
-        } else if (deal.from_choice === 'cheat' && userChoice === 'cheat') {
-            resultHtml = `
-                <div class="result-message result-warning">
-                    <div class="result-icon">
-                        <i class="fas fa-angry"></i>
-                    </div>
-                    <p>Оба игрока выбрали "Жульничать"!</p>
-                    <p>Вы потеряли: ${Math.abs(toCoinsChange)} монет</p>
-                    <p>Другой игрок потерял: ${Math.abs(fromCoinsChange)} монет</p>
-                </div>
-                <p>Никто не выиграл - взаимное недоверие привело к потерям для обоих.</p>
-            `;
-        }
-        
-        dom.resultContent.innerHTML = resultHtml;
-        dom.resultModal.classList.add('active');
-        
-    } catch (error) {
-        console.error('Ошибка показа результата сделки:', error);
-    }
-}
-
 export async function loadDeals() {
     try {
         if (!state.supabase || !state.currentUser) {
@@ -404,7 +95,7 @@ export async function loadDeals() {
             }
         }
         
-        // Все сделки (история)
+        // Все завершённые сделки (история) - только завершённые
         const { data: all, error: allError } = await state.supabase
             .from('deals')
             .select(`
@@ -413,6 +104,7 @@ export async function loadDeals() {
                 to_user:profiles!deals_to_user_fkey(username, class)
             `)
             .or(`from_user.eq.${state.currentUser.id},to_user.eq.${state.currentUser.id}`)
+            .eq('status', 'completed') // Только завершённые сделки
             .order('created_at', { ascending: false });
         
         if (allError) {
@@ -428,84 +120,76 @@ export async function loadDeals() {
                     </div>
                 `;
             } else {
-                all.forEach(deal => {
-                    const isOutgoing = deal.from_user.id === state.currentUser.id;
-                    const otherUser = isOutgoing ? deal.to_user : deal.from_user;
-                    const directionText = isOutgoing ? "Кому:" : "От кого:";
-                    
-                    const statusBadge = deal.status === 'pending' ? 
-                        '<span class="badge badge-warning">Ожидание</span>' : 
-                        deal.status === 'completed' ? 
-                        '<span class="badge badge-success">Завершена</span>' :
-                        '<span class="badge badge-danger">Отклонена</span>';
-                    
-                    let resultHtml = '';
-                    if (deal.status === 'completed') {
-                        let coinsChange = 0;
-                        let resultClass = '';
-                        let resultText = '';
-                        
-                        if (isOutgoing) {
-                            if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                                coinsChange = 2;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                                coinsChange = 3;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            }
-                        } else {
-                            if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                                coinsChange = 2;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                                coinsChange = 3;
-                                resultClass = 'profit-positive';
-                                resultText = `+${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                                coinsChange = -1;
-                                resultClass = 'profit-negative';
-                                resultText = `${coinsChange} монет`;
-                            }
-                        }
-                        
-                        resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
-                    }
-                    
-                    const dealItem = document.createElement('div');
-                    dealItem.className = 'deal-item';
-                    
-                    let dealInfo = `
-                        <div>
-                            <p><strong>${directionText}</strong> ${otherUser.username} (${otherUser.class})</p>
-                            <p><strong>Ваш выбор:</strong> ${isOutgoing ? (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>
+                // Разделяем сделки на входящие и исходящие
+                const incomingDeals = all.filter(deal => deal.to_user.id === state.currentUser.id);
+                const outgoingDeals = all.filter(deal => deal.from_user.id === state.currentUser.id);
+                
+                // Создаем контейнер с двумя колонками
+                const dealsContainer = document.createElement('div');
+                dealsContainer.className = 'deals-columns';
+                
+                // Колонка входящих сделок
+                const incomingColumn = document.createElement('div');
+                incomingColumn.className = 'deals-column';
+                incomingColumn.innerHTML = `
+                    <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-download"></i> Входящие сделки
+                    </h3>
+                `;
+                
+                const incomingList = document.createElement('div');
+                incomingList.className = 'deals-list';
+                
+                if (incomingDeals.length === 0) {
+                    incomingList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>Нет завершенных входящих сделок</p>
+                        </div>
                     `;
-                    
-                    if (deal.status === 'completed') {
-                        dealInfo += `<p><strong>Ответ:</strong> ${isOutgoing ? (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>`;
-                    }
-                    
-                    dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
-                    dealInfo += resultHtml;
-                    dealInfo += `</div>`;
-                    
-                    dealItem.innerHTML = dealInfo;
-                    dom.allDeals.appendChild(dealItem);
-                });
+                } else {
+                    incomingDeals.forEach(deal => {
+                        const dealItem = createDealItem(deal, false); // false = входящая сделка
+                        incomingList.appendChild(dealItem);
+                    });
+                }
+                
+                incomingColumn.appendChild(incomingList);
+                
+                // Колонка исходящих сделок
+                const outgoingColumn = document.createElement('div');
+                outgoingColumn.className = 'deals-column';
+                outgoingColumn.innerHTML = `
+                    <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-upload"></i> Исходящие сделки
+                    </h3>
+                `;
+                
+                const outgoingList = document.createElement('div');
+                outgoingList.className = 'deals-list';
+                
+                if (outgoingDeals.length === 0) {
+                    outgoingList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-paper-plane"></i>
+                            <p>Нет завершенных исходящих сделок</p>
+                        </div>
+                    `;
+                } else {
+                    outgoingDeals.forEach(deal => {
+                        const dealItem = createDealItem(deal, true); // true = исходящая сделка
+                        outgoingList.appendChild(dealItem);
+                    });
+                }
+                
+                outgoingColumn.appendChild(outgoingList);
+                
+                // Добавляем колонки в контейнер
+                dealsContainer.appendChild(incomingColumn);
+                dealsContainer.appendChild(outgoingColumn);
+                
+                // Добавляем контейнер в allDeals
+                dom.allDeals.appendChild(dealsContainer);
             }
         }
     } catch (error) {
@@ -513,58 +197,70 @@ export async function loadDeals() {
     }
 }
 
-export async function loadRanking() {
-    try {
-        if (!state.supabase) {
-            console.error('Supabase not initialized');
-            return;
+// Вспомогательная функция для создания элемента сделки
+function createDealItem(deal, isOutgoing) {
+    const otherUser = isOutgoing ? deal.to_user : deal.from_user;
+    const directionText = isOutgoing ? "Кому:" : "От кого:";
+    
+    // Вычисляем результат сделки для текущего пользователя
+    let coinsChange = 0;
+    let resultClass = '';
+    let resultText = '';
+    
+    if (isOutgoing) {
+        // Для исходящих сделок
+        if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+            coinsChange = 2;
+            resultClass = 'profit-positive';
+            resultText = `+${coinsChange} монет`;
+        } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+            coinsChange = -1;
+            resultClass = 'profit-negative';
+            resultText = `${coinsChange} монет`;
+        } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+            coinsChange = 3;
+            resultClass = 'profit-positive';
+            resultText = `+${coinsChange} монет`;
+        } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+            coinsChange = -1;
+            resultClass = 'profit-negative';
+            resultText = `${coinsChange} монет`;
         }
-        
-        const { data: users, error } = await state.supabase
-            .from('profiles')
-            .select('*')
-            .order('coins', { ascending: false });
-        
-        if (error) {
-            console.error('Ошибка загрузки рейтинга:', error);
-            return;
+    } else {
+        // Для входящих сделок
+        if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+            coinsChange = 2;
+            resultClass = 'profit-positive';
+            resultText = `+${coinsChange} монет`;
+        } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+            coinsChange = 3;
+            resultClass = 'profit-positive';
+            resultText = `+${coinsChange} монет`;
+        } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+            coinsChange = -1;
+            resultClass = 'profit-negative';
+            resultText = `${coinsChange} монет`;
+        } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+            coinsChange = -1;
+            resultClass = 'profit-negative';
+            resultText = `${coinsChange} монет`;
         }
-        
-        if (dom.rankingTable) {
-            dom.rankingTable.innerHTML = '';
-            
-            if (users.length === 0) {
-                dom.rankingTable.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 20px;">
-                            <div class="empty-state">
-                                <i class="fas fa-trophy"></i>
-                                <p>Нет данных для рейтинга</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            } else {
-                users.forEach((user, index) => {
-                    const row = document.createElement('tr');
-                    
-                    if (state.currentUser && user.id === state.currentUser.id) {
-                        row.classList.add('current-user');
-                    }
-                    
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td>${user.username} ${state.currentUser && user.id === state.currentUser.id ? '(Вы)' : ''}</td>
-                        <td>${user.class}</td>
-                        <td>${user.coins}</td>
-                        <td>${user.reputation}</td>
-                    `;
-                    
-                    dom.rankingTable.appendChild(row);
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки рейтинга:', error);
     }
+    
+    const dealItem = document.createElement('div');
+    dealItem.className = 'deal-item';
+    
+    let dealInfo = `
+        <div>
+            <p><strong>${directionText}</strong> ${otherUser.username} (${otherUser.class})</p>
+            <p><strong>Ваш выбор:</strong> ${isOutgoing ? (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>
+            <p><strong>Ответ:</strong> ${isOutgoing ? (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>
+    `;
+    
+    dealInfo += `<p><strong>Статус:</strong> <span class="badge badge-success">Завершена</span></p>`;
+    dealInfo += `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
+    dealInfo += `</div>`;
+    
+    dealItem.innerHTML = dealInfo;
+    return dealItem;
 }
