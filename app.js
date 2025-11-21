@@ -1,6 +1,7 @@
 // Сначала объявляем все переменные
 let supabase = null;
 let currentUser = null;
+let currentUserProfile = null; // Добавляем для хранения профиля текущего пользователя
 let selectedUser = null;
 let selectedDeal = null;
 let depositTimers = {};
@@ -16,7 +17,7 @@ let loadingMessage, errorMessage, authError;
 let dealLimitInfo, dealLimitText;
 let depositModal, depositModalContent, depositResultModal, depositResultContent, closeDepositResultBtn;
 let activeDepositsList, depositHistoryList;
-let topRankingTable; // Новый элемент для топа рейтинга на странице авторизации
+let topRankingTable;
 
 // Конфигурация Supabase
 const SUPABASE_CONFIG = {
@@ -128,7 +129,7 @@ function initDOMElements() {
     closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
     activeDepositsList = document.getElementById('activeDepositsList');
     depositHistoryList = document.getElementById('depositHistoryList');
-    topRankingTable = document.getElementById('topRankingTable'); // Новый элемент
+    topRankingTable = document.getElementById('topRankingTable');
 }
 
 // Показать сообщение о загрузке
@@ -437,6 +438,7 @@ async function handleLogout() {
         
         await supabase.auth.signOut();
         currentUser = null;
+        currentUserProfile = null;
         showAuthSection();
     } catch (error) {
         console.error('Ошибка выхода:', error);
@@ -463,6 +465,9 @@ async function loadUserProfile(userId) {
             await createUserProfile(userId);
             return;
         }
+        
+        // Сохраняем профиль текущего пользователя
+        currentUserProfile = profile;
         
         // Обновление интерфейса
         if (userGreeting) userGreeting.textContent = `Привет, ${profile.username}!`;
@@ -554,7 +559,7 @@ function showProfileSection() {
 // Загрузка списка пользователей
 async function loadUsers() {
     try {
-        if (!supabase || !currentUser) {
+        if (!supabase || !currentUser || !currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
@@ -599,10 +604,24 @@ async function loadUsers() {
                 const userCard = document.createElement('div');
                 userCard.className = 'user-card';
                 
-                // Проверяем баланс пользователя для активации кнопки
-                const canMakeDeal = user.coins > 0;
-                const buttonClass = canMakeDeal ? 'btn-secondary' : 'btn-secondary btn-disabled';
-                const buttonText = canMakeDeal ? 'Сделка' : 'Нет монет';
+                // Проверяем баланс обоих пользователей для активации кнопки
+                const currentUserHasCoins = currentUserProfile.coins > 0;
+                const targetUserHasCoins = user.coins > 0;
+                const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
+                
+                let buttonClass = 'btn-secondary';
+                let buttonText = 'Сделка';
+                let disabled = false;
+                
+                if (!currentUserHasCoins) {
+                    buttonClass = 'btn-secondary btn-disabled';
+                    buttonText = 'У вас нет монет';
+                    disabled = true;
+                } else if (!targetUserHasCoins) {
+                    buttonClass = 'btn-secondary btn-disabled';
+                    buttonText = 'У игрока нет монет';
+                    disabled = true;
+                }
                 
                 userCard.innerHTML = `
                     <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
@@ -621,7 +640,7 @@ async function loadUsers() {
                             <span>${user.reputation}</span>
                         </div>
                     </div>
-                    <button class="${buttonClass} propose-deal-btn" data-user-id="${user.id}" ${!canMakeDeal ? 'disabled' : ''}>
+                    <button class="${buttonClass} propose-deal-btn" data-user-id="${user.id}" ${disabled ? 'disabled' : ''}>
                         <i class="fas fa-handshake"></i> ${buttonText}
                     </button>
                 `;
@@ -647,8 +666,14 @@ async function loadUsers() {
 // Показать модальное окно сделки
 async function showDealModal(userId) {
     try {
-        if (!supabase) {
-            console.error('Supabase not initialized');
+        if (!supabase || !currentUserProfile) {
+            console.error('Supabase or current user not initialized');
+            return;
+        }
+        
+        // Проверяем баланс текущего пользователя
+        if (currentUserProfile.coins <= 0) {
+            alert('У вас недостаточно монет для совершения сделки');
             return;
         }
         
@@ -746,8 +771,17 @@ async function getTodayDealsCount(targetUserId) {
 // Предложить сделку
 async function proposeDeal(choice) {
     try {
-        if (!supabase || !currentUser || !selectedUser) {
+        if (!supabase || !currentUser || !selectedUser || !currentUserProfile) {
             console.error('Required data not initialized');
+            return;
+        }
+        
+        // Дополнительная проверка баланса
+        if (currentUserProfile.coins <= 0) {
+            alert('У вас недостаточно монет для совершения сделки');
+            if (dealModal) {
+                dealModal.classList.remove('active');
+            }
             return;
         }
         
@@ -1089,6 +1123,7 @@ async function loadDeals() {
                     if (deal.status === 'completed') {
                         let coinsChange = 0;
                         let resultClass = '';
+                        let resultText = '';
                         
                         // Определяем изменение монет для текущего пользователя
                         if (isOutgoing) {
@@ -1096,35 +1131,42 @@ async function loadDeals() {
                             if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
                                 coinsChange = 2;
                                 resultClass = 'profit-positive';
+                                resultText = `+${coinsChange} монет`;
                             } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
                                 coinsChange = -1;
                                 resultClass = 'profit-negative';
+                                resultText = `${coinsChange} монет`;
                             } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
                                 coinsChange = 3;
                                 resultClass = 'profit-positive';
+                                resultText = `+${coinsChange} монет`;
                             } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
                                 coinsChange = -1;
                                 resultClass = 'profit-negative';
+                                resultText = `${coinsChange} монет`;
                             }
                         } else {
                             // Для входящих сделок
                             if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
                                 coinsChange = 2;
                                 resultClass = 'profit-positive';
+                                resultText = `+${coinsChange} монет`;
                             } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
                                 coinsChange = 3;
                                 resultClass = 'profit-positive';
+                                resultText = `+${coinsChange} монет`;
                             } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
                                 coinsChange = -1;
                                 resultClass = 'profit-negative';
+                                resultText = `${coinsChange} монет`;
                             } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
                                 coinsChange = -1;
                                 resultClass = 'profit-negative';
+                                resultText = `${coinsChange} монет`;
                             }
                         }
                         
-                        const sign = coinsChange > 0 ? '+' : '';
-                        resultHtml = `<div class="deal-result ${resultClass}">Результат: ${sign}${coinsChange} монет</div>`;
+                        resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
                     }
                     
                     const dealItem = document.createElement('div');
@@ -1133,7 +1175,7 @@ async function loadDeals() {
                     let dealInfo = `
                         <div>
                             <p><strong>${directionText}</strong> ${otherUser.username} (${otherUser.class})</p>
-                            <p><strong>Ваш выбор:</strong> ${isOutgoing ? deal.from_choice : deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                            <p><strong>Ваш выбор:</strong> ${isOutgoing ? (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>
                     `;
                     
                     if (deal.status === 'completed') {
