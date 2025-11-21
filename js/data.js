@@ -1,14 +1,14 @@
-import { supabaseClient, currentUser, topRankingTable } from './config.js';
+import { state, dom } from './config.js';
 import { loadRanking } from './deals.js';
 
 export async function loadTopRanking() {
     try {
-        if (!supabaseClient) {
+        if (!state.supabase) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: users, error } = await supabaseClient
+        const { data: users, error } = await state.supabase
             .from('profiles')
             .select('*')
             .order('coins', { ascending: false })
@@ -19,11 +19,11 @@ export async function loadTopRanking() {
             return;
         }
         
-        if (topRankingTable) {
-            topRankingTable.innerHTML = '';
+        if (dom.topRankingTable) {
+            dom.topRankingTable.innerHTML = '';
             
             if (users.length === 0) {
-                topRankingTable.innerHTML = `
+                dom.topRankingTable.innerHTML = `
                     <tr>
                         <td colspan="5" style="text-align: center; padding: 20px;">
                             <div class="empty-state">
@@ -43,7 +43,7 @@ export async function loadTopRanking() {
                         <td>${user.coins}</td>
                         <td>${user.reputation}</td>
                     `;
-                    topRankingTable.appendChild(row);
+                    dom.topRankingTable.appendChild(row);
                 });
             }
         }

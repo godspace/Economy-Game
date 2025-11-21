@@ -1,14 +1,14 @@
-import { supabaseClient, currentUser, currentUserProfile, selectedUser, usersList, userGreeting, userAvatar, coinsValue, reputationValue } from './config.js';
+import { state, dom } from './config.js';
 import { showDealModal } from './deals.js';
 
 export async function loadUserProfile(userId) {
     try {
-        if (!supabaseClient) {
+        if (!state.supabase) {
             console.error('Supabase not initialized');
             return;
         }
         
-        const { data: profile, error } = await supabaseClient
+        const { data: profile, error } = await state.supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
@@ -20,12 +20,12 @@ export async function loadUserProfile(userId) {
             return;
         }
         
-        currentUserProfile = profile;
+        state.currentUserProfile = profile;
         
-        if (userGreeting) userGreeting.textContent = `Привет, ${profile.username}!`;
-        if (userAvatar) userAvatar.textContent = profile.username.charAt(0).toUpperCase();
-        if (coinsValue) coinsValue.textContent = profile.coins;
-        if (reputationValue) reputationValue.textContent = profile.reputation;
+        if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${profile.username}!`;
+        if (dom.userAvatar) dom.userAvatar.textContent = profile.username.charAt(0).toUpperCase();
+        if (dom.coinsValue) dom.coinsValue.textContent = profile.coins;
+        if (dom.reputationValue) dom.reputationValue.textContent = profile.reputation;
         
     } catch (error) {
         console.error('Ошибка загрузки профиля:', error);
@@ -34,7 +34,7 @@ export async function loadUserProfile(userId) {
 
 export async function createUserProfile(userId) {
     try {
-        if (!supabaseClient || !currentUser) {
+        if (!state.supabase || !state.currentUser) {
             return;
         }
         
@@ -45,7 +45,7 @@ export async function createUserProfile(userId) {
             return;
         }
         
-        const { error } = await supabaseClient
+        const { error } = await state.supabase
             .from('profiles')
             .insert([
                 { 
@@ -68,18 +68,18 @@ export async function createUserProfile(userId) {
 
 export async function loadUsers() {
     try {
-        if (!supabaseClient || !currentUser || !currentUserProfile) {
+        if (!state.supabase || !state.currentUser || !state.currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
-        const selectedClass = document.getElementById('classFilter') ? document.getElementById('classFilter').value : '';
+        const searchTerm = dom.searchInput ? dom.searchInput.value : '';
+        const selectedClass = dom.classFilter ? dom.classFilter.value : '';
         
-        let query = supabaseClient
+        let query = state.supabase
             .from('profiles')
             .select('*')
-            .neq('id', currentUser.id);
+            .neq('id', state.currentUser.id);
         
         if (searchTerm) {
             query = query.ilike('username', `%${searchTerm}%`);
@@ -96,11 +96,11 @@ export async function loadUsers() {
             return;
         }
         
-        if (usersList) {
-            usersList.innerHTML = '';
+        if (dom.usersList) {
+            dom.usersList.innerHTML = '';
             
             if (users.length === 0) {
-                usersList.innerHTML = `
+                dom.usersList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-users"></i>
                         <p>Пользователи не найдены</p>
@@ -113,7 +113,7 @@ export async function loadUsers() {
                 const userCard = document.createElement('div');
                 userCard.className = 'user-card';
                 
-                const currentUserHasCoins = currentUserProfile.coins > 0;
+                const currentUserHasCoins = state.currentUserProfile.coins > 0;
                 const targetUserHasCoins = user.coins > 0;
                 const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
                 
@@ -153,7 +153,7 @@ export async function loadUsers() {
                     </button>
                 `;
                 
-                usersList.appendChild(userCard);
+                dom.usersList.appendChild(userCard);
             });
             
             document.querySelectorAll('.propose-deal-btn').forEach(btn => {

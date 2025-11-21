@@ -1,152 +1,144 @@
-import { 
-    // Импортируем все DOM элементы из config
-    authSection, profileSection, authForm, authBtn, userInfo, userGreeting, logoutBtn,
-    coinsValue, reputationValue, usersList, searchInput, classFilter, searchBtn,
-    incomingDeals, pendingDeals, allDeals, rankingTable, dealModal, responseModal, resultModal,
-    dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation,
-    cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo,
-    resultContent, closeResultBtn, userAvatar, loadingMessage, errorMessage, authError,
-    dealLimitInfo, dealLimitText, depositModal, depositModalContent, depositResultModal,
-    depositResultContent, closeDepositResultBtn, activeDepositsList, depositHistoryList,
-    topRankingTable
-} from './config.js';
-
-// Убираем объявления переменных здесь - они уже импортированы из config
+import { dom, state } from './config.js';
 
 export function initDOMElements() {
-    // Теперь просто присваиваем значения импортированным переменным
-    authSection = document.getElementById('authSection');
-    profileSection = document.getElementById('profileSection');
-    authForm = document.getElementById('authForm');
-    authBtn = document.getElementById('authBtn');
-    userInfo = document.getElementById('userInfo');
-    userGreeting = document.getElementById('userGreeting');
-    userAvatar = document.getElementById('userAvatar');
-    logoutBtn = document.getElementById('logoutBtn');
-    coinsValue = document.getElementById('coinsValue');
-    reputationValue = document.getElementById('reputationValue');
-    usersList = document.getElementById('usersList');
-    searchInput = document.getElementById('searchInput');
-    classFilter = document.getElementById('classFilter');
-    searchBtn = document.getElementById('searchBtn');
-    incomingDeals = document.getElementById('incomingDeals');
-    pendingDeals = document.getElementById('pendingDeals');
-    allDeals = document.getElementById('allDeals');
-    rankingTable = document.getElementById('rankingTable');
-    dealModal = document.getElementById('dealModal');
-    responseModal = document.getElementById('responseModal');
-    resultModal = document.getElementById('resultModal');
-    dealAvatar = document.getElementById('dealAvatar');
-    dealPlayerName = document.getElementById('dealPlayerName');
-    dealPlayerClass = document.getElementById('dealPlayerClass');
-    dealPlayerCoins = document.getElementById('dealPlayerCoins');
-    dealPlayerReputation = document.getElementById('dealPlayerReputation');
-    cooperateBtn = document.getElementById('cooperateBtn');
-    cheatBtn = document.getElementById('cheatBtn');
-    respondCooperateBtn = document.getElementById('respondCooperateBtn');
-    respondCheatBtn = document.getElementById('respondCheatBtn');
-    responseDealInfo = document.getElementById('responseDealInfo');
-    resultContent = document.getElementById('resultContent');
-    closeResultBtn = document.getElementById('closeResultBtn');
-    loadingMessage = document.getElementById('loadingMessage');
-    errorMessage = document.getElementById('errorMessage');
-    authError = document.getElementById('authError');
-    dealLimitInfo = document.getElementById('dealLimitInfo');
-    dealLimitText = document.getElementById('dealLimitText');
-    depositModal = document.getElementById('depositModal');
-    depositModalContent = document.getElementById('depositModalContent');
-    depositResultModal = document.getElementById('depositResultModal');
-    depositResultContent = document.getElementById('depositResultContent');
-    closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
-    activeDepositsList = document.getElementById('activeDepositsList');
-    depositHistoryList = document.getElementById('depositHistoryList');
-    topRankingTable = document.getElementById('topRankingTable');
+    // Инициализируем свойства объекта dom, а не переопределяем переменные
+    dom.authSection = document.getElementById('authSection');
+    dom.profileSection = document.getElementById('profileSection');
+    dom.authForm = document.getElementById('authForm');
+    dom.authBtn = document.getElementById('authBtn');
+    dom.userInfo = document.getElementById('userInfo');
+    dom.userGreeting = document.getElementById('userGreeting');
+    dom.userAvatar = document.getElementById('userAvatar');
+    dom.logoutBtn = document.getElementById('logoutBtn');
+    dom.coinsValue = document.getElementById('coinsValue');
+    dom.reputationValue = document.getElementById('reputationValue');
+    dom.usersList = document.getElementById('usersList');
+    dom.searchInput = document.getElementById('searchInput');
+    dom.classFilter = document.getElementById('classFilter');
+    dom.searchBtn = document.getElementById('searchBtn');
+    dom.incomingDeals = document.getElementById('incomingDeals');
+    dom.pendingDeals = document.getElementById('pendingDeals');
+    dom.allDeals = document.getElementById('allDeals');
+    dom.rankingTable = document.getElementById('rankingTable');
+    dom.dealModal = document.getElementById('dealModal');
+    dom.responseModal = document.getElementById('responseModal');
+    dom.resultModal = document.getElementById('resultModal');
+    dom.dealAvatar = document.getElementById('dealAvatar');
+    dom.dealPlayerName = document.getElementById('dealPlayerName');
+    dom.dealPlayerClass = document.getElementById('dealPlayerClass');
+    dom.dealPlayerCoins = document.getElementById('dealPlayerCoins');
+    dom.dealPlayerReputation = document.getElementById('dealPlayerReputation');
+    dom.cooperateBtn = document.getElementById('cooperateBtn');
+    dom.cheatBtn = document.getElementById('cheatBtn');
+    dom.respondCooperateBtn = document.getElementById('respondCooperateBtn');
+    dom.respondCheatBtn = document.getElementById('respondCheatBtn');
+    dom.responseDealInfo = document.getElementById('responseDealInfo');
+    dom.resultContent = document.getElementById('resultContent');
+    dom.closeResultBtn = document.getElementById('closeResultBtn');
+    dom.loadingMessage = document.getElementById('loadingMessage');
+    dom.errorMessage = document.getElementById('errorMessage');
+    dom.authError = document.getElementById('authError');
+    dom.dealLimitInfo = document.getElementById('dealLimitInfo');
+    dom.dealLimitText = document.getElementById('dealLimitText');
+    dom.depositModal = document.getElementById('depositModal');
+    dom.depositModalContent = document.getElementById('depositModalContent');
+    dom.depositResultModal = document.getElementById('depositResultModal');
+    dom.depositResultContent = document.getElementById('depositResultContent');
+    dom.closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
+    dom.activeDepositsList = document.getElementById('activeDepositsList');
+    dom.depositHistoryList = document.getElementById('depositHistoryList');
+    dom.topRankingTable = document.getElementById('topRankingTable');
 }
 
-// Остальные функции остаются без изменений
 export function showLoading() {
-    if (loadingMessage) {
-        loadingMessage.style.display = 'block';
+    if (dom.loadingMessage) {
+        dom.loadingMessage.style.display = 'block';
     }
-    if (authSection) {
-        authSection.style.display = 'none';
+    if (dom.authSection) {
+        dom.authSection.style.display = 'none';
     }
-    if (profileSection) {
-        profileSection.style.display = 'none';
+    if (dom.profileSection) {
+        dom.profileSection.style.display = 'none';
     }
 }
 
 export function hideLoading() {
-    if (loadingMessage) {
-        loadingMessage.style.display = 'none';
+    if (dom.loadingMessage) {
+        dom.loadingMessage.style.display = 'none';
     }
 }
 
 export function showError(message) {
     hideLoading();
-    if (errorMessage) {
-        errorMessage.innerHTML = `<p>${message}</p>`;
-        errorMessage.style.display = 'block';
+    if (dom.errorMessage) {
+        dom.errorMessage.innerHTML = `<p>${message}</p>`;
+        dom.errorMessage.style.display = 'block';
     }
 }
 
 export function showAuthError(message) {
-    if (authError) {
-        authError.innerHTML = `<p>${message}</p>`;
-        authError.style.display = 'block';
+    if (dom.authError) {
+        dom.authError.innerHTML = `<p>${message}</p>`;
+        dom.authError.style.display = 'block';
     }
 }
 
 export function hideAuthError() {
-    if (authError) {
-        authError.style.display = 'none';
+    if (dom.authError) {
+        dom.authError.style.display = 'none';
     }
 }
 
 export function showAuthSection() {
-    if (authSection) {
-        authSection.style.display = 'block';
+    if (dom.authSection) {
+        dom.authSection.style.display = 'block';
     }
-    if (profileSection) {
-        profileSection.style.display = 'none';
+    if (dom.profileSection) {
+        dom.profileSection.style.display = 'none';
     }
-    if (userInfo) {
-        userInfo.style.display = 'none';
+    if (dom.userInfo) {
+        dom.userInfo.style.display = 'none';
     }
-    if (errorMessage) {
-        errorMessage.style.display = 'none';
+    if (dom.errorMessage) {
+        dom.errorMessage.style.display = 'none';
     }
 }
 
 export function showProfileSection() {
-    if (authSection) {
-        authSection.style.display = 'none';
+    if (dom.authSection) {
+        dom.authSection.style.display = 'none';
     }
-    if (profileSection) {
-        profileSection.style.display = 'block';
+    if (dom.profileSection) {
+        dom.profileSection.style.display = 'block';
     }
-    if (userInfo) {
-        userInfo.style.display = 'block';
+    if (dom.userInfo) {
+        dom.userInfo.style.display = 'block';
     }
-    if (errorMessage) {
-        errorMessage.style.display = 'none';
+    if (dom.errorMessage) {
+        dom.errorMessage.style.display = 'none';
     }
-    if (authError) {
-        authError.style.display = 'none';
+    if (dom.authError) {
+        dom.authError.style.display = 'none';
     }
 }
 
+// Импортируем функции из других модулей
+import { handleAuth, handleLogout } from './auth.js';
+import { loadUsers } from './users.js';
+import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
+import { loadInvestments, openDepositModal } from './investments.js';
+
 export function setupEventListeners() {
-    if (authForm) {
-        authForm.addEventListener('submit', handleAuth);
+    if (dom.authForm) {
+        dom.authForm.addEventListener('submit', handleAuth);
     }
     
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleLogout);
+    if (dom.logoutBtn) {
+        dom.logoutBtn.addEventListener('click', handleLogout);
     }
     
-    if (searchBtn) {
-        searchBtn.addEventListener('click', loadUsers);
+    if (dom.searchBtn) {
+        dom.searchBtn.addEventListener('click', loadUsers);
     }
     
     // Табы
@@ -179,66 +171,66 @@ export function setupEventListeners() {
     if (closeModalButtons) {
         closeModalButtons.forEach(closeBtn => {
             closeBtn.addEventListener('click', function() {
-                if (dealModal) dealModal.classList.remove('active');
-                if (responseModal) responseModal.classList.remove('active');
-                if (resultModal) resultModal.classList.remove('active');
-                if (depositModal) depositModal.classList.remove('active');
-                if (depositResultModal) depositResultModal.classList.remove('active');
+                if (dom.dealModal) dom.dealModal.classList.remove('active');
+                if (dom.responseModal) dom.responseModal.classList.remove('active');
+                if (dom.resultModal) dom.resultModal.classList.remove('active');
+                if (dom.depositModal) dom.depositModal.classList.remove('active');
+                if (dom.depositResultModal) dom.depositResultModal.classList.remove('active');
             });
         });
     }
     
-    if (closeResultBtn) {
-        closeResultBtn.addEventListener('click', function() {
-            if (resultModal) resultModal.classList.remove('active');
+    if (dom.closeResultBtn) {
+        dom.closeResultBtn.addEventListener('click', function() {
+            if (dom.resultModal) dom.resultModal.classList.remove('active');
         });
     }
     
-    if (closeDepositResultBtn) {
-        closeDepositResultBtn.addEventListener('click', function() {
-            if (depositResultModal) depositResultModal.classList.remove('active');
+    if (dom.closeDepositResultBtn) {
+        dom.closeDepositResultBtn.addEventListener('click', function() {
+            if (dom.depositResultModal) dom.depositResultModal.classList.remove('active');
         });
     }
     
     window.addEventListener('click', function(event) {
-        if (event.target === dealModal) {
-            dealModal.classList.remove('active');
+        if (event.target === dom.dealModal) {
+            dom.dealModal.classList.remove('active');
         }
-        if (event.target === responseModal) {
-            responseModal.classList.remove('active');
+        if (event.target === dom.responseModal) {
+            dom.responseModal.classList.remove('active');
         }
-        if (event.target === resultModal) {
-            resultModal.classList.remove('active');
+        if (event.target === dom.resultModal) {
+            dom.resultModal.classList.remove('active');
         }
-        if (event.target === depositModal) {
-            depositModal.classList.remove('active');
+        if (event.target === dom.depositModal) {
+            dom.depositModal.classList.remove('active');
         }
-        if (event.target === depositResultModal) {
-            depositResultModal.classList.remove('active');
+        if (event.target === dom.depositResultModal) {
+            dom.depositResultModal.classList.remove('active');
         }
     });
     
     // Кнопки выбора стратегии
-    if (cooperateBtn) {
-        cooperateBtn.addEventListener('click', function() {
+    if (dom.cooperateBtn) {
+        dom.cooperateBtn.addEventListener('click', function() {
             proposeDeal('cooperate');
         });
     }
     
-    if (cheatBtn) {
-        cheatBtn.addEventListener('click', function() {
+    if (dom.cheatBtn) {
+        dom.cheatBtn.addEventListener('click', function() {
             proposeDeal('cheat');
         });
     }
     
-    if (respondCooperateBtn) {
-        respondCooperateBtn.addEventListener('click', function() {
+    if (dom.respondCooperateBtn) {
+        dom.respondCooperateBtn.addEventListener('click', function() {
             respondToDeal('cooperate');
         });
     }
     
-    if (respondCheatBtn) {
-        respondCheatBtn.addEventListener('click', function() {
+    if (dom.respondCheatBtn) {
+        dom.respondCheatBtn.addEventListener('click', function() {
             respondToDeal('cheat');
         });
     }
@@ -272,9 +264,3 @@ export function setupEventListeners() {
         });
     });
 }
-
-// Импортируем функции из других модулей
-import { handleAuth, handleLogout } from './auth.js';
-import { loadUsers } from './users.js';
-import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
-import { loadInvestments, openDepositModal } from './investments.js';

@@ -1,4 +1,4 @@
-import { supabaseClient, currentUser, currentUserProfile, authBtn, SUPABASE_CONFIG } from './config.js';
+import { state, dom, SUPABASE_CONFIG } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError } from './ui.js';
 import { loadUserProfile } from './users.js';
 
@@ -11,8 +11,7 @@ export async function initSupabase() {
                 throw new Error('Supabase library not loaded');
             }
             
-            // Используем другое имя переменной
-            supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+            state.supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
             
             console.log('Supabase initialized successfully');
             resolve();
@@ -25,11 +24,11 @@ export async function initSupabase() {
 
 export async function checkAuth() {
     try {
-        if (!supabaseClient) {
+        if (!state.supabase) {
             throw new Error('Supabase not initialized');
         }
         
-        const { data: { user }, error } = await supabaseClient.auth.getUser();
+        const { data: { user }, error } = await state.supabase.auth.getUser();
         
         if (error) {
             console.warn('Auth check error:', error);
@@ -39,7 +38,7 @@ export async function checkAuth() {
         
         if (user) {
             await loadUserProfile(user.id);
-            currentUser = user;
+            state.currentUser = user;
             showProfileSection();
         } else {
             showAuthSection();
@@ -53,7 +52,7 @@ export async function checkAuth() {
 export async function handleAuth(e) {
     e.preventDefault();
     
-    if (!supabaseClient) {
+    if (!state.supabase) {
         alert('Система не инициализирована. Пожалуйста, обновите страницу.');
         return;
     }
@@ -69,12 +68,12 @@ export async function handleAuth(e) {
     
     hideAuthError();
     
-    authBtn.disabled = true;
-    authBtn.textContent = 'Загрузка...';
+    dom.authBtn.disabled = true;
+    dom.authBtn.textContent = 'Загрузка...';
     
     try {
         // Сначала пробуем зарегистрироваться
-        const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
+        const { data: signUpData, error: signUpError } = await state.supabase.auth.signUp({
             email: `${username}@school.game`,
             password: password,
             options: {
@@ -90,7 +89,7 @@ export async function handleAuth(e) {
             if (signUpError.message.includes('already registered')) {
                 console.log('User exists, trying to sign in...');
                 
-                const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+                const { data: signInData, error: signInError } = await state.supabase.auth.signInWithPassword({
                     email: `${username}@school.game`,
                     password: password
                 });
@@ -99,23 +98,23 @@ export async function handleAuth(e) {
                     throw signInError;
                 }
                 
-                currentUser = signInData.user;
-                await loadUserProfile(currentUser.id);
+                state.currentUser = signInData.user;
+                await loadUserProfile(state.currentUser.id);
                 showProfileSection();
             } else {
                 throw signUpError;
             }
         } else {
             // Регистрация успешна
-            currentUser = signUpData.user;
+            state.currentUser = signUpData.user;
             
             // Создаем профиль пользователя
             try {
-                const { error: profileError } = await supabaseClient
+                const { error: profileError } = await state.supabase
                     .from('profiles')
                     .insert([
                         { 
-                            id: currentUser.id, 
+                            id: state.currentUser.id, 
                             username: username, 
                             class: userClass 
                         }
@@ -128,31 +127,31 @@ export async function handleAuth(e) {
                 console.warn('Profile creation error:', profileError);
             }
             
-            await loadUserProfile(currentUser.id);
+            await loadUserProfile(state.currentUser.id);
             showProfileSection();
         }
     } catch (error) {
         console.error('Ошибка аутентификации:', error);
         showAuthError('Ошибка: ' + (error.message || 'Неизвестная ошибка'));
     } finally {
-        authBtn.disabled = false;
-        authBtn.textContent = 'Войти / Зарегистрироваться';
+        dom.authBtn.disabled = false;
+        dom.authBtn.textContent = 'Войти / Зарегистрироваться';
     }
 }
 
 export async function handleLogout() {
     try {
-        if (!supabaseClient) {
+        if (!state.supabase) {
             console.error('Supabase not initialized');
             return;
         }
         
-        Object.values(depositTimers).forEach(timer => clearInterval(timer));
-        depositTimers = {};
+        Object.values(state.depositTimers).forEach(timer => clearInterval(timer));
+        state.depositTimers = {};
         
-        await supabaseClient.auth.signOut();
-        currentUser = null;
-        currentUserProfile = null;
+        await state.supabase.auth.signOut();
+        state.currentUser = null;
+        state.currentUserProfile = null;
         showAuthSection();
     } catch (error) {
         console.error('Ошибка выхода:', error);
