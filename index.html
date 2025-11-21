@@ -6,7 +6,7 @@
     <title>Эволюция доверия</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Все стили остаются без изменений */
+        /* Все предыдущие стили остаются без изменений */
         :root {
             --primary: #4361ee;
             --primary-light: #4895ef;
@@ -799,6 +799,21 @@
             color: var(--gray);
         }
         
+        /* Новые стили для разделения истории сделок */
+        .deals-section {
+            margin-bottom: 25px;
+        }
+        
+        .deals-section h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: var(--primary);
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
         /* Мобильные стили */
         @media (max-width: 768px) {
             .container {
@@ -972,6 +987,10 @@
                 background-color: #332701;
                 color: #ffd54f;
                 border-left-color: #ffc107;
+            }
+            
+            .deals-section h3 {
+                border-bottom-color: #444;
             }
         }
     </style>
@@ -1190,8 +1209,21 @@
                     <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                         <i class="fas fa-history"></i> Все сделки
                     </h2>
-                    <div id="allDeals">
-                        <!-- Все сделки будут загружены здесь -->
+                    
+                    <!-- Раздел для исходящих сделок -->
+                    <div class="deals-section">
+                        <h3><i class="fas fa-share-square"></i> Исходящие сделки</h3>
+                        <div id="outgoingDeals">
+                            <!-- Исходящие сделки будут загружены здесь -->
+                        </div>
+                    </div>
+                    
+                    <!-- Раздел для входящих сделок -->
+                    <div class="deals-section">
+                        <h3><i class="fas fa-inbox"></i> Входящие сделки</h3>
+                        <div id="incomingHistoryDeals">
+                            <!-- Входящие сделки будут загружены здесь -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1372,6 +1404,12 @@
                 <span id="dealLimitText">Вы уже совершили 0 из 5 возможных сделок с этим игроком сегодня.</span>
             </div>
             
+            <!-- Добавлено сообщение о нулевом балансе -->
+            <div id="zeroBalanceInfo" class="deal-limit-info" style="display: none; background-color: #f8d7da; color: #721c24; border-left-color: #f5c6cb;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>У вас недостаточно монет для предложения сделки. Пополните баланс через вклады.</span>
+            </div>
+            
             <div class="choice-buttons">
                 <button id="cooperateBtn" class="btn-success">
                     <i class="fas fa-handshake"></i> Сотрудничать
@@ -1458,19 +1496,20 @@
         let selectedUser = null;
         let selectedDeal = null;
         let depositTimers = {};
+        let currentUserCoins = 0; // Добавлено для отслеживания баланса текущего пользователя
 
         // DOM элементы
         let authSection, profileSection, authForm, authBtn, userInfo, userGreeting, logoutBtn;
         let coinsValue, reputationValue, classValue, usersList, searchInput, classFilter, searchBtn;
-        let incomingDeals, pendingDeals, allDeals, rankingTable, dealModal, responseModal, resultModal, closeModal;
+        let incomingDeals, pendingDeals, outgoingDeals, incomingHistoryDeals, rankingTable, dealModal, responseModal, resultModal, closeModal;
         let dealUsername, dealAvatar, dealPlayerName, dealPlayerClass, dealPlayerCoins, dealPlayerReputation;
         let cooperateBtn, cheatBtn, respondCooperateBtn, respondCheatBtn, responseDealInfo;
         let resultContent, closeResultBtn, userAvatar;
         let loadingMessage, errorMessage, authError;
-        let dealLimitInfo, dealLimitText;
+        let dealLimitInfo, dealLimitText, zeroBalanceInfo; // Добавлен zeroBalanceInfo
         let depositModal, depositModalContent, depositResultModal, depositResultContent, closeDepositResultBtn;
         let activeDepositsList, depositHistoryList;
-        let topRankingTable; // Новый элемент для топа рейтинга на странице авторизации
+        let topRankingTable;
 
         // Конфигурация Supabase
         const SUPABASE_CONFIG = {
@@ -1553,7 +1592,8 @@
             searchBtn = document.getElementById('searchBtn');
             incomingDeals = document.getElementById('incomingDeals');
             pendingDeals = document.getElementById('pendingDeals');
-            allDeals = document.getElementById('allDeals');
+            outgoingDeals = document.getElementById('outgoingDeals');
+            incomingHistoryDeals = document.getElementById('incomingHistoryDeals');
             rankingTable = document.getElementById('rankingTable');
             dealModal = document.getElementById('dealModal');
             responseModal = document.getElementById('responseModal');
@@ -1576,6 +1616,7 @@
             authError = document.getElementById('authError');
             dealLimitInfo = document.getElementById('dealLimitInfo');
             dealLimitText = document.getElementById('dealLimitText');
+            zeroBalanceInfo = document.getElementById('zeroBalanceInfo'); // Новый элемент
             depositModal = document.getElementById('depositModal');
             depositModalContent = document.getElementById('depositModalContent');
             depositResultModal = document.getElementById('depositResultModal');
@@ -1583,7 +1624,7 @@
             closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
             activeDepositsList = document.getElementById('activeDepositsList');
             depositHistoryList = document.getElementById('depositHistoryList');
-            topRankingTable = document.getElementById('topRankingTable'); // Новый элемент
+            topRankingTable = document.getElementById('topRankingTable');
         }
 
         // Показать сообщение о загрузке
@@ -1925,6 +1966,9 @@
                 if (coinsValue) coinsValue.textContent = profile.coins;
                 if (reputationValue) reputationValue.textContent = profile.reputation;
                 
+                // Сохраняем баланс текущего пользователя
+                currentUserCoins = profile.coins;
+                
                 // Загрузка данных для вкладок
                 loadUsers();
                 loadDeals();
@@ -2055,9 +2099,10 @@
                         userCard.className = 'user-card';
                         
                         // Проверяем баланс пользователя для активации кнопки
-                        const canMakeDeal = user.coins > 0;
+                        // ИСПРАВЛЕНИЕ: Теперь проверяем баланс текущего пользователя тоже
+                        const canMakeDeal = user.coins > 0 && currentUserCoins > 0;
                         const buttonClass = canMakeDeal ? 'btn-secondary' : 'btn-secondary btn-disabled';
-                        const buttonText = canMakeDeal ? 'Сделка' : 'Нет монет';
+                        const buttonText = canMakeDeal ? 'Сделка' : (currentUserCoins <= 0 ? 'Нет монет' : 'Нет монет');
                         
                         userCard.innerHTML = `
                             <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
@@ -2126,34 +2171,60 @@
                 if (dealPlayerCoins) dealPlayerCoins.textContent = user.coins;
                 if (dealPlayerReputation) dealPlayerReputation.textContent = user.reputation;
                 
-                // Проверяем лимит сделок с этим пользователем за сегодня
-                const todayDealsCount = await getTodayDealsCount(userId);
-                if (dealLimitInfo && dealLimitText) {
-                    if (todayDealsCount >= 5) {
-                        dealLimitText.textContent = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
-                        dealLimitInfo.style.display = 'block';
-                        
-                        // Блокируем кнопки
-                        if (cooperateBtn) {
-                            cooperateBtn.disabled = true;
-                            cooperateBtn.classList.add('btn-disabled');
-                        }
-                        if (cheatBtn) {
-                            cheatBtn.disabled = true;
-                            cheatBtn.classList.add('btn-disabled');
-                        }
-                    } else {
-                        dealLimitText.textContent = `Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.`;
-                        dealLimitInfo.style.display = 'block';
-                        
-                        // Разблокируем кнопки
-                        if (cooperateBtn) {
-                            cooperateBtn.disabled = false;
-                            cooperateBtn.classList.remove('btn-disabled');
-                        }
-                        if (cheatBtn) {
-                            cheatBtn.disabled = false;
-                            cheatBtn.classList.remove('btn-disabled');
+                // ИСПРАВЛЕНИЕ: Проверяем баланс текущего пользователя
+                if (currentUserCoins <= 0) {
+                    // Показываем сообщение о нулевом балансе и блокируем кнопки
+                    if (zeroBalanceInfo) {
+                        zeroBalanceInfo.style.display = 'block';
+                    }
+                    if (dealLimitInfo) {
+                        dealLimitInfo.style.display = 'none';
+                    }
+                    
+                    // Блокируем кнопки
+                    if (cooperateBtn) {
+                        cooperateBtn.disabled = true;
+                        cooperateBtn.classList.add('btn-disabled');
+                    }
+                    if (cheatBtn) {
+                        cheatBtn.disabled = true;
+                        cheatBtn.classList.add('btn-disabled');
+                    }
+                } else {
+                    // Скрываем сообщение о нулевом балансе
+                    if (zeroBalanceInfo) {
+                        zeroBalanceInfo.style.display = 'none';
+                    }
+                    
+                    // Проверяем лимит сделок с этим пользователем за сегодня
+                    const todayDealsCount = await getTodayDealsCount(userId);
+                    if (dealLimitInfo && dealLimitText) {
+                        if (todayDealsCount >= 5) {
+                            dealLimitText.textContent = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
+                            dealLimitInfo.style.display = 'block';
+                            
+                            // Блокируем кнопки
+                            if (cooperateBtn) {
+                                cooperateBtn.disabled = true;
+                                cooperateBtn.classList.add('btn-disabled');
+                            }
+                            if (cheatBtn) {
+                                cheatBtn.disabled = true;
+                                cheatBtn.classList.add('btn-disabled');
+                            }
+                        } else {
+                            dealLimitText.textContent = `Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.`;
+                            dealLimitInfo.style.display = 'block';
+                            
+                            // Разблокируем кнопки
+                            if (cooperateBtn) {
+                                cooperateBtn.disabled = false;
+                                cooperateBtn.classList.remove('btn-disabled');
+                            }
+                            if (cheatBtn) {
+                                cheatBtn.disabled = false;
+                                cheatBtn.classList.remove('btn-disabled');
+                            }
                         }
                     }
                 }
@@ -2203,6 +2274,12 @@
             try {
                 if (!supabase || !currentUser || !selectedUser) {
                     console.error('Required data not initialized');
+                    return;
+                }
+                
+                // ИСПРАВЛЕНИЕ: Проверяем баланс текущего пользователя
+                if (currentUserCoins <= 0) {
+                    alert('У вас недостаточно монет для предложения сделки. Пополните баланс через вклады.');
                     return;
                 }
                 
@@ -2504,7 +2581,7 @@
                     }
                 }
                 
-                // Все сделки (история) - теперь показываем как входящие, так и исходящие
+                // Все сделки (история) - теперь показываем как входящие, так и исходящие, но раздельно
                 const { data: all, error: allError } = await supabase
                     .from('deals')
                     .select(`
@@ -2517,36 +2594,39 @@
                 
                 if (allError) {
                     console.error('Ошибка загрузки всех сделок:', allError);
-                } else if (allDeals) {
-                    allDeals.innerHTML = '';
+                } else {
+                    // Разделяем сделки на исходящие и входящие
+                    const outgoing = all.filter(deal => deal.from_user.id === currentUser.id);
+                    const incoming = all.filter(deal => deal.to_user.id === currentUser.id);
                     
-                    if (all.length === 0) {
-                        allDeals.innerHTML = `
-                            <div class="empty-state">
-                                <i class="fas fa-history"></i>
-                                <p>Нет завершенных сделок</p>
-                            </div>
-                        `;
-                    } else {
-                        all.forEach(deal => {
-                            const isOutgoing = deal.from_user.id === currentUser.id;
-                            const otherUser = isOutgoing ? deal.to_user : deal.from_user;
-                            const directionText = isOutgoing ? "Кому:" : "От кого:";
-                            
-                            const statusBadge = deal.status === 'pending' ? 
-                                '<span class="badge badge-warning">Ожидание</span>' : 
-                                deal.status === 'completed' ? 
-                                '<span class="badge badge-success">Завершена</span>' :
-                                '<span class="badge badge-danger">Отклонена</span>';
-                            
-                            // Вычисляем результат сделки для текущего пользователя
-                            let resultHtml = '';
-                            if (deal.status === 'completed') {
-                                let coinsChange = 0;
-                                let resultClass = '';
+                    // Отображаем исходящие сделки
+                    if (outgoingDeals) {
+                        outgoingDeals.innerHTML = '';
+                        
+                        if (outgoing.length === 0) {
+                            outgoingDeals.innerHTML = `
+                                <div class="empty-state">
+                                    <i class="fas fa-share-square"></i>
+                                    <p>Нет исходящих сделок</p>
+                                </div>
+                            `;
+                        } else {
+                            outgoing.forEach(deal => {
+                                const dealItem = document.createElement('div');
+                                dealItem.className = 'deal-item';
                                 
-                                // Определяем изменение монет для текущего пользователя
-                                if (isOutgoing) {
+                                const statusBadge = deal.status === 'pending' ? 
+                                    '<span class="badge badge-warning">Ожидание</span>' : 
+                                    deal.status === 'completed' ? 
+                                    '<span class="badge badge-success">Завершена</span>' :
+                                    '<span class="badge badge-danger">Отклонена</span>';
+                                
+                                // Вычисляем результат сделки для текущего пользователя
+                                let resultHtml = '';
+                                if (deal.status === 'completed') {
+                                    let coinsChange = 0;
+                                    let resultClass = '';
+                                    
                                     // Для исходящих сделок
                                     if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
                                         coinsChange = 2;
@@ -2561,7 +2641,59 @@
                                         coinsChange = -1;
                                         resultClass = 'profit-negative';
                                     }
-                                } else {
+                                    
+                                    const sign = coinsChange > 0 ? '+' : '';
+                                    resultHtml = `<div class="deal-result ${resultClass}">Результат: ${sign}${coinsChange} монет</div>`;
+                                }
+                                
+                                let dealInfo = `
+                                    <div>
+                                        <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
+                                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                                `;
+                                
+                                if (deal.status === 'completed') {
+                                    dealInfo += `<p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>`;
+                                }
+                                
+                                dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
+                                dealInfo += resultHtml;
+                                dealInfo += `</div>`;
+                                
+                                dealItem.innerHTML = dealInfo;
+                                outgoingDeals.appendChild(dealItem);
+                            });
+                        }
+                    }
+                    
+                    // Отображаем входящие сделки
+                    if (incomingHistoryDeals) {
+                        incomingHistoryDeals.innerHTML = '';
+                        
+                        if (incoming.length === 0) {
+                            incomingHistoryDeals.innerHTML = `
+                                <div class="empty-state">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>Нет входящих сделок</p>
+                                </div>
+                            `;
+                        } else {
+                            incoming.forEach(deal => {
+                                const dealItem = document.createElement('div');
+                                dealItem.className = 'deal-item';
+                                
+                                const statusBadge = deal.status === 'pending' ? 
+                                    '<span class="badge badge-warning">Ожидание</span>' : 
+                                    deal.status === 'completed' ? 
+                                    '<span class="badge badge-success">Завершена</span>' :
+                                    '<span class="badge badge-danger">Отклонена</span>';
+                                
+                                // Вычисляем результат сделки для текущего пользователя
+                                let resultHtml = '';
+                                if (deal.status === 'completed') {
+                                    let coinsChange = 0;
+                                    let resultClass = '';
+                                    
                                     // Для входящих сделок
                                     if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
                                         coinsChange = 2;
@@ -2576,32 +2708,29 @@
                                         coinsChange = -1;
                                         resultClass = 'profit-negative';
                                     }
+                                    
+                                    const sign = coinsChange > 0 ? '+' : '';
+                                    resultHtml = `<div class="deal-result ${resultClass}">Результат: ${sign}${coinsChange} монет</div>`;
                                 }
                                 
-                                const sign = coinsChange > 0 ? '+' : '';
-                                resultHtml = `<div class="deal-result ${resultClass}">Результат: ${sign}${coinsChange} монет</div>`;
-                            }
-                            
-                            const dealItem = document.createElement('div');
-                            dealItem.className = 'deal-item';
-                            
-                            let dealInfo = `
-                                <div>
-                                    <p><strong>${directionText}</strong> ${otherUser.username} (${otherUser.class})</p>
-                                    <p><strong>Ваш выбор:</strong> ${isOutgoing ? deal.from_choice : deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            `;
-                            
-                            if (deal.status === 'completed') {
-                                dealInfo += `<p><strong>Ответ:</strong> ${isOutgoing ? (deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать') : (deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать')}</p>`;
-                            }
-                            
-                            dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
-                            dealInfo += resultHtml;
-                            dealInfo += `</div>`;
-                            
-                            dealItem.innerHTML = dealInfo;
-                            allDeals.appendChild(dealItem);
-                        });
+                                let dealInfo = `
+                                    <div>
+                                        <p><strong>От кого:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
+                                        <p><strong>Ваш выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                                `;
+                                
+                                if (deal.status === 'completed') {
+                                    dealInfo += `<p><strong>Ответ:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>`;
+                                }
+                                
+                                dealInfo += `<p><strong>Статус:</strong> ${statusBadge}</p>`;
+                                dealInfo += resultHtml;
+                                dealInfo += `</div>`;
+                                
+                                dealItem.innerHTML = dealInfo;
+                                incomingHistoryDeals.appendChild(dealItem);
+                            });
+                        }
                     }
                 }
             } catch (error) {
@@ -3011,6 +3140,7 @@
                 
                 // Обновляем интерфейс
                 coinsValue.textContent = newCoins;
+                currentUserCoins = newCoins; // Обновляем переменную баланса
                 
                 alert('Вклад успешно открыт!');
                 depositModal.classList.remove('active');
@@ -3100,6 +3230,7 @@
                 
                 // Обновляем интерфейс
                 coinsValue.textContent = newCoins;
+                currentUserCoins = newCoins; // Обновляем переменную баланса
                 
                 // Показываем результат вклада
                 showDepositResult(deposit, profit);
