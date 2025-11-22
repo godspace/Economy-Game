@@ -213,24 +213,12 @@ export function openDepositModal(type, duration, profit, isRisky) {
 async function createDeposit(type, amount, duration, profit, isRisky) {
     try {
         if (!state.supabase || !state.currentUser) {
-            console.error('Supabase or current user not initialized');
-            return;
+            throw new Error('Система не инициализирована');
         }
         
-        const { data: profile, error: profileError } = await state.supabase
-            .from('profiles')
-            .select('coins')
-            .eq('id', state.currentUser.id)
-            .single();
-        
-        if (profileError) {
-            console.error('Ошибка получения профиля:', profileError);
-            return;
-        }
-        
-        if (profile.coins < amount) {
-            alert('Недостаточно монет для открытия вклада');
-            return;
+        // Проверяем минимальную сумму
+        if (amount < 1) {
+            throw new Error('Минимальная сумма вклада - 1 монета');
         }
         
         const startTime = new Date();
@@ -238,9 +226,10 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
         
         let expectedProfit = profit;
         if (isRisky) {
-            expectedProfit = 2;
+            expectedProfit = 2; // Для рисковых вкладов
         }
         
+        // Создаем вклад (триггер автоматически проверит баланс и вычтет сумму)
         const { data: deposit, error } = await state.supabase
             .from('deposits')
             .insert([
@@ -259,21 +248,21 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
             .single();
         
         if (error) {
+            // Обрабатываем ошибку от триггера
+            if (error.message.includes('Недостаточно средств')) {
+                throw new Error('Недостаточно монет для открытия вклада');
+            }
             throw error;
         }
         
-        const newCoins = profile.coins - amount;
-        const { error: updateError } = await state.supabase
+        // Обновляем баланс на клиенте (после успешного вычитания)
+        const { data: updatedProfile } = await state.supabase
             .from('profiles')
-            .update({ coins: newCoins })
-            .eq('id', state.currentUser.id);
+            .select('coins')
+            .eq('id', state.currentUser.id)
+            .single();
         
-        if (updateError) {
-            console.error('Ошибка обновления баланса:', updateError);
-            return;
-        }
-        
-        dom.coinsValue.textContent = newCoins;
+        dom.coinsValue.textContent = updatedProfile.coins;
         
         alert('Вклад успешно открыт!');
         dom.depositModal.classList.remove('active');
