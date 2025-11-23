@@ -1,5 +1,8 @@
-import { state, dom } from './config.js';
+import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 import { showDealModal } from './deals.js';
+
+// Debounce для поиска
+let searchTimeout = null;
 
 export async function loadUserProfile(userId) {
     try {
@@ -10,7 +13,7 @@ export async function loadUserProfile(userId) {
         
         const { data: profile, error } = await state.supabase
             .from('profiles')
-            .select('*')
+            .select('id, username, coins, reputation') // Только нужные поля
             .eq('id', userId)
             .single();
         
@@ -66,10 +69,19 @@ export async function createUserProfile(userId) {
     }
 }
 
-export async function loadUsers() {
+export async function loadUsers(forceRefresh = false) {
     try {
         if (!state.supabase || !state.currentUser || !state.currentUserProfile) {
             console.error('Supabase or current user not initialized');
+            return;
+        }
+        
+        // Проверка кэша
+        const now = Date.now();
+        if (!forceRefresh && cache.users.data && 
+            (now - cache.users.timestamp < cache.users.ttl) &&
+            shouldUpdate('users')) {
+            renderUsers(cache.users.data);
             return;
         }
         
@@ -78,8 +90,9 @@ export async function loadUsers() {
         
         let query = state.supabase
             .from('profiles')
-            .select('*')
-            .neq('id', state.currentUser.id);
+            .select('id, username, class, coins, reputation') // Только нужные поля
+            .neq('id', state.currentUser.id)
+            .limit(50); // Ограничение количества
         
         if (searchTerm) {
             query = query.ilike('username', `%${searchTerm}%`);
@@ -96,76 +109,102 @@ export async function loadUsers() {
             return;
         }
         
-        if (dom.usersList) {
-            dom.usersList.innerHTML = '';
-            
-            if (users.length === 0) {
-                dom.usersList.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-users"></i>
-                        <p>Пользователи не найдены</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            users.forEach(user => {
-                const userCard = document.createElement('div');
-                userCard.className = 'user-card';
-                
-                const currentUserHasCoins = state.currentUserProfile.coins > 0;
-                const targetUserHasCoins = user.coins > 0;
-                const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
-                
-                let buttonClass = 'btn-secondary';
-                let buttonText = 'Сделка';
-                let disabled = false;
-                
-                if (!currentUserHasCoins) {
-                    buttonClass = 'btn-secondary btn-disabled';
-                    buttonText = 'У вас нет монет';
-                    disabled = true;
-                } else if (!targetUserHasCoins) {
-                    buttonClass = 'btn-secondary btn-disabled';
-                    buttonText = 'У игрока нет монет';
-                    disabled = true;
-                }
-                
-                userCard.innerHTML = `
-                    <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-                    <div class="user-name">${user.username}</div>
-                    <div class="user-details">
-                        <div class="user-detail">
-                            <i class="fas fa-users"></i>
-                            <span>${user.class}</span>
-                        </div>
-                        <div class="user-detail">
-                            <i class="fas fa-coins"></i>
-                            <span>${user.coins}</span>
-                        </div>
-                        <div class="user-detail">
-                            <i class="fas fa-star"></i>
-                            <span>${user.reputation}</span>
-                        </div>
-                    </div>
-                    <button class="${buttonClass} propose-deal-btn" data-user-id="${user.id}" ${disabled ? 'disabled' : ''}>
-                        <i class="fas fa-handshake"></i> ${buttonText}
-                    </button>
-                `;
-                
-                dom.usersList.appendChild(userCard);
-            });
-            
-            document.querySelectorAll('.propose-deal-btn').forEach(btn => {
-                if (!btn.disabled) {
-                    btn.addEventListener('click', function() {
-                        const userId = this.dataset.userId;
-                        showDealModal(userId);
-                    });
-                }
-            });
-        }
+        // Сохраняем в кэш
+        cache.users.data = users;
+        cache.users.timestamp = now;
+        markUpdated('users');
+        
+        renderUsers(users);
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
+    }
+}
+
+function renderUsers(users) {
+    if (!dom.usersList) return;
+    
+    dom.usersList.innerHTML = '';
+    
+    if (users.length === 0) {
+        dom.usersList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <p>Пользователи не найдены</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Используем DocumentFragment для оптимизации рендеринга
+    const fragment = document.createDocumentFragment();
+    
+    users.forEach(user => {
+        const userCard = document.createElement('div');
+        userCard.className = 'user-card';
+        
+        const currentUserHasCoins = state.currentUserProfile.coins > 0;
+        const targetUserHasCoins = user.coins > 0;
+        const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
+        
+        let buttonClass = 'btn-secondary';
+        let buttonText = 'Сделка';
+        let disabled = false;
+        
+        if (!currentUserHasCoins) {
+            buttonClass = 'btn-secondary btn-disabled';
+            buttonText = 'У вас нет монет';
+            disabled = true;
+        } else if (!targetUserHasCoins) {
+            buttonClass = 'btn-secondary btn-disabled';
+            buttonText = 'У игрока нет монет';
+            disabled = true;
+        }
+        
+        userCard.innerHTML = `
+            <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
+            <div class="user-name">${user.username}</div>
+            <div class="user-details">
+                <div class="user-detail">
+                    <i class="fas fa-users"></i>
+                    <span>${user.class}</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-coins"></i>
+                    <span>${user.coins}</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-star"></i>
+                    <span>${user.reputation}</span>
+                </div>
+            </div>
+            <button class="${buttonClass} propose-deal-btn" data-user-id="${user.id}" ${disabled ? 'disabled' : ''}>
+                <i class="fas fa-handshake"></i> ${buttonText}
+            </button>
+        `;
+        
+        fragment.appendChild(userCard);
+    });
+    
+    dom.usersList.appendChild(fragment);
+}
+
+// Debounce поиска
+export function setupSearchDebounce() {
+    if (dom.searchInput) {
+        dom.searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadUsers(true); // force refresh
+            }, 500);
+        });
+    }
+    
+    if (dom.classFilter) {
+        dom.classFilter.addEventListener('change', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadUsers(true); // force refresh
+            }, 300);
+        });
     }
 }

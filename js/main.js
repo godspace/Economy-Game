@@ -2,9 +2,37 @@ import { initDOMElements, setupEventListeners, showLoading, hideLoading, showErr
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
 
+// Мониторинг производительности
+function initPerformanceMonitoring() {
+    if ('PerformanceObserver' in window) {
+        const observer = new PerformanceObserver((list) => {
+            list.getEntries().forEach((entry) => {
+                if (entry.duration > 100) {
+                    console.warn('Long task detected:', entry);
+                }
+            });
+        });
+        observer.observe({ entryTypes: ['longtask'] });
+    }
+    
+    // Мониторинг загрузки ресурсов
+    window.addEventListener('load', () => {
+        const perfData = performance.timing;
+        const loadTime = perfData.loadEventEnd - perfData.navigationStart;
+        console.log(`Page load time: ${loadTime}ms`);
+        
+        if (loadTime > 3000) {
+            console.warn('Page load time is slow, consider optimization');
+        }
+    });
+}
+
 async function initApp() {
     try {
         console.log('Starting app initialization...');
+        
+        // Инициализация мониторинга производительности
+        initPerformanceMonitoring();
         
         // Сначала инициализируем DOM элементы
         initDOMElements();

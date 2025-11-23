@@ -1,7 +1,22 @@
 // Конфигурация Supabase
 export const SUPABASE_CONFIG = {
     url: 'https://isugrtihjmbrzwflybrr.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI'
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzdWdydGloam1icnp3Zmx5YnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMzODQ0OTQsImV4cCI6MjA3ODk2MDQ5NH0.ek79k1g5svlLdhbYS664Lkc-6_tKc06qUgR-MhZtGNI',
+    options: {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true
+        }
+    }
+};
+
+// Кэширование данных
+export const cache = {
+    users: { data: null, timestamp: 0, ttl: 60000 }, // 1 минута
+    ranking: { data: null, timestamp: 0, ttl: 30000 }, // 30 секунд
+    topRanking: { data: null, timestamp: 0, ttl: 45000 }, // 45 секунд
+    deals: { data: null, timestamp: 0, ttl: 20000 } // 20 секунд
 };
 
 // Объект для хранения глобальных переменных
@@ -11,8 +26,32 @@ export const state = {
     currentUserProfile: null,
     selectedUser: null,
     selectedDeal: null,
-    depositTimers: {}
+    depositTimers: {},
+    lastUpdates: {
+        users: 0,
+        deals: 0,
+        ranking: 0,
+        topRanking: 0
+    },
+    updateIntervals: {
+        users: 60000,    // 1 минута
+        deals: 30000,    // 30 секунд
+        ranking: 45000,  // 45 секунд
+        topRanking: 60000 // 1 минута
+    }
 };
+
+// Функция проверки необходимости обновления
+export function shouldUpdate(resource) {
+    const now = Date.now();
+    return !state.lastUpdates[resource] || 
+           (now - state.lastUpdates[resource] > state.updateIntervals[resource]);
+}
+
+// Функция обновления времени последнего обновления
+export function markUpdated(resource) {
+    state.lastUpdates[resource] = Date.now();
+}
 
 // Объект для хранения DOM элементов
 export const dom = {

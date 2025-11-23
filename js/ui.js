@@ -1,4 +1,5 @@
 import { dom, state } from './config.js';
+import { setupSearchDebounce } from './users.js';
 
 export function initDOMElements() {
     // Инициализируем свойства объекта dom, а не переопределяем переменные
@@ -127,7 +128,25 @@ export function showProfileSection() {
 import { handleAuth, handleLogout } from './auth.js';
 import { loadUsers } from './users.js';
 import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
-import { loadInvestments, openDepositModal } from './investments.js';
+
+// Ленивая загрузка модулей
+async function loadTabModule(tabName) {
+    switch(tabName) {
+        case 'users':
+            loadUsers();
+            break;
+        case 'deals':
+            loadDeals();
+            break;
+        case 'ranking':
+            loadRanking();
+            break;
+        case 'investments':
+            const { loadInvestments } = await import('./investments.js');
+            loadInvestments();
+            break;
+    }
+}
 
 export function setupEventListeners() {
     if (dom.authForm) {
@@ -138,11 +157,14 @@ export function setupEventListeners() {
         dom.logoutBtn.addEventListener('click', handleLogout);
     }
     
+    // Настройка debounce для поиска
+    setupSearchDebounce();
+    
     if (dom.searchBtn) {
-        dom.searchBtn.addEventListener('click', loadUsers);
+        dom.searchBtn.addEventListener('click', () => loadUsers(true));
     }
     
-    // Табы
+    // Табы с ленивой загрузкой
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -155,15 +177,8 @@ export function setupEventListeners() {
                 tabContent.classList.add('active');
             }
             
-            if (this.dataset.tab === 'ranking') {
-                loadRanking();
-            } else if (this.dataset.tab === 'deals') {
-                loadDeals();
-            } else if (this.dataset.tab === 'users') {
-                loadUsers();
-            } else if (this.dataset.tab === 'investments') {
-                loadInvestments();
-            }
+            // Ленивая загрузка контента таба
+            loadTabModule(this.dataset.tab);
         });
     });
     
@@ -193,21 +208,42 @@ export function setupEventListeners() {
         });
     }
     
-    window.addEventListener('click', function(event) {
-        if (event.target === dom.dealModal) {
-            dom.dealModal.classList.remove('active');
+    // Делегирование событий для динамических элементов
+    document.addEventListener('click', function(event) {
+        // Обработка предложения сделки
+        if (event.target.closest('.propose-deal-btn')) {
+            const button = event.target.closest('.propose-deal-btn');
+            if (!button.disabled) {
+                const userId = button.dataset.userId;
+                const { showDealModal } = require('./deals.js');
+                showDealModal(userId);
+            }
         }
-        if (event.target === dom.responseModal) {
-            dom.responseModal.classList.remove('active');
+        
+        // Обработка ответа на сделку
+        if (event.target.closest('.respond-deal')) {
+            const button = event.target.closest('.respond-deal');
+            const dealId = button.dataset.dealId;
+            const { showResponseModal } = require('./deals.js');
+            showResponseModal(dealId);
         }
-        if (event.target === dom.resultModal) {
-            dom.resultModal.classList.remove('active');
+        
+        // Обработка открытия вкладов
+        if (event.target.closest('.open-deposit')) {
+            const button = event.target.closest('.open-deposit');
+            import('./investments.js').then(module => {
+                module.openDepositModal(
+                    button.dataset.type,
+                    button.dataset.duration,
+                    button.dataset.profit,
+                    button.dataset.risk === 'true'
+                );
+            });
         }
-        if (event.target === dom.depositModal) {
-            dom.depositModal.classList.remove('active');
-        }
-        if (event.target === dom.depositResultModal) {
-            dom.depositResultModal.classList.remove('active');
+        
+        // Закрытие модальных окон при клике вне области
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
         }
     });
     
@@ -235,28 +271,6 @@ export function setupEventListeners() {
             respondToDeal('cheat');
         });
     }
-    
-    // Кнопки открытия вкладов
-    document.addEventListener('click', function(event) {
-        if (event.target.classList.contains('open-deposit') || 
-            event.target.parentElement.classList.contains('open-deposit')) {
-            const button = event.target.classList.contains('open-deposit') ? 
-                event.target : event.target.parentElement;
-            openDepositModal(
-                button.dataset.type,
-                button.dataset.duration,
-                button.dataset.profit,
-                button.dataset.risk === 'true'
-            );
-        }
-    });
-    
-    // Закрытие модальных окон при клике вне области
-    document.addEventListener('click', function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.classList.remove('active');
-        }
-    });
     
     // Предотвращение закрытия при клике внутри модального окна
     document.querySelectorAll('.modal-content').forEach(content => {

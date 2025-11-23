@@ -1,4 +1,4 @@
-import { state, dom } from './config.js';
+import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
 export async function showDealModal(userId) {
     try {
@@ -14,7 +14,7 @@ export async function showDealModal(userId) {
         
         const { data: user, error } = await state.supabase
             .from('profiles')
-            .select('*')
+            .select('id, username, class, coins, reputation') // Только нужные поля
             .eq('id', userId)
             .single();
         
@@ -81,7 +81,7 @@ async function getTodayDealsCount(targetUserId) {
         
         const { data: todayDeals, error } = await state.supabase
             .from('deals')
-            .select('id, created_at')
+            .select('id') // Только ID для подсчета
             .eq('from_user', state.currentUser.id)
             .eq('to_user', targetUserId)
             .gte('created_at', today)
@@ -140,7 +140,11 @@ export async function proposeDeal(choice) {
         if (dom.dealModal) {
             dom.dealModal.classList.remove('active');
         }
-        loadDeals();
+        
+        // Инвалидируем кэш сделок
+        cache.deals.data = null;
+        cache.deals.timestamp = 0;
+        loadDeals(true); // force refresh
     } catch (error) {
         console.error('Ошибка предложения сделки:', error);
         alert('Ошибка: ' + error.message);
@@ -157,9 +161,9 @@ export async function showResponseModal(dealId) {
         const { data: deal, error } = await state.supabase
             .from('deals')
             .select(`
-                *,
+                id, from_choice, status, created_at,
                 from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
-            `)
+            `) // Только нужные поля
             .eq('id', dealId)
             .single();
         
@@ -228,7 +232,11 @@ export async function respondToDeal(choice) {
             dom.responseModal.classList.remove('active');
         }
         
-        loadDeals();
+        // Инвалидируем кэш сделок и обновляем
+        cache.deals.data = null;
+        cache.deals.timestamp = 0;
+        loadDeals(true); // force refresh
+        
         if (state.currentUser) {
             const { loadUserProfile } = await import('./users.js');
             loadUserProfile(state.currentUser.id);
@@ -307,293 +315,331 @@ async function showDealResult(deal, userChoice, result) {
     }
 }
 
-export async function loadDeals() {
+export async function loadDeals(forceRefresh = false) {
     try {
         if (!state.supabase || !state.currentUser) {
             console.error('Supabase or current user not initialized');
             return;
         }
         
-        // Входящие сделки
-        const { data: incoming, error: incomingError } = await state.supabase
-            .from('deals')
-            .select(`
-                *,
-                from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
-            `)
-            .eq('to_user', state.currentUser.id)
-            .eq('status', 'pending');
-        
-        if (incomingError) {
-            console.error('Ошибка загрузки входящих сделок:', incomingError);
-        } else if (dom.incomingDeals) {
-            dom.incomingDeals.innerHTML = '';
-            
-            if (incoming.length === 0) {
-                dom.incomingDeals.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>Нет входящих сделок</p>
-                    </div>
-                `;
-            } else {
-                incoming.forEach(deal => {
-                    const dealItem = document.createElement('div');
-                    dealItem.className = 'deal-item';
-                    dealItem.innerHTML = `
-                        <div>
-                            <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                            <p><strong>Монеты:</strong> ${deal.from_user.coins}</p>
-                            <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
-                        </div>
-                        <div class="deal-actions">
-                            <button class="btn-success respond-deal" data-deal-id="${deal.id}">
-                                <i class="fas fa-reply"></i> Ответить
-                            </button>
-                        </div>
-                    `;
-                    
-                    dom.incomingDeals.appendChild(dealItem);
-                });
-                
-                document.querySelectorAll('.respond-deal').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const dealId = this.dataset.dealId;
-                        showResponseModal(dealId);
-                    });
-                });
-            }
+        // Проверка кэша
+        const now = Date.now();
+        if (!forceRefresh && cache.deals.data && 
+            (now - cache.deals.timestamp < cache.deals.ttl) &&
+            shouldUpdate('deals')) {
+            renderDeals(cache.deals.data);
+            return;
         }
         
-        // Ожидающие ответа сделки
-        const { data: pending, error: pendingError } = await state.supabase
-            .from('deals')
-            .select(`
-                *,
-                to_user:profiles!deals_to_user_fkey(username, class)
-            `)
-            .eq('from_user', state.currentUser.id)
-            .eq('status', 'pending');
-        
-        if (pendingError) {
-            console.error('Ошибка загрузки ожидающих сделок:', pendingError);
-        } else if (dom.pendingDeals) {
-            dom.pendingDeals.innerHTML = '';
+        // Параллельная загрузка данных
+        const [incomingResult, pendingResult, completedIncomingResult, completedOutgoingResult] = await Promise.all([
+            // Входящие сделки
+            state.supabase
+                .from('deals')
+                .select(`
+                    id, from_choice, status, created_at,
+                    from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
+                `)
+                .eq('to_user', state.currentUser.id)
+                .eq('status', 'pending'),
             
-            if (pending.length === 0) {
-                dom.pendingDeals.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-clock"></i>
-                        <p>Нет ожидающих ответа сделок</p>
-                    </div>
-                `;
-            } else {
-                pending.forEach(deal => {
-                    const dealItem = document.createElement('div');
-                    dealItem.className = 'deal-item';
-                    dealItem.innerHTML = `
-                        <div>
-                            <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                            <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            <p><strong>Статус:</strong> <span class="badge badge-warning">Ожидание</span></p>
-                        </div>
-                    `;
-                    
-                    dom.pendingDeals.appendChild(dealItem);
-                });
-            }
-        }
-        
-        // Завершённые входящие сделки
-        const { data: completedIncoming, error: completedIncomingError } = await state.supabase
-            .from('deals')
-            .select(`
-                *,
-                from_user:profiles!deals_from_user_fkey(username, class),
-                to_user:profiles!deals_to_user_fkey(username, class)
-            `)
-            .eq('to_user', state.currentUser.id)
-            .eq('status', 'completed')
-            .order('created_at', { ascending: false });
-        
-        if (completedIncomingError) {
-            console.error('Ошибка загрузки завершённых входящих сделок:', completedIncomingError);
-        } else if (dom.completedIncomingDeals) {
-            dom.completedIncomingDeals.innerHTML = '';
+            // Ожидающие ответа сделки
+            state.supabase
+                .from('deals')
+                .select(`
+                    id, from_choice, status, created_at,
+                    to_user:profiles!deals_to_user_fkey(username, class)
+                `)
+                .eq('from_user', state.currentUser.id)
+                .eq('status', 'pending'),
             
-            if (completedIncoming.length === 0) {
-                dom.completedIncomingDeals.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>Нет завершённых входящих сделок</p>
-                    </div>
-                `;
-            } else {
-                completedIncoming.forEach(deal => {
-                    const dealItem = document.createElement('div');
-                    dealItem.className = 'deal-item';
-                    
-                    let coinsChange = 0;
-                    let resultClass = '';
-                    let resultText = '';
-                    
-                    if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                        coinsChange = 2;
-                        resultClass = 'profit-positive';
-                        resultText = `+${coinsChange} монет`;
-                    } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                        coinsChange = 3;
-                        resultClass = 'profit-positive';
-                        resultText = `+${coinsChange} монет`;
-                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                        coinsChange = -1;
-                        resultClass = 'profit-negative';
-                        resultText = `${coinsChange} монет`;
-                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                        coinsChange = -1;
-                        resultClass = 'profit-negative';
-                        resultText = `${coinsChange} монет`;
-                    }
-                    
-                    const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
-                    
-                    dealItem.innerHTML = `
-                        <div>
-                            <p><strong>От кого:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                            <p><strong>Ваш выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            <p><strong>Ответ:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            ${resultHtml}
-                        </div>
-                    `;
-                    
-                    dom.completedIncomingDeals.appendChild(dealItem);
-                });
-            }
-        }
-        
-        // Завершённые исходящие сделки
-        const { data: completedOutgoing, error: completedOutgoingError } = await state.supabase
-            .from('deals')
-            .select(`
-                *,
-                from_user:profiles!deals_from_user_fkey(username, class),
-                to_user:profiles!deals_to_user_fkey(username, class)
-            `)
-            .eq('from_user', state.currentUser.id)
-            .eq('status', 'completed')
-            .order('created_at', { ascending: false });
-        
-        if (completedOutgoingError) {
-            console.error('Ошибка загрузки завершённых исходящих сделок:', completedOutgoingError);
-        } else if (dom.completedOutgoingDeals) {
-            dom.completedOutgoingDeals.innerHTML = '';
+            // Завершённые входящие сделки
+            state.supabase
+                .from('deals')
+                .select(`
+                    id, from_choice, to_choice, status, created_at,
+                    from_user:profiles!deals_from_user_fkey(username, class),
+                    to_user:profiles!deals_to_user_fkey(username, class)
+                `)
+                .eq('to_user', state.currentUser.id)
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false })
+                .limit(20), // Ограничение истории
             
-            if (completedOutgoing.length === 0) {
-                dom.completedOutgoingDeals.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-paper-plane"></i>
-                        <p>Нет завершённых исходящих сделок</p>
-                    </div>
-                `;
-            } else {
-                completedOutgoing.forEach(deal => {
-                    const dealItem = document.createElement('div');
-                    dealItem.className = 'deal-item';
-                    
-                    let coinsChange = 0;
-                    let resultClass = '';
-                    let resultText = '';
-                    
-                    if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
-                        coinsChange = 2;
-                        resultClass = 'profit-positive';
-                        resultText = `+${coinsChange} монет`;
-                    } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
-                        coinsChange = -1;
-                        resultClass = 'profit-negative';
-                        resultText = `${coinsChange} монет`;
-                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
-                        coinsChange = 3;
-                        resultClass = 'profit-positive';
-                        resultText = `+${coinsChange} монет`;
-                    } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
-                        coinsChange = -1;
-                        resultClass = 'profit-negative';
-                        resultText = `${coinsChange} монет`;
-                    }
-                    
-                    const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
-                    
-                    dealItem.innerHTML = `
-                        <div>
-                            <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                            <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            <p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                            ${resultHtml}
-                        </div>
-                    `;
-                    
-                    dom.completedOutgoingDeals.appendChild(dealItem);
-                });
-            }
-        }
+            // Завершённые исходящие сделки
+            state.supabase
+                .from('deals')
+                .select(`
+                    id, from_choice, to_choice, status, created_at,
+                    from_user:profiles!deals_from_user_fkey(username, class),
+                    to_user:profiles!deals_to_user_fkey(username, class)
+                `)
+                .eq('from_user', state.currentUser.id)
+                .eq('status', 'completed')
+                .order('created_at', { ascending: false })
+                .limit(20) // Ограничение истории
+        ]);
+        
+        const dealsData = {
+            incoming: incomingResult.data || [],
+            pending: pendingResult.data || [],
+            completedIncoming: completedIncomingResult.data || [],
+            completedOutgoing: completedOutgoingResult.data || []
+        };
+        
+        // Сохраняем в кэш
+        cache.deals.data = dealsData;
+        cache.deals.timestamp = now;
+        markUpdated('deals');
+        
+        renderDeals(dealsData);
     } catch (error) {
         console.error('Ошибка загрузки сделок:', error);
     }
 }
 
-export async function loadRanking() {
+function renderDeals(dealsData) {
+    const { incoming, pending, completedIncoming, completedOutgoing } = dealsData;
+    
+    // Рендерим входящие сделки
+    if (dom.incomingDeals) {
+        renderDealsList(incoming, dom.incomingDeals, 'incoming');
+    }
+    
+    // Рендерим ожидающие сделки
+    if (dom.pendingDeals) {
+        renderDealsList(pending, dom.pendingDeals, 'pending');
+    }
+    
+    // Рендерим завершённые входящие сделки
+    if (dom.completedIncomingDeals) {
+        renderCompletedDeals(completedIncoming, dom.completedIncomingDeals, 'incoming');
+    }
+    
+    // Рендерим завершённые исходящие сделки
+    if (dom.completedOutgoingDeals) {
+        renderCompletedDeals(completedOutgoing, dom.completedOutgoingDeals, 'outgoing');
+    }
+}
+
+function renderDealsList(deals, container, type) {
+    container.innerHTML = '';
+    
+    if (deals.length === 0) {
+        const icon = type === 'incoming' ? 'fa-inbox' : 'fa-clock';
+        const text = type === 'incoming' ? 'Нет входящих сделок' : 'Нет ожидающих ответа сделок';
+        
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas ${icon}"></i>
+                <p>${text}</p>
+            </div>
+        `;
+    } else {
+        const fragment = document.createDocumentFragment();
+        
+        deals.forEach(deal => {
+            const dealItem = document.createElement('div');
+            dealItem.className = 'deal-item';
+            
+            if (type === 'incoming') {
+                dealItem.innerHTML = `
+                    <div>
+                        <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
+                        <p><strong>Монеты:</strong> ${deal.from_user.coins}</p>
+                        <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
+                    </div>
+                    <div class="deal-actions">
+                        <button class="btn-success respond-deal" data-deal-id="${deal.id}">
+                            <i class="fas fa-reply"></i> Ответить
+                        </button>
+                    </div>
+                `;
+            } else {
+                dealItem.innerHTML = `
+                    <div>
+                        <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
+                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Статус:</strong> <span class="badge badge-warning">Ожидание</span></p>
+                    </div>
+                `;
+            }
+            
+            fragment.appendChild(dealItem);
+        });
+        
+        container.appendChild(fragment);
+    }
+}
+
+function renderCompletedDeals(deals, container, type) {
+    container.innerHTML = '';
+    
+    if (deals.length === 0) {
+        const icon = type === 'incoming' ? 'fa-inbox' : 'fa-paper-plane';
+        const text = type === 'incoming' ? 'Нет завершённых входящих сделок' : 'Нет завершённых исходящих сделок';
+        
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas ${icon}"></i>
+                <p>${text}</p>
+            </div>
+        `;
+    } else {
+        const fragment = document.createDocumentFragment();
+        
+        deals.forEach(deal => {
+            const dealItem = document.createElement('div');
+            dealItem.className = 'deal-item';
+            
+            let coinsChange = 0;
+            let resultClass = '';
+            let resultText = '';
+            
+            if (type === 'incoming') {
+                // Для входящих: to_choice - наш выбор
+                if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                    coinsChange = 2;
+                    resultClass = 'profit-positive';
+                    resultText = `+${coinsChange} монет`;
+                } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                    coinsChange = 3;
+                    resultClass = 'profit-positive';
+                    resultText = `+${coinsChange} монет`;
+                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                    coinsChange = -1;
+                    resultClass = 'profit-negative';
+                    resultText = `${coinsChange} монет`;
+                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                    coinsChange = -1;
+                    resultClass = 'profit-negative';
+                    resultText = `${coinsChange} монет`;
+                }
+                
+                const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
+                
+                dealItem.innerHTML = `
+                    <div>
+                        <p><strong>От кого:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
+                        <p><strong>Ваш выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ответ:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        ${resultHtml}
+                    </div>
+                `;
+            } else {
+                // Для исходящих: from_choice - наш выбор
+                if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                    coinsChange = 2;
+                    resultClass = 'profit-positive';
+                    resultText = `+${coinsChange} монет`;
+                } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                    coinsChange = -1;
+                    resultClass = 'profit-negative';
+                    resultText = `${coinsChange} монет`;
+                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                    coinsChange = 3;
+                    resultClass = 'profit-positive';
+                    resultText = `+${coinsChange} монет`;
+                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                    coinsChange = -1;
+                    resultClass = 'profit-negative';
+                    resultText = `${coinsChange} монет`;
+                }
+                
+                const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
+                
+                dealItem.innerHTML = `
+                    <div>
+                        <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
+                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        ${resultHtml}
+                    </div>
+                `;
+            }
+            
+            fragment.appendChild(dealItem);
+        });
+        
+        container.appendChild(fragment);
+    }
+}
+
+export async function loadRanking(forceRefresh = false) {
     try {
         if (!state.supabase) {
             console.error('Supabase not initialized');
             return;
         }
         
+        // Проверка кэша
+        const now = Date.now();
+        if (!forceRefresh && cache.ranking.data && 
+            (now - cache.ranking.timestamp < cache.ranking.ttl) &&
+            shouldUpdate('ranking')) {
+            renderRanking(cache.ranking.data);
+            return;
+        }
+        
         const { data: users, error } = await state.supabase
             .from('profiles')
-            .select('*')
-            .order('coins', { ascending: false });
+            .select('id, username, class, coins, reputation') // Только нужные поля
+            .order('coins', { ascending: false })
+            .limit(100); // Ограничение рейтинга
         
         if (error) {
             console.error('Ошибка загрузки рейтинга:', error);
             return;
         }
         
-        if (dom.rankingTable) {
-            dom.rankingTable.innerHTML = '';
-            
-            if (users.length === 0) {
-                dom.rankingTable.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 20px;">
-                            <div class="empty-state">
-                                <i class="fas fa-trophy"></i>
-                                <p>Нет данных для рейтинга</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            } else {
-                users.forEach((user, index) => {
-                    const row = document.createElement('tr');
-                    
-                    if (state.currentUser && user.id === state.currentUser.id) {
-                        row.classList.add('current-user');
-                    }
-                    
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td>${user.username} ${state.currentUser && user.id === state.currentUser.id ? '(Вы)' : ''}</td>
-                        <td>${user.class}</td>
-                        <td>${user.coins}</td>
-                        <td>${user.reputation}</td>
-                    `;
-                    
-                    dom.rankingTable.appendChild(row);
-                });
-            }
-        }
+        // Сохраняем в кэш
+        cache.ranking.data = users;
+        cache.ranking.timestamp = now;
+        markUpdated('ranking');
+        
+        renderRanking(users);
     } catch (error) {
         console.error('Ошибка загрузки рейтинга:', error);
+    }
+}
+
+function renderRanking(users) {
+    if (!dom.rankingTable) return;
+    
+    dom.rankingTable.innerHTML = '';
+    
+    if (users.length === 0) {
+        dom.rankingTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 20px;">
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <p>Нет данных для рейтинга</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } else {
+        const fragment = document.createDocumentFragment();
+        
+        users.forEach((user, index) => {
+            const row = document.createElement('tr');
+            
+            if (state.currentUser && user.id === state.currentUser.id) {
+                row.classList.add('current-user');
+            }
+            
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${user.username} ${state.currentUser && user.id === state.currentUser.id ? '(Вы)' : ''}</td>
+                <td>${user.class}</td>
+                <td>${user.coins}</td>
+                <td>${user.reputation}</td>
+            `;
+            
+            fragment.appendChild(row);
+        });
+        
+        dom.rankingTable.appendChild(fragment);
     }
 }
