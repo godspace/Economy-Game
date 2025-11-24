@@ -643,3 +643,12 @@ function renderRanking(users) {
         dom.rankingTable.appendChild(fragment);
     }
 }
+// В конце deals.js добавьте:
+export {
+    showDealModal,
+    proposeDeal,
+    showResponseModal,
+    respondToDeal,
+    loadDeals,
+    loadRanking
+};
