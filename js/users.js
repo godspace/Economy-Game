@@ -1,8 +1,4 @@
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
-import { showDealModal } from './deals.js';
-
-// Debounce для поиска
-let searchTimeout = null;
 
 export async function loadUserProfile(userId) {
     try {
@@ -186,9 +182,23 @@ function renderUsers(users) {
     });
     
     dom.usersList.appendChild(fragment);
+    
+    // Добавляем обработчики событий после рендеринга
+    document.querySelectorAll('.propose-deal-btn').forEach(btn => {
+        if (!btn.disabled) {
+            btn.addEventListener('click', async function() {
+                const userId = this.dataset.userId;
+                // Динамический импорт для разрыва циклической зависимости
+                const { showDealModal } = await import('./deals.js');
+                showDealModal(userId);
+            });
+        }
+    });
 }
 
 // Debounce поиска
+let searchTimeout = null;
+
 export function setupSearchDebounce() {
     if (dom.searchInput) {
         dom.searchInput.addEventListener('input', function() {
