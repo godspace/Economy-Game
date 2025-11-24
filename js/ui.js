@@ -126,19 +126,20 @@ export function showProfileSection() {
 
 // Импортируем функции из других модулей
 import { handleAuth, handleLogout } from './auth.js';
-import { loadUsers } from './users.js';
-import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
 
 // Ленивая загрузка модулей
 async function loadTabModule(tabName) {
     switch(tabName) {
         case 'users':
+            const { loadUsers } = await import('./users.js');
             loadUsers();
             break;
         case 'deals':
+            const { loadDeals } = await import('./deals.js');
             loadDeals();
             break;
         case 'ranking':
+            const { loadRanking } = await import('./deals.js');
             loadRanking();
             break;
         case 'investments':
@@ -161,7 +162,10 @@ export function setupEventListeners() {
     setupSearchDebounce();
     
     if (dom.searchBtn) {
-        dom.searchBtn.addEventListener('click', () => loadUsers(true));
+        dom.searchBtn.addEventListener('click', async () => {
+            const { loadUsers } = await import('./users.js');
+            loadUsers(true);
+        });
     }
     
     // Табы с ленивой загрузкой
@@ -209,37 +213,18 @@ export function setupEventListeners() {
     }
     
     // Делегирование событий для динамических элементов
-    document.addEventListener('click', async function(event) {
-        // Обработка предложения сделки
-        if (event.target.closest('.propose-deal-btn')) {
-            const button = event.target.closest('.propose-deal-btn');
-            if (!button.disabled) {
-                const userId = button.dataset.userId;
-                // Используем динамический импорт вместо require
-                const { showDealModal } = await import('./deals.js');
-                showDealModal(userId);
-            }
-        }
-        
-        // Обработка ответа на сделку
-        if (event.target.closest('.respond-deal')) {
-            const button = event.target.closest('.respond-deal');
-            const dealId = button.dataset.dealId;
-            // Используем динамический импорт вместо require
-            const { showResponseModal } = await import('./deals.js');
-            showResponseModal(dealId);
-        }
-        
+    document.addEventListener('click', function(event) {
         // Обработка открытия вкладов
         if (event.target.closest('.open-deposit')) {
             const button = event.target.closest('.open-deposit');
-            const { openDepositModal } = await import('./investments.js');
-            openDepositModal(
-                button.dataset.type,
-                button.dataset.duration,
-                button.dataset.profit,
-                button.dataset.risk === 'true'
-            );
+            import('./investments.js').then(module => {
+                module.openDepositModal(
+                    button.dataset.type,
+                    button.dataset.duration,
+                    button.dataset.profit,
+                    button.dataset.risk === 'true'
+                );
+            });
         }
         
         // Закрытие модальных окон при клике вне области
@@ -250,25 +235,29 @@ export function setupEventListeners() {
     
     // Кнопки выбора стратегии
     if (dom.cooperateBtn) {
-        dom.cooperateBtn.addEventListener('click', function() {
+        dom.cooperateBtn.addEventListener('click', async function() {
+            const { proposeDeal } = await import('./deals.js');
             proposeDeal('cooperate');
         });
     }
     
     if (dom.cheatBtn) {
-        dom.cheatBtn.addEventListener('click', function() {
+        dom.cheatBtn.addEventListener('click', async function() {
+            const { proposeDeal } = await import('./deals.js');
             proposeDeal('cheat');
         });
     }
     
     if (dom.respondCooperateBtn) {
-        dom.respondCooperateBtn.addEventListener('click', function() {
+        dom.respondCooperateBtn.addEventListener('click', async function() {
+            const { respondToDeal } = await import('./deals.js');
             respondToDeal('cooperate');
         });
     }
     
     if (dom.respondCheatBtn) {
-        dom.respondCheatBtn.addEventListener('click', function() {
+        dom.respondCheatBtn.addEventListener('click', async function() {
+            const { respondToDeal } = await import('./deals.js');
             respondToDeal('cheat');
         });
     }
