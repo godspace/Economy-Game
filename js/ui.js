@@ -127,7 +127,7 @@ export function showProfileSection() {
 // Импортируем функции из других модулей
 import { handleAuth, handleLogout } from './auth.js';
 import { loadUsers } from './users.js';
-import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
+import { loadDeals, loadRanking, proposeDeal, respondToDeal, showDealModal, showResponseModal } from './deals.js';
 
 // Ленивая загрузка модулей
 async function loadTabModule(tabName) {
@@ -215,7 +215,6 @@ export function setupEventListeners() {
             const button = event.target.closest('.propose-deal-btn');
             if (!button.disabled) {
                 const userId = button.dataset.userId;
-                const { showDealModal } = require('./deals.js');
                 showDealModal(userId);
             }
         }
@@ -224,7 +223,6 @@ export function setupEventListeners() {
         if (event.target.closest('.respond-deal')) {
             const button = event.target.closest('.respond-deal');
             const dealId = button.dataset.dealId;
-            const { showResponseModal } = require('./deals.js');
             showResponseModal(dealId);
         }
         
