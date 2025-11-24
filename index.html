@@ -146,6 +146,12 @@
                 <div class="tab" data-tab="ranking">
                     <i class="fas fa-trophy"></i> Рейтинг
                 </div>
+                <div class="tab" data-tab="shop">
+                    <i class="fas fa-store"></i> Магазин
+                </div>
+                <div class="tab" data-tab="adminOrders" id="adminOrdersTab" style="display: none;">
+                    <i class="fas fa-user-shield"></i> Управление заказами
+                </div>
             </div>
 
             <div class="tab-content active" id="usersTab">
@@ -376,6 +382,39 @@
                             <!-- Рейтинг будет загружен здесь -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Новая вкладка Магазин -->
+            <div class="tab-content" id="shopTab">
+                <div class="card">
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-store"></i> Магазин
+                    </h2>
+                    <div id="shopProductsList" class="products-list">
+                        <!-- Список товаров будет загружен здесь -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-history"></i> История заказов
+                    </h2>
+                    <div id="shopOrderHistory">
+                        <!-- История заказов будет загружена здесь -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Новая вкладка Управление заказами (только для админа) -->
+            <div class="tab-content" id="adminOrdersTabContent">
+                <div class="card">
+                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-clipboard-list"></i> Все заказы
+                    </h2>
+                    <div id="adminOrdersList">
+                        <!-- Список заказов для админа будет загружен здесь -->
+                    </div>
                 </div>
             </div>
         </section>
