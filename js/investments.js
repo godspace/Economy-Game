@@ -104,7 +104,7 @@ export async function loadInvestments() {
                             <div class="deposit-type">${depositTypeNames[deposit.type] || deposit.type}</div>
                             <div class="deposit-details">
                                 <div class="deposit-amount">${deposit.amount} монет</div>
-                                <div>Сумма возврата: ${deposit.amount + deposit.actual_profit} монет</div>
+                                <div>Итоговая сумма: ${deposit.final_amount || (deposit.amount + deposit.actual_profit)} монет</div>
                                 <div class="${profitClass}">Прибыль: ${profitSign}${deposit.actual_profit} монет</div>
                             </div>
                         </div>
@@ -137,6 +137,7 @@ export function startDepositTimer(depositId, endTime) {
         if (timeLeft <= 0) {
             timerElement.textContent = '00:00:00';
             clearInterval(state.depositTimers[depositId]);
+            delete state.depositTimers[depositId];
             completeDeposit(depositId);
             return;
         }
@@ -262,7 +263,10 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
             .eq('id', state.currentUser.id)
             .single();
         
-        dom.coinsValue.textContent = updatedProfile.coins;
+        if (updatedProfile) {
+            state.currentUserProfile.coins = updatedProfile.coins;
+            dom.coinsValue.textContent = updatedProfile.coins;
+        }
         
         alert('Вклад успешно открыт!');
         dom.depositModal.classList.remove('active');
@@ -282,29 +286,47 @@ async function completeDeposit(depositId) {
             return;
         }
         
+        // Получаем данные о вкладе с блокировкой для предотвращения двойного выполнения
         const { data: deposit, error: depositError } = await state.supabase
             .from('deposits')
             .select('*')
             .eq('id', depositId)
+            .eq('status', 'active') // Только активные вклады
             .single();
         
         if (depositError) {
-            console.error('Ошибка получения вклада:', depositError);
+            console.error('Ошибка получения вклада или вклад уже завершен:', depositError);
+            return;
+        }
+        
+        // Проверяем, не завершен ли уже вклад
+        if (deposit.status !== 'active') {
+            console.log('Вклад уже завершен:', depositId);
             return;
         }
         
         let profit = 0;
+        let finalAmount = deposit.amount;
+        
         if (deposit.is_risky) {
+            // Для рисковых вкладов: 40% шанс получить +20%, 60% шанс потерять 10%
             const random = Math.random();
             if (random <= 0.4) {
-                profit = Math.floor(deposit.amount * 0.2);
+                profit = Math.floor(deposit.amount * 0.2); // +20%
+                finalAmount = deposit.amount + profit;
             } else {
-                profit = -Math.floor(deposit.amount * 0.1);
+                profit = -Math.floor(deposit.amount * 0.1); // -10%
+                finalAmount = deposit.amount + profit;
             }
         } else {
+            // Для безрисковых вкладов: фиксированный процент
             profit = Math.floor(deposit.amount * (deposit.expected_profit / 100));
+            finalAmount = deposit.amount + profit;
         }
         
+        console.log(`Завершение вклада ${depositId}: сумма=${deposit.amount}, прибыль=${profit}, итого=${finalAmount}`);
+        
+        // Получаем текущий баланс пользователя
         const { data: profile, error: profileError } = await state.supabase
             .from('profiles')
             .select('coins')
@@ -316,7 +338,12 @@ async function completeDeposit(depositId) {
             return;
         }
         
-        const newCoins = profile.coins + deposit.amount + profit;
+        // Рассчитываем новый баланс: ТОЛЬКО ПРИБЫЛЬ, так как основная сумма уже была списана при создании вклада
+        const newCoins = profile.coins + profit;
+        
+        console.log(`Текущий баланс: ${profile.coins}, новая прибыль: ${profit}, новый баланс: ${newCoins}`);
+        
+        // Обновляем баланс пользователя - зачисляем только прибыль
         const { error: updateError } = await state.supabase
             .from('profiles')
             .update({ coins: newCoins })
@@ -327,23 +354,34 @@ async function completeDeposit(depositId) {
             return;
         }
         
+        // Обновляем вклад - помечаем как завершенный и сохраняем прибыль и итоговую сумму
         const { error: updateDepositError } = await state.supabase
             .from('deposits')
             .update({ 
                 status: 'completed',
-                actual_profit: profit
+                actual_profit: profit,
+                final_amount: finalAmount,
+                updated_at: new Date().toISOString()
             })
             .eq('id', depositId);
         
         if (updateDepositError) {
             console.error('Ошибка обновления вклада:', updateDepositError);
+            // Откатываем изменение баланса при ошибке
+            await state.supabase
+                .from('profiles')
+                .update({ coins: profile.coins })
+                .eq('id', state.currentUser.id);
             return;
         }
         
+        // Обновляем баланс на клиенте
+        state.currentUserProfile.coins = newCoins;
         dom.coinsValue.textContent = newCoins;
         
-        showDepositResult(deposit, profit);
+        showDepositResult(deposit, profit, finalAmount);
         
+        // Перезагружаем список вкладов
         loadInvestments();
         
     } catch (error) {
@@ -351,7 +389,7 @@ async function completeDeposit(depositId) {
     }
 }
 
-function showDepositResult(deposit, profit) {
+function showDepositResult(deposit, profit, finalAmount) {
     try {
         if (!dom.depositResultModal || !dom.depositResultContent) {
             return;
@@ -373,7 +411,8 @@ function showDepositResult(deposit, profit) {
                     </div>
                     <p>Вклад "${depositTypeNames[deposit.type]}" завершен!</p>
                     <p>Вы получили прибыль: <span class="profit-positive">+${profit} монет</span></p>
-                    <p>Общая сумма: ${deposit.amount + profit} монет</p>
+                    <p>Итоговая сумма: ${finalAmount} монет</p>
+                    <p>Изначальная сумма: ${deposit.amount} монет</p>
                 </div>
                 <p>Поздравляем с успешным вложением!</p>
             `;
@@ -385,7 +424,8 @@ function showDepositResult(deposit, profit) {
                     </div>
                     <p>Вклад "${depositTypeNames[deposit.type]}" завершен!</p>
                     <p>Вы понесли убыток: <span class="profit-negative">${profit} монет</span></p>
-                    <p>Общая сумма: ${deposit.amount + profit} монет</p>
+                    <p>Итоговая сумма: ${finalAmount} монет</p>
+                    <p>Изначальная сумма: ${deposit.amount} монет</p>
                 </div>
                 <p>К сожалению, этот раз не удачный. Попробуйте еще!</p>
             `;
@@ -397,7 +437,8 @@ function showDepositResult(deposit, profit) {
                     </div>
                     <p>Вклад "${depositTypeNames[deposit.type]}" завершен!</p>
                     <p>Прибыль: 0 монет</p>
-                    <p>Общая сумма: ${deposit.amount} монет</p>
+                    <p>Итоговая сумма: ${finalAmount} монет</p>
+                    <p>Изначальная сумма: ${deposit.amount} монет</p>
                 </div>
                 <p>Вы сохранили свои средства без изменений.</p>
             `;
