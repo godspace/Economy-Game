@@ -103,3 +103,8 @@ export const dom = {
     depositHistoryList: null,
     topRankingTable: null
 };
+// config.js - добавить в конец файла
+export const SHOP_CONFIG = {
+    adminId: 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b',
+    productPrice: 299
+};
