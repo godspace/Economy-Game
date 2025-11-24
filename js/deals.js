@@ -469,6 +469,19 @@ function renderDealsList(deals, container, type) {
         });
         
         container.appendChild(fragment);
+        
+        // Добавляем обработчики для кнопок ответа
+        if (type === 'incoming') {
+            setTimeout(() => {
+                document.querySelectorAll('.respond-deal').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const dealId = this.dataset.dealId;
+                        const { showResponseModal } = await import('./deals.js');
+                        showResponseModal(dealId);
+                    });
+                });
+            }, 0);
+        }
     }
 }
 
@@ -643,12 +656,5 @@ function renderRanking(users) {
         dom.rankingTable.appendChild(fragment);
     }
 }
-// В конце deals.js добавьте:
-export {
-    showDealModal,
-    proposeDeal,
-    showResponseModal,
-    respondToDeal,
-    loadDeals,
-    loadRanking
-};
+
+// УДАЛЕН БЛОК ДУБЛИРУЮЩЕГО ЭКСПОРТА - экспорты уже указаны при объявлении функций
