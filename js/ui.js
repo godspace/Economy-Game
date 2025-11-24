@@ -127,7 +127,7 @@ export function showProfileSection() {
 // Импортируем функции из других модулей
 import { handleAuth, handleLogout } from './auth.js';
 import { loadUsers } from './users.js';
-import { loadDeals, loadRanking, proposeDeal, respondToDeal, showDealModal, showResponseModal } from './deals.js';
+import { loadDeals, loadRanking, proposeDeal, respondToDeal } from './deals.js';
 
 // Ленивая загрузка модулей
 async function loadTabModule(tabName) {
@@ -209,12 +209,14 @@ export function setupEventListeners() {
     }
     
     // Делегирование событий для динамических элементов
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', async function(event) {
         // Обработка предложения сделки
         if (event.target.closest('.propose-deal-btn')) {
             const button = event.target.closest('.propose-deal-btn');
             if (!button.disabled) {
                 const userId = button.dataset.userId;
+                // Используем динамический импорт вместо require
+                const { showDealModal } = await import('./deals.js');
                 showDealModal(userId);
             }
         }
@@ -223,20 +225,21 @@ export function setupEventListeners() {
         if (event.target.closest('.respond-deal')) {
             const button = event.target.closest('.respond-deal');
             const dealId = button.dataset.dealId;
+            // Используем динамический импорт вместо require
+            const { showResponseModal } = await import('./deals.js');
             showResponseModal(dealId);
         }
         
         // Обработка открытия вкладов
         if (event.target.closest('.open-deposit')) {
             const button = event.target.closest('.open-deposit');
-            import('./investments.js').then(module => {
-                module.openDepositModal(
-                    button.dataset.type,
-                    button.dataset.duration,
-                    button.dataset.profit,
-                    button.dataset.risk === 'true'
-                );
-            });
+            const { openDepositModal } = await import('./investments.js');
+            openDepositModal(
+                button.dataset.type,
+                button.dataset.duration,
+                button.dataset.profit,
+                button.dataset.risk === 'true'
+            );
         }
         
         // Закрытие модальных окон при клике вне области
