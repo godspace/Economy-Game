@@ -50,6 +50,12 @@ export function initDOMElements() {
     dom.activeDepositsList = document.getElementById('activeDepositsList');
     dom.depositHistoryList = document.getElementById('depositHistoryList');
     dom.topRankingTable = document.getElementById('topRankingTable');
+    
+    // Новые DOM элементы для магазина
+    dom.shopProductsList = document.getElementById('shopProductsList');
+    dom.shopOrderHistory = document.getElementById('shopOrderHistory');
+    dom.adminOrdersList = document.getElementById('adminOrdersList');
+    dom.adminOrdersTab = document.querySelector('.tab[data-tab="adminOrders"]');
 }
 
 export function showLoading() {
@@ -122,6 +128,11 @@ export function showProfileSection() {
     if (dom.authError) {
         dom.authError.style.display = 'none';
     }
+    
+    // Показываем вкладку админа если пользователь админ
+    if (state.currentUser && state.currentUser.id === 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b' && dom.adminOrdersTab) {
+        dom.adminOrdersTab.style.display = 'flex';
+    }
 }
 
 // Импортируем функции из других модулей
@@ -145,6 +156,14 @@ async function loadTabModule(tabName) {
         case 'investments':
             const { loadInvestments } = await import('./investments.js');
             loadInvestments();
+            break;
+        case 'shop':
+            const { loadShop } = await import('./shop.js');
+            loadShop();
+            break;
+        case 'adminOrders':
+            const { loadAdminOrders } = await import('./shop.js');
+            loadAdminOrders();
             break;
     }
 }

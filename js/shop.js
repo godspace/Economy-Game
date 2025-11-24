@@ -1,5 +1,5 @@
 // shop.js
-import { state, dom, SHOP_CONFIG } from './config.js';
+import { state, dom } from './config.js';
 
 export async function loadShop() {
     try {
@@ -251,7 +251,7 @@ export async function loadAdminOrders() {
         }
 
         // Проверяем, является ли пользователь админом
-        if (state.currentUser.id !== SHOP_CONFIG.adminId) {
+        if (state.currentUser.id !== 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b') {
             if (dom.adminOrdersTab) {
                 dom.adminOrdersTab.style.display = 'none';
             }
