@@ -10,6 +10,21 @@
 <body>
     <div class="container">
         <header>
+            <!-- Баннер техработ (альтернативный вариант) -->
+            <div id="maintenanceBanner" class="maintenance-warning" style="display: none;">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-tools" style="font-size: 1.5rem;"></i>
+                        <div style="margin-left: 10px;">
+                            <strong>Технические работы завтра с 15:00</strong>
+                            <div style="font-size: 0.9rem;">Игра будет временно недоступна</div>
+                        </div>
+                    </div>
+                    <button id="closeMaintenanceBanner" class="btn-warning btn-small">
+                        <i class="fas fa-times"></i> Закрыть
+                    </button>
+                </div>
+            </div>
             <div class="header-content">
                 <div class="logo">
                     <i class="fas fa-handshake"></i>
@@ -24,6 +39,7 @@
                     </button>
                 </div>
             </div>
+            
         </header>
 
         <div id="loadingMessage" class="loading">
