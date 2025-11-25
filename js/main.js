@@ -2,9 +2,6 @@ import { initDOMElements, setupEventListeners, showLoading, hideLoading, showErr
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
 
-// Глобальная ссылка на dom
-let dom;
-
 // Мониторинг производительности
 function initPerformanceMonitoring() {
     if ('PerformanceObserver' in window) {
@@ -30,34 +27,18 @@ function initPerformanceMonitoring() {
     });
 }
 
-// Функция для показа предупреждения о технических работах
-function showMaintenanceWarning() {
-    // Проверяем, не закрывал ли пользователь уже это предупреждение
-    const warningClosed = localStorage.getItem('maintenanceWarningClosed');
-    
-    if (!warningClosed) {
-        // Для модального окна
-        if (dom && dom.maintenanceModal) {
-            setTimeout(() => {
-                dom.maintenanceModal.classList.add('active');
-            }, 1000);
-        }
-        // Или для баннера
-        if (dom && dom.maintenanceBanner) {
-            dom.maintenanceBanner.style.display = 'block';
-        }
-    }
-}
-
 // Функция для скрытия предупреждения и сохранения состояния
 export function closeMaintenanceWarning() {
+    const maintenanceModal = document.getElementById('maintenanceModal');
+    const maintenanceBanner = document.getElementById('maintenanceBanner');
+    
     // Для модального окна
-    if (dom && dom.maintenanceModal) {
-        dom.maintenanceModal.classList.remove('active');
+    if (maintenanceModal) {
+        maintenanceModal.classList.remove('active');
     }
     // Для баннера
-    if (dom && dom.maintenanceBanner) {
-        dom.maintenanceBanner.style.display = 'none';
+    if (maintenanceBanner) {
+        maintenanceBanner.style.display = 'none';
     }
     // Сохраняем в localStorage, что пользователь закрыл предупреждение
     localStorage.setItem('maintenanceWarningClosed', 'true');
@@ -73,15 +54,17 @@ async function initApp() {
         // Сначала инициализируем DOM элементы
         initDOMElements();
         
-        // Получаем ссылку на dom после инициализации
-        const { dom: domInstance } = await import('./ui.js');
-        dom = domInstance;
-        
         // Показываем сообщение о загрузке
         showLoading();
         
-        // Показываем предупреждение о технических работах
-        showMaintenanceWarning();
+        // Показываем предупреждение о технических работах сразу после инициализации DOM
+        const warningClosed = localStorage.getItem('maintenanceWarningClosed');
+        if (!warningClosed) {
+            const maintenanceBanner = document.getElementById('maintenanceBanner');
+            if (maintenanceBanner) {
+                maintenanceBanner.style.display = 'block';
+            }
+        }
         
         // Затем инициализируем Supabase
         await initSupabase();
@@ -102,7 +85,7 @@ async function initApp() {
         
     } catch (error) {
         console.error('Error initializing app:', error);
-        showError('Не удалось загрузить приложения: ' + error.message);
+        showError('Не удалось загрузить приложение: ' + error.message);
     }
 }
 
