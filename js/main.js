@@ -28,7 +28,7 @@ function initPerformanceMonitoring() {
 }
 
 // Функция для скрытия предупреждения и сохранения состояния
-export function closeMaintenanceWarning() {
+function closeMaintenanceWarning() {
     const maintenanceModal = document.getElementById('maintenanceModal');
     const maintenanceBanner = document.getElementById('maintenanceBanner');
     
@@ -129,4 +129,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Экспортируем функцию для использования в других модулях
-export { loadTabModule, closeMaintenanceWarning };
+export { loadTabModule };
