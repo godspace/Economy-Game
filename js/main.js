@@ -27,6 +27,39 @@ function initPerformanceMonitoring() {
     });
 }
 
+// Функция для показа предупреждения о технических работах
+function showMaintenanceWarning() {
+    // Проверяем, не закрывал ли пользователь уже это предупреждение
+    const warningClosed = localStorage.getItem('maintenanceWarningClosed');
+    
+    if (!warningClosed) {
+        // Для модального окна
+        if (window.dom && window.dom.maintenanceModal) {
+            setTimeout(() => {
+                window.dom.maintenanceModal.classList.add('active');
+            }, 1000);
+        }
+        // Или для баннера
+        if (window.dom && window.dom.maintenanceBanner) {
+            window.dom.maintenanceBanner.style.display = 'block';
+        }
+    }
+}
+
+// Функция для скрытия предупреждения и сохранения состояния
+export function closeMaintenanceWarning() {
+    // Для модального окна
+    if (window.dom && window.dom.maintenanceModal) {
+        window.dom.maintenanceModal.classList.remove('active');
+    }
+    // Для баннера
+    if (window.dom && window.dom.maintenanceBanner) {
+        window.dom.maintenanceBanner.style.display = 'none';
+    }
+    // Сохраняем в localStorage, что пользователь закрыл предупреждение
+    localStorage.setItem('maintenanceWarningClosed', 'true');
+}
+
 async function initApp() {
     try {
         console.log('Starting app initialization...');
@@ -42,8 +75,8 @@ async function initApp() {
         
         // Показываем предупреждение о технических работах
         showMaintenanceWarning();
-        // Затем инициализируем Supabase
         
+        // Затем инициализируем Supabase
         await initSupabase();
         
         // Настройка обработчиков событий
@@ -90,9 +123,12 @@ async function loadTabModule(tabName) {
             loadShop();
             break;
         case 'adminOrders':
+            console.log('Loading admin orders...');
             const { loadAdminOrders } = await import('./shop.js');
             loadAdminOrders();
             break;
+        default:
+            console.warn('Unknown tab:', tabName);
     }
 }
 
@@ -102,22 +138,5 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initApp, 100);
 });
 
-function showMaintenanceWarning() {
-    const warningClosed = localStorage.getItem('maintenanceWarningClosed');
-    
-    if (!warningClosed) {
-        // Для модального окна
-        if (dom.maintenanceModal) {
-            setTimeout(() => {
-                dom.maintenanceModal.classList.add('active');
-            }, 1000);
-        }
-        // Или для баннера
-        if (dom.maintenanceBanner) {
-            dom.maintenanceBanner.style.display = 'block';
-        }
-    }
-}
-
 // Экспортируем функцию для использования в других модулях
-export { loadTabModule };
+export { loadTabModule, closeMaintenanceWarning };
