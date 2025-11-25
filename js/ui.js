@@ -57,6 +57,8 @@ export function initDOMElements() {
     dom.adminOrdersList = document.getElementById('adminOrdersList');
     dom.adminOrdersTab = document.getElementById('adminOrdersTab');
     dom.adminOrdersTabContent = document.getElementById('adminOrdersTabContent');
+    dom.maintenanceBanner = document.getElementById('maintenanceBanner');
+    dom.closeMaintenanceBanner = document.getElementById('closeMaintenanceBanner');
 }
 
 export function showLoading() {
@@ -192,6 +194,14 @@ export function setupEventListeners() {
         dom.searchBtn.addEventListener('click', async () => {
             const { loadUsers } = await import('./users.js');
             loadUsers(true);
+        });
+    }
+    if (dom.closeMaintenanceBanner) {
+        dom.closeMaintenanceBanner.addEventListener('click', function() {
+            if (dom.maintenanceBanner) {
+                dom.maintenanceBanner.style.display = 'none';
+                localStorage.setItem('maintenanceWarningClosed', 'true');
+            }
         });
     }
     
