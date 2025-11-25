@@ -1169,3 +1169,13 @@ button:active {
         flex-direction: column;
     }
 }
+.btn-disabled {
+    background-color: var(--gray) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.btn-disabled:hover {
+    transform: none !important;
+    background-color: var(--gray) !important;
+}
