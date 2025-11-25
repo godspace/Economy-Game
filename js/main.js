@@ -40,7 +40,10 @@ async function initApp() {
         // Показываем сообщение о загрузке
         showLoading();
         
+        // Показываем предупреждение о технических работах
+        showMaintenanceWarning();
         // Затем инициализируем Supabase
+        
         await initSupabase();
         
         // Настройка обработчиков событий
