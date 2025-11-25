@@ -2,6 +2,9 @@ import { initDOMElements, setupEventListeners, showLoading, hideLoading, showErr
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
 
+// Глобальная ссылка на dom
+let dom;
+
 // Мониторинг производительности
 function initPerformanceMonitoring() {
     if ('PerformanceObserver' in window) {
@@ -34,14 +37,14 @@ function showMaintenanceWarning() {
     
     if (!warningClosed) {
         // Для модального окна
-        if (window.dom && window.dom.maintenanceModal) {
+        if (dom && dom.maintenanceModal) {
             setTimeout(() => {
-                window.dom.maintenanceModal.classList.add('active');
+                dom.maintenanceModal.classList.add('active');
             }, 1000);
         }
         // Или для баннера
-        if (window.dom && window.dom.maintenanceBanner) {
-            window.dom.maintenanceBanner.style.display = 'block';
+        if (dom && dom.maintenanceBanner) {
+            dom.maintenanceBanner.style.display = 'block';
         }
     }
 }
@@ -49,12 +52,12 @@ function showMaintenanceWarning() {
 // Функция для скрытия предупреждения и сохранения состояния
 export function closeMaintenanceWarning() {
     // Для модального окна
-    if (window.dom && window.dom.maintenanceModal) {
-        window.dom.maintenanceModal.classList.remove('active');
+    if (dom && dom.maintenanceModal) {
+        dom.maintenanceModal.classList.remove('active');
     }
     // Для баннера
-    if (window.dom && window.dom.maintenanceBanner) {
-        window.dom.maintenanceBanner.style.display = 'none';
+    if (dom && dom.maintenanceBanner) {
+        dom.maintenanceBanner.style.display = 'none';
     }
     // Сохраняем в localStorage, что пользователь закрыл предупреждение
     localStorage.setItem('maintenanceWarningClosed', 'true');
@@ -69,6 +72,10 @@ async function initApp() {
         
         // Сначала инициализируем DOM элементы
         initDOMElements();
+        
+        // Получаем ссылку на dom после инициализации
+        const { dom: domInstance } = await import('./ui.js');
+        dom = domInstance;
         
         // Показываем сообщение о загрузке
         showLoading();
@@ -95,7 +102,7 @@ async function initApp() {
         
     } catch (error) {
         console.error('Error initializing app:', error);
-        showError('Не удалось загрузить приложение: ' + error.message);
+        showError('Не удалось загрузить приложения: ' + error.message);
     }
 }
 
