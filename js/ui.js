@@ -57,6 +57,10 @@ export function initDOMElements() {
     dom.adminOrdersList = document.getElementById('adminOrdersList');
     dom.adminOrdersTab = document.getElementById('adminOrdersTab');
     dom.adminOrdersTabContent = document.getElementById('adminOrdersTabContent');
+    
+    // Модальное окно техработ
+    dom.maintenanceModal = document.getElementById('maintenanceModal');
+    dom.closeMaintenanceModal = document.getElementById('closeMaintenanceModal');
     dom.maintenanceBanner = document.getElementById('maintenanceBanner');
     dom.closeMaintenanceBanner = document.getElementById('closeMaintenanceBanner');
 }
@@ -176,6 +180,17 @@ async function loadTabModule(tabName) {
     }
 }
 
+// Функция для закрытия предупреждения о техработах
+function closeMaintenanceWarning() {
+    if (dom.maintenanceModal) {
+        dom.maintenanceModal.classList.remove('active');
+    }
+    if (dom.maintenanceBanner) {
+        dom.maintenanceBanner.style.display = 'none';
+    }
+    localStorage.setItem('maintenanceWarningClosed', 'true');
+}
+
 export function setupEventListeners() {
     console.log('Setting up event listeners...');
     
@@ -196,13 +211,14 @@ export function setupEventListeners() {
             loadUsers(true);
         });
     }
+    
+    // Обработчики для закрытия предупреждения о техработах
+    if (dom.closeMaintenanceModal) {
+        dom.closeMaintenanceModal.addEventListener('click', closeMaintenanceWarning);
+    }
+    
     if (dom.closeMaintenanceBanner) {
-        dom.closeMaintenanceBanner.addEventListener('click', function() {
-            if (dom.maintenanceBanner) {
-                dom.maintenanceBanner.style.display = 'none';
-                localStorage.setItem('maintenanceWarningClosed', 'true');
-            }
-        });
+        dom.closeMaintenanceBanner.addEventListener('click', closeMaintenanceWarning);
     }
     
     // Табы с ленивой загрузкой
