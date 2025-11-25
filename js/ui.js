@@ -55,7 +55,8 @@ export function initDOMElements() {
     dom.shopProductsList = document.getElementById('shopProductsList');
     dom.shopOrderHistory = document.getElementById('shopOrderHistory');
     dom.adminOrdersList = document.getElementById('adminOrdersList');
-    dom.adminOrdersTab = document.querySelector('.tab[data-tab="adminOrders"]');
+    dom.adminOrdersTab = document.getElementById('adminOrdersTab');
+    dom.adminOrdersTabContent = document.getElementById('adminOrdersTabContent');
 }
 
 export function showLoading() {
@@ -140,6 +141,8 @@ import { handleAuth, handleLogout } from './auth.js';
 
 // Ленивая загрузка модулей
 async function loadTabModule(tabName) {
+    console.log('Loading tab module:', tabName);
+    
     switch(tabName) {
         case 'users':
             const { loadUsers } = await import('./users.js');
@@ -162,13 +165,18 @@ async function loadTabModule(tabName) {
             loadShop();
             break;
         case 'adminOrders':
+            console.log('Loading admin orders...');
             const { loadAdminOrders } = await import('./shop.js');
             loadAdminOrders();
             break;
+        default:
+            console.warn('Unknown tab:', tabName);
     }
 }
 
 export function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
     if (dom.authForm) {
         dom.authForm.addEventListener('submit', handleAuth);
     }
@@ -190,18 +198,32 @@ export function setupEventListeners() {
     // Табы с ленивой загрузкой
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            console.log('Tab clicked:', tabName);
+            
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             
             this.classList.add('active');
-            const tabId = this.dataset.tab + 'Tab';
-            const tabContent = document.getElementById(tabId);
+            
+            // Определяем ID контента для таба
+            let tabContentId;
+            if (tabName === 'adminOrders') {
+                tabContentId = 'adminOrdersTabContent';
+            } else {
+                tabContentId = tabName + 'Tab';
+            }
+            
+            const tabContent = document.getElementById(tabContentId);
             if (tabContent) {
                 tabContent.classList.add('active');
+                console.log('Activated tab content:', tabContentId);
+            } else {
+                console.error('Tab content not found:', tabContentId);
             }
             
             // Ленивая загрузка контента таба
-            loadTabModule(this.dataset.tab);
+            loadTabModule(tabName);
         });
     });
     
@@ -287,4 +309,6 @@ export function setupEventListeners() {
             event.stopPropagation();
         });
     });
+    
+    console.log('Event listeners setup completed');
 }

@@ -3,6 +3,8 @@ import { state, dom } from './config.js';
 
 export async function loadShop() {
     try {
+        console.log('Loading shop...');
+        
         if (!state.supabase || !state.currentUser) {
             console.error('Supabase or current user not initialized');
             return;
@@ -28,7 +30,10 @@ export async function loadShop() {
 }
 
 function renderProducts(products) {
-    if (!dom.shopProductsList) return;
+    if (!dom.shopProductsList) {
+        console.error('shopProductsList not found');
+        return;
+    }
 
     if (products.length === 0) {
         dom.shopProductsList.innerHTML = `
@@ -180,7 +185,10 @@ export async function loadOrderHistory() {
 }
 
 function renderOrderHistory(orders) {
-    if (!dom.shopOrderHistory) return;
+    if (!dom.shopOrderHistory) {
+        console.error('shopOrderHistory not found');
+        return;
+    }
 
     if (orders.length === 0) {
         dom.shopOrderHistory.innerHTML = `
@@ -246,17 +254,23 @@ function getStatusInfo(status) {
 // Функции для админа
 export async function loadAdminOrders() {
     try {
+        console.log('Loading admin orders...');
+        
         if (!state.supabase || !state.currentUser) {
+            console.error('Supabase or current user not initialized');
             return;
         }
 
         // Проверяем, является ли пользователь админом
         if (state.currentUser.id !== 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b') {
+            console.log('User is not admin, hiding admin tab');
             if (dom.adminOrdersTab) {
                 dom.adminOrdersTab.style.display = 'none';
             }
             return;
         }
+
+        console.log('User is admin, loading orders...');
 
         const { data: orders, error } = await state.supabase
             .from('orders')
@@ -272,6 +286,8 @@ export async function loadAdminOrders() {
             return;
         }
 
+        console.log('Admin orders loaded:', orders);
+
         renderAdminOrders(orders);
 
     } catch (error) {
@@ -280,7 +296,10 @@ export async function loadAdminOrders() {
 }
 
 function renderAdminOrders(orders) {
-    if (!dom.adminOrdersList) return;
+    if (!dom.adminOrdersList) {
+        console.error('adminOrdersList not found');
+        return;
+    }
 
     if (orders.length === 0) {
         dom.adminOrdersList.innerHTML = `
