@@ -1179,3 +1179,72 @@ button:active {
     transform: none !important;
     background-color: var(--gray) !important;
 }
+/* Стили для баннера техработ */
+.maintenance-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-left: 4px solid #ffc107;
+    border-right: 4px solid #ffc107;
+    padding: 12px 20px;
+    margin: 0 0 15px 0;
+    border-radius: 0;
+    color: #856404;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.maintenance-warning strong {
+    color: #856404;
+}
+
+.maintenance-warning .btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.maintenance-warning .btn-warning:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+}
+
+/* Анимация появления */
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.maintenance-warning {
+    animation: slideDown 0.5s ease-out;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .maintenance-warning {
+        padding: 10px 15px;
+    }
+    
+    .maintenance-warning > div {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .maintenance-warning .btn-small {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .maintenance-warning {
+        font-size: 0.9rem;
+    }
+    
+    .maintenance-warning i.fa-tools {
+        font-size: 1.2rem;
+    }
+}
