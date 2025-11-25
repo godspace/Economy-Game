@@ -50,6 +50,12 @@ function renderProducts(products) {
     products.forEach(product => {
         const productCard = document.createElement('div');
         productCard.className = 'product-card';
+        
+        // Проверяем, доступен ли товар для покупки
+        const isAvailable = product.is_active;
+        const buttonClass = isAvailable ? 'btn-success' : 'btn-disabled';
+        const buttonText = isAvailable ? 'Купить' : 'Недоступно';
+        
         productCard.innerHTML = `
             <div class="product-image">
                 <img src="${product.image_url}" alt="${product.name}" onerror="this.src='https://via.placeholder.com/200x200?text=Товар'">
@@ -58,8 +64,12 @@ function renderProducts(products) {
                 <h3 class="product-name">${product.name}</h3>
                 <p class="product-description">${product.description}</p>
                 <div class="product-price">${product.price} монет</div>
-                <button class="btn-success buy-product-btn" data-product-id="${product.id}" data-product-name="${product.name}" data-product-price="${product.price}">
-                    <i class="fas fa-shopping-cart"></i> Купить
+                <button class="${buttonClass} buy-product-btn" 
+                        data-product-id="${product.id}" 
+                        data-product-name="${product.name}" 
+                        data-product-price="${product.price}"
+                        ${isAvailable ? '' : 'disabled'}>
+                    <i class="fas fa-shopping-cart"></i> ${buttonText}
                 </button>
             </div>
         `;
@@ -69,8 +79,8 @@ function renderProducts(products) {
     dom.shopProductsList.innerHTML = '';
     dom.shopProductsList.appendChild(fragment);
 
-    // Добавляем обработчики событий для кнопок покупки
-    document.querySelectorAll('.buy-product-btn').forEach(btn => {
+    // Добавляем обработчики событий только для доступных товаров
+    document.querySelectorAll('.buy-product-btn:not(:disabled)').forEach(btn => {
         btn.addEventListener('click', function() {
             const productId = this.dataset.productId;
             const productName = this.dataset.productName;
