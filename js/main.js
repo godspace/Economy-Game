@@ -99,5 +99,22 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initApp, 100);
 });
 
+function showMaintenanceWarning() {
+    const warningClosed = localStorage.getItem('maintenanceWarningClosed');
+    
+    if (!warningClosed) {
+        // Для модального окна
+        if (dom.maintenanceModal) {
+            setTimeout(() => {
+                dom.maintenanceModal.classList.add('active');
+            }, 1000);
+        }
+        // Или для баннера
+        if (dom.maintenanceBanner) {
+            dom.maintenanceBanner.style.display = 'block';
+        }
+    }
+}
+
 // Экспортируем функцию для использования в других модулях
 export { loadTabModule };
