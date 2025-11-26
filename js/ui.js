@@ -1,8 +1,4 @@
-// В начале ui.js
-import { 
-    handleAuth, 
-    handleLogout 
-} from './auth.js';
+import { handleAuth, handleLogout } from './auth.js';
 import { dom, state } from './config.js';
 import { setupSearchDebounce } from './users.js';
 
@@ -147,10 +143,18 @@ export function showProfileSection() {
     }
 }
 
-// Импортируем функции из других модулей
-import { handleAuth, handleLogout } from './auth.js';
+// Функция для закрытия предупреждения о техработах
+function closeMaintenanceWarning() {
+    if (dom.maintenanceModal) {
+        dom.maintenanceModal.classList.remove('active');
+    }
+    if (dom.maintenanceBanner) {
+        dom.maintenanceBanner.style.display = 'none';
+    }
+    localStorage.setItem('maintenanceWarningClosed', 'true');
+}
 
-// Ленивая загрузка модулей
+// Импортируем loadTabModule из main.js
 async function loadTabModule(tabName) {
     console.log('Loading tab module:', tabName);
     
@@ -183,17 +187,6 @@ async function loadTabModule(tabName) {
         default:
             console.warn('Unknown tab:', tabName);
     }
-}
-
-// Функция для закрытия предупреждения о техработах
-function closeMaintenanceWarning() {
-    if (dom.maintenanceModal) {
-        dom.maintenanceModal.classList.remove('active');
-    }
-    if (dom.maintenanceBanner) {
-        dom.maintenanceBanner.style.display = 'none';
-    }
-    localStorage.setItem('maintenanceWarningClosed', 'true');
 }
 
 export function setupEventListeners() {

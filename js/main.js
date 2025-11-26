@@ -1,4 +1,4 @@
-import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError, initApp } from './ui.js';
+import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
 
@@ -44,7 +44,7 @@ function closeMaintenanceWarning() {
     localStorage.setItem('maintenanceWarningClosed', 'true');
 }
 
-async function initApp() {
+async function initializeApplication() {
     try {
         console.log('Starting app initialization...');
         
@@ -125,7 +125,7 @@ async function loadTabModule(tabName) {
 // Запуск приложения после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
     // Даем время для загрузки всех скриптов
-    setTimeout(initApp, 100);
+    setTimeout(initializeApplication, 100);
 });
 
 // Экспортируем функцию для использования в других модулях
