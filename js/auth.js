@@ -76,3 +76,10 @@ export async function handleAuth(e) {
         dom.authBtn.textContent = 'Войти';
     }
 }
+// В конце auth.js должны быть эти экспорты
+export {
+    initSupabase,
+    checkAuth,
+    handleAuth,
+    handleLogout  // <-- эта строка должна быть
+};
