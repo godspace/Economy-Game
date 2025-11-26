@@ -1,6 +1,5 @@
 import { state, dom, SUPABASE_CONFIG } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError } from './ui.js';
-import { loadUserProfile } from './users.js';
 
 export async function initSupabase() {
     return new Promise((resolve, reject) => {
@@ -24,25 +23,9 @@ export async function initSupabase() {
 
 export async function checkAuth() {
     try {
-        if (!state.supabase) {
-            throw new Error('Supabase not initialized');
-        }
-        
-        const { data: { user }, error } = await state.supabase.auth.getUser();
-        
-        if (error) {
-            console.warn('Auth check error:', error);
-            showAuthSection();
-            return;
-        }
-        
-        if (user) {
-            await loadUserProfile(user.id);
-            state.currentUser = user;
-            showProfileSection();
-        } else {
-            showAuthSection();
-        }
+        // В новой системе мы всегда показываем экран аутентификации
+        // Аутентификация происходит через код, а не через сессию Supabase
+        showAuthSection();
     } catch (error) {
         console.error('Ошибка проверки авторизации:', error);
         showAuthSection();
@@ -57,7 +40,7 @@ export async function handleAuth(e) {
         return;
     }
     
-    const code = document.getElementById('code').value;
+    const code = document.getElementById('code').value.trim();
     
     if (!code) {
         showAuthError('Пожалуйста, введите ваш код');
@@ -70,6 +53,8 @@ export async function handleAuth(e) {
     dom.authBtn.textContent = 'Загрузка...';
     
     try {
+        console.log('Поиск студента с кодом:', code);
+        
         // Ищем ученика по коду
         const { data: student, error: studentError } = await state.supabase
             .from('students')
@@ -77,38 +62,60 @@ export async function handleAuth(e) {
             .eq('code', code)
             .single();
         
-        if (studentError || !student) {
+        if (studentError) {
+            console.error('Ошибка поиска студента:', studentError);
+            if (studentError.code === 'PGRST116') {
+                throw new Error('Неверный код');
+            }
+            throw new Error('Ошибка базы данных');
+        }
+        
+        if (!student) {
             throw new Error('Неверный код');
         }
         
-        // Ищем или создаем профиль
+        console.log('Студент найден:', student);
+        
+        // Ищем существующий профиль
         const { data: profile, error: profileError } = await state.supabase
             .from('profiles')
             .select('*')
             .eq('student_id', student.id)
             .single();
         
-        if (profileError) {
+        if (profileError && profileError.code !== 'PGRST116') {
+            // PGRST116 - "Not found" error, это нормально
+            console.error('Ошибка поиска профиля:', profileError);
+            throw new Error('Ошибка базы данных');
+        }
+        
+        if (profile) {
+            // Профиль существует
+            console.log('Профиль найден:', profile);
+            state.currentUserProfile = profile;
+        } else {
             // Создаем новый профиль
+            console.log('Создание нового профиля для студента:', student.id);
             const username = `${student.first_name} ${student.last_name}`;
             const { data: newProfile, error: createError } = await state.supabase
                 .from('profiles')
-                .insert([
-                    {
-                        student_id: student.id,
-                        username: username,
-                        class: student.class,
-                        coins: 100,
-                        reputation: 50
-                    }
-                ])
+                .insert({
+                    student_id: student.id,
+                    username: username,
+                    class: student.class,
+                    coins: 100,
+                    reputation: 50
+                })
                 .select()
                 .single();
             
-            if (createError) throw createError;
+            if (createError) {
+                console.error('Ошибка создания профиля:', createError);
+                throw new Error('Не удалось создать профиль');
+            }
+            
+            console.log('Новый профиль создан:', newProfile);
             state.currentUserProfile = newProfile;
-        } else {
-            state.currentUserProfile = profile;
         }
         
         // Обновляем UI
@@ -121,7 +128,11 @@ export async function handleAuth(e) {
         
     } catch (error) {
         console.error('Ошибка аутентификации:', error);
-        showAuthError('Неверный код или ошибка системы');
+        if (error.message === 'Неверный код') {
+            showAuthError('Неверный код. Пожалуйста, проверьте правильность ввода.');
+        } else {
+            showAuthError('Ошибка системы. Пожалуйста, попробуйте позже.');
+        }
     } finally {
         dom.authBtn.disabled = false;
         dom.authBtn.textContent = 'Войти';
@@ -130,17 +141,15 @@ export async function handleAuth(e) {
 
 export async function handleLogout() {
     try {
-        if (!state.supabase) {
-            console.error('Supabase not initialized');
-            return;
-        }
-        
+        // Очищаем таймеры вкладов
         Object.values(state.depositTimers).forEach(timer => clearInterval(timer));
         state.depositTimers = {};
         
-        // В новой системе мы не используем auth.signOut, просто очищаем состояние
+        // Очищаем состояние пользователя
         state.currentUser = null;
         state.currentUserProfile = null;
+        
+        // Показываем экран аутентификации
         showAuthSection();
     } catch (error) {
         console.error('Ошибка выхода:', error);
