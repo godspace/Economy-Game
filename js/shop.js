@@ -295,64 +295,20 @@ export async function loadAdminOrders() {
     try {
         console.log('🛠️ Loading admin orders...');
         
-        if (!state.supabase) {
-            console.error('❌ Supabase not initialized');
+        if (!state.supabase || !state.currentUserProfile) {
+            console.error('❌ Supabase or current user not initialized');
             return;
         }
+
+        // ИСПОЛЬЗУЕМ ГЛОБАЛЬНЫЙ СТАТУС АДМИНА ВМЕСТО ПРОВЕРКИ В БАЗЕ ДАННЫХ
+        console.log('🛠️ Using global admin status:', state.isAdmin);
         
-        if (!state.currentUserProfile) {
-            console.error('❌ Current user profile not loaded');
+        if (!state.isAdmin) {
+            console.log('👤 User is not admin, skipping admin orders');
             return;
         }
 
-        console.log('🛠️ Current user:', {
-            id: state.currentUserProfile.id,
-            username: state.currentUserProfile.username,
-            class: state.currentUserProfile.class
-        });
-
-        // Проверяем админ-статус ТОЛЬКО через таблицу admins
-        console.log('🛠️ Checking admins table for user:', state.currentUserProfile.id);
-        
-        const { data: admin, error: adminError } = await state.supabase
-            .from('admins')
-            .select('user_id')
-            .eq('user_id', state.currentUserProfile.id)
-            .single();
-
-        console.log('🛠️ Admin check result:', { 
-            admin, 
-            adminError,
-            errorDetails: adminError ? {
-                message: adminError.message,
-                code: adminError.code,
-                details: adminError.details
-            } : null
-        });
-
-        const isAdmin = !adminError && admin;
-
-        console.log('🛠️ Is user admin?', isAdmin);
-
-        if (!isAdmin) {
-            console.log('👤 User is not admin, hiding admin tab');
-            if (dom.adminOrdersTab) {
-                dom.adminOrdersTab.style.display = 'none';
-            } else {
-                console.error('❌ adminOrdersTab DOM element not found!');
-            }
-            return;
-        }
-
-        console.log('🔧 User is admin, showing admin tab and loading orders...');
-
-        // Показываем вкладку админа
-        if (dom.adminOrdersTab) {
-            dom.adminOrdersTab.style.display = 'flex';
-            console.log('✅ Admin tab should be visible now');
-        } else {
-            console.error('❌ adminOrdersTab DOM element not found!');
-        }
+        console.log('🔧 User is admin, loading orders...');
 
         // Загружаем заказы
         const { data: orders, error } = await state.supabase
@@ -376,6 +332,7 @@ export async function loadAdminOrders() {
         console.error('❌ Ошибка загрузки заказов для админа:', error);
     }
 }
+
 function renderAdminOrders(orders) {
     if (!dom.adminOrdersList) {
         console.error('adminOrdersList not found');

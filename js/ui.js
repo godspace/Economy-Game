@@ -130,6 +130,18 @@ export function showProfileSection() {
     if (dom.userInfo) {
         dom.userInfo.style.display = 'block';
     }
+    
+    // УПРАВЛЯЕМ ВИДИМОСТЬЮ ВКЛАДКИ АДМИНИСТРАТОРА
+    if (dom.adminOrdersTab) {
+        if (state.isAdmin) {
+            dom.adminOrdersTab.style.display = 'flex';
+            console.log('✅ Admin tab shown');
+        } else {
+            dom.adminOrdersTab.style.display = 'none';
+            console.log('❌ Admin tab hidden - user is not admin');
+        }
+    }
+    
     if (dom.errorMessage) {
         dom.errorMessage.style.display = 'none';
     }

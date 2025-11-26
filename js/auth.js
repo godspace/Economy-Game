@@ -32,6 +32,32 @@ export async function checkAuth() {
     }
 }
 
+export async function checkAdminStatus() {
+    try {
+        if (!state.supabase || !state.currentUserProfile) {
+            state.isAdmin = false;
+            return false;
+        }
+        
+        console.log('🔧 Checking admin status for user:', state.currentUserProfile.id);
+        
+        const { data: admin, error } = await state.supabase
+            .from('admins')
+            .select('user_id')
+            .eq('user_id', state.currentUserProfile.id)
+            .single();
+        
+        state.isAdmin = !error && admin;
+        console.log('🔧 User is admin:', state.isAdmin);
+        
+        return state.isAdmin;
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        state.isAdmin = false;
+        return false;
+    }
+}
+
 export async function handleAuth(e) {
     e.preventDefault();
     
@@ -121,6 +147,9 @@ export async function handleAuth(e) {
         // Устанавливаем состояние аутентификации
         state.isAuthenticated = true;
         
+        // ПРОВЕРЯЕМ СТАТУС АДМИНИСТРАТОРА
+        await checkAdminStatus();
+        
         // Обновляем UI
         if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${state.currentUserProfile.username}!`;
         if (dom.userAvatar) dom.userAvatar.textContent = state.currentUserProfile.username.charAt(0).toUpperCase();
@@ -152,6 +181,7 @@ export async function handleLogout() {
         state.currentUser = null;
         state.currentUserProfile = null;
         state.isAuthenticated = false;
+        state.isAdmin = false; // СБРАСЫВАЕМ СТАТУС АДМИНА
         
         // Показываем экран аутентификации
         showAuthSection();

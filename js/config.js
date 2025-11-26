@@ -39,7 +39,8 @@ export const state = {
         ranking: 45000,  // 45 секунд
         topRanking: 60000 // 1 минута
     },
-    isAuthenticated: false
+    isAuthenticated: false,
+    isAdmin: false // ДОБАВЛЯЕМ СВОЙСТВО ДЛЯ СТАТУСА АДМИНИСТРАТОРА
 };
 
 // Функция проверки необходимости обновления
