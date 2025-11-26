@@ -1,3 +1,8 @@
+// В начале ui.js
+import { 
+    handleAuth, 
+    handleLogout 
+} from './auth.js';
 import { dom, state } from './config.js';
 import { setupSearchDebounce } from './users.js';
 
