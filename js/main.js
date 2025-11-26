@@ -1,4 +1,4 @@
-import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
+import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError, initApp } from './ui.js';
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
 
