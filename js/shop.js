@@ -4,16 +4,30 @@ export async function loadShop() {
     try {
         console.log('Loading shop...');
         
-        if (!state.supabase || !state.isAuthenticated || !state.currentUserProfile) {
-            console.error('Supabase or authentication not initialized');
+        if (!state.supabase) {
+            console.error('Supabase not initialized');
             return;
         }
-
+        
+        if (!state.isAuthenticated) {
+            console.error('User not authenticated');
+            return;
+        }
+        
+        if (!state.currentUserProfile) {
+            console.error('User profile not loaded');
+            return;
+        }
+        
+        console.log('User authenticated:', state.currentUserProfile.id, 'Coins:', state.currentUserProfile.coins);
+        
         // Загружаем товары
         const { data: products, error: productsError } = await state.supabase
             .from('products')
             .select('*')
             .eq('is_active', true);
+
+        console.log('Products loaded:', products);
 
         if (productsError) {
             console.error('Ошибка загрузки товаров:', productsError);
@@ -113,12 +127,20 @@ function showBuyConfirmation(productId, productName, productPrice) {
 
 async function purchaseProduct(productId, price) {
     try {
-        if (!state.supabase || !state.currentUser) {
+        if (!state.supabase || !state.currentUserProfile) {
             throw new Error('Система не инициализирована');
         }
 
-        // Используем RPC функцию для атомарной покупки
-        const { data: result, error } = await state.supabase.rpc('purchase_product', {
+        console.log('Покупка товара:', {
+            productId,
+            price,
+            userId: state.currentUserProfile.id,
+            userCoins: state.currentUserProfile.coins
+        });
+
+        // Используем новую RPC функцию с передачей user_id
+        const { data: result, error } = await state.supabase.rpc('purchase_product_with_user', {
+            p_user_id: state.currentUserProfile.id,
             p_product_id: productId,
             p_quantity: 1
         });
@@ -155,7 +177,7 @@ async function updateUserBalance() {
         const { data: profile, error } = await state.supabase
             .from('profiles')
             .select('coins')
-            .eq('id', state.currentUser.id)
+            .eq('id', state.currentUserProfile.id)
             .single();
 
         if (error) {
@@ -176,7 +198,7 @@ async function updateUserBalance() {
 
 export async function loadOrderHistory() {
     try {
-        if (!state.supabase || !state.currentUser) {
+        if (!state.supabase || !state.currentUserProfile) {
             return;
         }
 
@@ -186,7 +208,7 @@ export async function loadOrderHistory() {
                 *,
                 products:product_id (name, image_url, price)
             `)
-            .eq('user_id', state.currentUser.id)
+            .eq('user_id', state.currentUserProfile.id)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -273,12 +295,12 @@ export async function loadAdminOrders() {
     try {
         console.log('Loading admin orders...');
         
-        if (!state.supabase || !state.currentUser) {
+        if (!state.supabase || !state.currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
 
-        // ИСПРАВЛЕНИЕ: Проверяем, является ли пользователь админом через таблицу admins
+        // Проверяем, является ли пользователь админом через таблицу admins
         // Если таблица admins не существует или пуста, используем fallback на основе username
         let isAdmin = false;
         
@@ -286,7 +308,7 @@ export async function loadAdminOrders() {
             const { data: admin, error: adminError } = await state.supabase
                 .from('admins')
                 .select('user_id')
-                .eq('user_id', state.currentUser.id)
+                .eq('user_id', state.currentUserProfile.id)
                 .single();
 
             if (!adminError && admin) {
