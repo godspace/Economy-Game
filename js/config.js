@@ -22,8 +22,8 @@ export const cache = {
 // Объект для хранения глобальных переменных
 export const state = {
     supabase: null,
-    currentUser: null,
-    currentUserProfile: null,
+    currentUser: null,        // { id: userProfile.id } - для совместимости с другими модулями
+    currentUserProfile: null, // Полный профиль пользователя
     selectedUser: null,
     selectedDeal: null,
     depositTimers: {},
@@ -39,7 +39,6 @@ export const state = {
         ranking: 45000,  // 45 секунд
         topRanking: 60000 // 1 минута
     },
-    // Добавляем для новой системы
     isAuthenticated: false
 };
 
@@ -103,10 +102,20 @@ export const dom = {
     closeDepositResultBtn: null,
     activeDepositsList: null,
     depositHistoryList: null,
-    topRankingTable: null
+    topRankingTable: null,
+    shopProductsList: null,
+    shopOrderHistory: null,
+    adminOrdersList: null,
+    adminOrdersTab: null,
+    adminOrdersTabContent: null,
+    maintenanceModal: null,
+    closeMaintenanceModal: null,
+    maintenanceBanner: null,
+    closeMaintenanceBanner: null
 };
-// config.js - добавить в конец файла
+
+// Конфигурация магазина (без хардкода админа)
 export const SHOP_CONFIG = {
-    adminId: 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b',
     productPrice: 299
+    // adminId больше не используется - проверка через таблицу admins
 };
