@@ -82,7 +82,7 @@ async function getTodayDealsCount(targetUserId) {
         const { data: todayDeals, error } = await state.supabase
             .from('deals')
             .select('id')
-            .eq('from_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
+            .eq('from_user', state.currentUserProfile.id)
             .eq('to_user', targetUserId)
             .gte('created_at', today)
             .lt('created_at', tomorrowStr);
@@ -123,7 +123,7 @@ export async function proposeDeal(choice) {
         
         // Используем RPC функцию для атомарного создания сделки с резервированием 1 монеты
         const { data: result, error } = await state.supabase.rpc('create_deal_with_reservation', {
-            p_from_user: state.currentUserProfile.id, // ИСПРАВЛЕНО: используем currentUserProfile.id
+            p_from_user: state.currentUserProfile.id,
             p_to_user: state.selectedUser.id,
             p_from_choice: choice
         });
@@ -167,7 +167,7 @@ export async function showResponseModal(dealId) {
             .from('deals')
             .select(`
                 id, from_choice, status, created_at,
-                from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
+                from_user:profiles!fk_deals_from_user(username, class, coins, reputation)
             `)
             .eq('id', dealId)
             .single();
@@ -352,16 +352,16 @@ export async function loadDeals(forceRefresh = false) {
             return;
         }
         
-        // Параллельная загрузка данных
+        // Параллельная загрузка данных с исправленными именами связей
         const [incomingResult, pendingResult, completedIncomingResult, completedOutgoingResult] = await Promise.all([
             // Входящие сделки
             state.supabase
                 .from('deals')
                 .select(`
                     id, from_choice, status, created_at,
-                    from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
+                    from_user:profiles!fk_deals_from_user(username, class, coins, reputation)
                 `)
-                .eq('to_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
+                .eq('to_user', state.currentUserProfile.id)
                 .eq('status', 'pending'),
             
             // Ожидающие ответа сделки
@@ -369,9 +369,9 @@ export async function loadDeals(forceRefresh = false) {
                 .from('deals')
                 .select(`
                     id, from_choice, status, created_at,
-                    to_user:profiles!deals_to_user_fkey(username, class)
+                    to_user:profiles!fk_deals_to_user(username, class)
                 `)
-                .eq('from_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
+                .eq('from_user', state.currentUserProfile.id)
                 .eq('status', 'pending'),
             
             // Завершённые входящие сделки
@@ -379,10 +379,10 @@ export async function loadDeals(forceRefresh = false) {
                 .from('deals')
                 .select(`
                     id, from_choice, to_choice, status, created_at,
-                    from_user:profiles!deals_from_user_fkey(username, class),
-                    to_user:profiles!deals_to_user_fkey(username, class)
+                    from_user:profiles!fk_deals_from_user(username, class),
+                    to_user:profiles!fk_deals_to_user(username, class)
                 `)
-                .eq('to_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
+                .eq('to_user', state.currentUserProfile.id)
                 .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(20),
@@ -392,10 +392,10 @@ export async function loadDeals(forceRefresh = false) {
                 .from('deals')
                 .select(`
                     id, from_choice, to_choice, status, created_at,
-                    from_user:profiles!deals_from_user_fkey(username, class),
-                    to_user:profiles!deals_to_user_fkey(username, class)
+                    from_user:profiles!fk_deals_from_user(username, class),
+                    to_user:profiles!fk_deals_to_user(username, class)
                 `)
-                .eq('from_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
+                .eq('from_user', state.currentUserProfile.id)
                 .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(20)
@@ -654,7 +654,6 @@ function renderRanking(users) {
         users.forEach((user, index) => {
             const row = document.createElement('tr');
             
-            // ИСПРАВЛЕНО: используем currentUserProfile вместо currentUser
             if (state.currentUserProfile && user.id === state.currentUserProfile.id) {
                 row.classList.add('current-user');
             }
