@@ -5,8 +5,8 @@ export async function loadShop() {
     try {
         console.log('Loading shop...');
         
-        if (!state.supabase || !state.currentUser) {
-            console.error('Supabase or current user not initialized');
+        if (!state.supabase || !state.isAuthenticated || !state.currentUserProfile) {
+            console.error('Supabase or authentication not initialized');
             return;
         }
 
