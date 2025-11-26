@@ -1,3 +1,54 @@
+import { state, dom, SUPABASE_CONFIG } from './config.js';
+import { showAuthSection, showProfileSection, showAuthError, hideAuthError } from './ui.js';
+import { loadUserProfile } from './users.js';
+
+export async function initSupabase() {
+    return new Promise((resolve, reject) => {
+        try {
+            console.log('Initializing Supabase...');
+            
+            if (typeof window.supabase === 'undefined') {
+                throw new Error('Supabase library not loaded');
+            }
+            
+            state.supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
+            
+            console.log('Supabase initialized successfully');
+            resolve();
+        } catch (error) {
+            console.error('Error initializing Supabase:', error);
+            reject(error);
+        }
+    });
+}
+
+export async function checkAuth() {
+    try {
+        if (!state.supabase) {
+            throw new Error('Supabase not initialized');
+        }
+        
+        const { data: { user }, error } = await state.supabase.auth.getUser();
+        
+        if (error) {
+            console.warn('Auth check error:', error);
+            showAuthSection();
+            return;
+        }
+        
+        if (user) {
+            await loadUserProfile(user.id);
+            state.currentUser = user;
+            showProfileSection();
+        } else {
+            showAuthSection();
+        }
+    } catch (error) {
+        console.error('Ошибка проверки авторизации:', error);
+        showAuthSection();
+    }
+}
+
 export async function handleAuth(e) {
     e.preventDefault();
     
@@ -76,10 +127,30 @@ export async function handleAuth(e) {
         dom.authBtn.textContent = 'Войти';
     }
 }
-// В конце auth.js должны быть эти экспорты
+
+export async function handleLogout() {
+    try {
+        if (!state.supabase) {
+            console.error('Supabase not initialized');
+            return;
+        }
+        
+        Object.values(state.depositTimers).forEach(timer => clearInterval(timer));
+        state.depositTimers = {};
+        
+        // В новой системе мы не используем auth.signOut, просто очищаем состояние
+        state.currentUser = null;
+        state.currentUserProfile = null;
+        showAuthSection();
+    } catch (error) {
+        console.error('Ошибка выхода:', error);
+    }
+}
+
+// Явный экспорт всех функций
 export {
     initSupabase,
     checkAuth,
     handleAuth,
-    handleLogout  // <-- эта строка должна быть
+    handleLogout
 };
