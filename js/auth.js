@@ -1,54 +1,3 @@
-import { state, dom, SUPABASE_CONFIG } from './config.js';
-import { showAuthSection, showProfileSection, showAuthError, hideAuthError } from './ui.js';
-import { loadUserProfile } from './users.js';
-
-export async function initSupabase() {
-    return new Promise((resolve, reject) => {
-        try {
-            console.log('Initializing Supabase...');
-            
-            if (typeof window.supabase === 'undefined') {
-                throw new Error('Supabase library not loaded');
-            }
-            
-            state.supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key);
-            
-            console.log('Supabase initialized successfully');
-            resolve();
-        } catch (error) {
-            console.error('Error initializing Supabase:', error);
-            reject(error);
-        }
-    });
-}
-
-export async function checkAuth() {
-    try {
-        if (!state.supabase) {
-            throw new Error('Supabase not initialized');
-        }
-        
-        const { data: { user }, error } = await state.supabase.auth.getUser();
-        
-        if (error) {
-            console.warn('Auth check error:', error);
-            showAuthSection();
-            return;
-        }
-        
-        if (user) {
-            await loadUserProfile(user.id);
-            state.currentUser = user;
-            showProfileSection();
-        } else {
-            showAuthSection();
-        }
-    } catch (error) {
-        console.error('Ошибка проверки авторизации:', error);
-        showAuthSection();
-    }
-}
-
 export async function handleAuth(e) {
     e.preventDefault();
     
@@ -57,12 +6,10 @@ export async function handleAuth(e) {
         return;
     }
     
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const userClass = document.getElementById('class').value;
+    const code = document.getElementById('code').value;
     
-    if (!username || !password || !userClass) {
-        showAuthError('Пожалуйста, заполните все поля');
+    if (!code) {
+        showAuthError('Пожалуйста, введите ваш код');
         return;
     }
     
@@ -72,88 +19,60 @@ export async function handleAuth(e) {
     dom.authBtn.textContent = 'Загрузка...';
     
     try {
-        // Сначала пробуем зарегистрироваться
-        const { data: signUpData, error: signUpError } = await state.supabase.auth.signUp({
-            email: `${username}@school.game`,
-            password: password,
-            options: {
-                data: {
-                    username: username,
-                    class: userClass
-                }
-            }
-        });
+        // Ищем ученика по коду
+        const { data: student, error: studentError } = await state.supabase
+            .from('students')
+            .select('*')
+            .eq('code', code)
+            .single();
         
-        if (signUpError) {
-            // Если регистрация не удалась, пробуем войти
-            if (signUpError.message.includes('already registered')) {
-                console.log('User exists, trying to sign in...');
-                
-                const { data: signInData, error: signInError } = await state.supabase.auth.signInWithPassword({
-                    email: `${username}@school.game`,
-                    password: password
-                });
-                
-                if (signInError) {
-                    throw signInError;
-                }
-                
-                state.currentUser = signInData.user;
-                await loadUserProfile(state.currentUser.id);
-                showProfileSection();
-            } else {
-                throw signUpError;
-            }
-        } else {
-            // Регистрация успешна
-            state.currentUser = signUpData.user;
-            
-            // Создаем профиль пользователя
-            try {
-                const { error: profileError } = await state.supabase
-                    .from('profiles')
-                    .insert([
-                        { 
-                            id: state.currentUser.id, 
-                            username: username, 
-                            class: userClass 
-                        }
-                    ]);
-                
-                if (profileError) {
-                    console.warn('Profile creation error (might already exist):', profileError);
-                }
-            } catch (profileError) {
-                console.warn('Profile creation error:', profileError);
-            }
-            
-            await loadUserProfile(state.currentUser.id);
-            showProfileSection();
+        if (studentError || !student) {
+            throw new Error('Неверный код');
         }
+        
+        // Ищем или создаем профиль
+        const { data: profile, error: profileError } = await state.supabase
+            .from('profiles')
+            .select('*')
+            .eq('student_id', student.id)
+            .single();
+        
+        if (profileError) {
+            // Создаем новый профиль
+            const username = `${student.first_name} ${student.last_name}`;
+            const { data: newProfile, error: createError } = await state.supabase
+                .from('profiles')
+                .insert([
+                    {
+                        student_id: student.id,
+                        username: username,
+                        class: student.class,
+                        coins: 100,
+                        reputation: 50
+                    }
+                ])
+                .select()
+                .single();
+            
+            if (createError) throw createError;
+            state.currentUserProfile = newProfile;
+        } else {
+            state.currentUserProfile = profile;
+        }
+        
+        // Обновляем UI
+        if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${state.currentUserProfile.username}!`;
+        if (dom.userAvatar) dom.userAvatar.textContent = state.currentUserProfile.username.charAt(0).toUpperCase();
+        if (dom.coinsValue) dom.coinsValue.textContent = state.currentUserProfile.coins;
+        if (dom.reputationValue) dom.reputationValue.textContent = state.currentUserProfile.reputation;
+        
+        showProfileSection();
+        
     } catch (error) {
         console.error('Ошибка аутентификации:', error);
-        showAuthError('Ошибка: ' + (error.message || 'Неизвестная ошибка'));
+        showAuthError('Неверный код или ошибка системы');
     } finally {
         dom.authBtn.disabled = false;
-        dom.authBtn.textContent = 'Войти / Зарегистрироваться';
-    }
-}
-
-export async function handleLogout() {
-    try {
-        if (!state.supabase) {
-            console.error('Supabase not initialized');
-            return;
-        }
-        
-        Object.values(state.depositTimers).forEach(timer => clearInterval(timer));
-        state.depositTimers = {};
-        
-        await state.supabase.auth.signOut();
-        state.currentUser = null;
-        state.currentUserProfile = null;
-        showAuthSection();
-    } catch (error) {
-        console.error('Ошибка выхода:', error);
+        dom.authBtn.textContent = 'Войти';
     }
 }
