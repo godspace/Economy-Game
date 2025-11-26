@@ -7,7 +7,6 @@ export async function showDealModal(userId) {
             return;
         }
         
-        // Проверяем, что у пользователя есть хотя бы 1 монета для резервирования
         if (state.currentUserProfile.coins < 1) {
             alert('У вас недостаточно монет для совершения сделки. Требуется минимум 1 монета для резервирования.');
             return;
@@ -71,7 +70,7 @@ export async function showDealModal(userId) {
 
 async function getTodayDealsCount(targetUserId) {
     try {
-        if (!state.supabase || !state.currentUser) {
+        if (!state.supabase || !state.currentUserProfile) {
             return 0;
         }
         
@@ -83,7 +82,7 @@ async function getTodayDealsCount(targetUserId) {
         const { data: todayDeals, error } = await state.supabase
             .from('deals')
             .select('id')
-            .eq('from_user', state.currentUser.id)
+            .eq('from_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
             .eq('to_user', targetUserId)
             .gte('created_at', today)
             .lt('created_at', tomorrowStr);
@@ -102,12 +101,11 @@ async function getTodayDealsCount(targetUserId) {
 
 export async function proposeDeal(choice) {
     try {
-        if (!state.supabase || !state.currentUser || !state.selectedUser || !state.currentUserProfile) {
+        if (!state.supabase || !state.currentUserProfile || !state.selectedUser) {
             console.error('Required data not initialized');
             return;
         }
         
-        // Проверяем, что у пользователя есть минимум 1 монета для резервирования
         if (state.currentUserProfile.coins < 1) {
             alert('У вас недостаточно монет для совершения сделки. Требуется минимум 1 монета для резервирования.');
             if (dom.dealModal) {
@@ -125,7 +123,7 @@ export async function proposeDeal(choice) {
         
         // Используем RPC функцию для атомарного создания сделки с резервированием 1 монеты
         const { data: result, error } = await state.supabase.rpc('create_deal_with_reservation', {
-            p_from_user: state.currentUser.id,
+            p_from_user: state.currentUserProfile.id, // ИСПРАВЛЕНО: используем currentUserProfile.id
             p_to_user: state.selectedUser.id,
             p_from_choice: choice
         });
@@ -219,7 +217,7 @@ export async function showResponseModal(dealId) {
 
 export async function respondToDeal(choice) {
     try {
-        if (!state.supabase || !state.selectedDeal) {
+        if (!state.supabase || !state.selectedDeal || !state.currentUserProfile) {
             console.error('Required data not initialized');
             return;
         }
@@ -250,7 +248,7 @@ export async function respondToDeal(choice) {
         cache.deals.timestamp = 0;
         loadDeals(true); // force refresh
         
-        if (state.currentUser) {
+        if (state.currentUserProfile) {
             // Обновляем баланс пользователя
             await updateUserBalance();
         }
@@ -363,7 +361,7 @@ export async function loadDeals(forceRefresh = false) {
                     id, from_choice, status, created_at,
                     from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
                 `)
-                .eq('to_user', state.currentUser.id)
+                .eq('to_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
                 .eq('status', 'pending'),
             
             // Ожидающие ответа сделки
@@ -373,7 +371,7 @@ export async function loadDeals(forceRefresh = false) {
                     id, from_choice, status, created_at,
                     to_user:profiles!deals_to_user_fkey(username, class)
                 `)
-                .eq('from_user', state.currentUser.id)
+                .eq('from_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
                 .eq('status', 'pending'),
             
             // Завершённые входящие сделки
@@ -384,7 +382,7 @@ export async function loadDeals(forceRefresh = false) {
                     from_user:profiles!deals_from_user_fkey(username, class),
                     to_user:profiles!deals_to_user_fkey(username, class)
                 `)
-                .eq('to_user', state.currentUser.id)
+                .eq('to_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
                 .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(20),
@@ -397,7 +395,7 @@ export async function loadDeals(forceRefresh = false) {
                     from_user:profiles!deals_from_user_fkey(username, class),
                     to_user:profiles!deals_to_user_fkey(username, class)
                 `)
-                .eq('from_user', state.currentUser.id)
+                .eq('from_user', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
                 .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(20)
@@ -656,13 +654,14 @@ function renderRanking(users) {
         users.forEach((user, index) => {
             const row = document.createElement('tr');
             
-            if (state.currentUser && user.id === state.currentUser.id) {
+            // ИСПРАВЛЕНО: используем currentUserProfile вместо currentUser
+            if (state.currentUserProfile && user.id === state.currentUserProfile.id) {
                 row.classList.add('current-user');
             }
             
             row.innerHTML = `
                 <td>${index + 1}</td>
-                <td>${user.username} ${state.currentUser && user.id === state.currentUser.id ? '(Вы)' : ''}</td>
+                <td>${user.username} ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '(Вы)' : ''}</td>
                 <td>${user.class}</td>
                 <td>${user.coins}</td>
                 <td>${user.reputation}</td>
@@ -678,10 +677,14 @@ function renderRanking(users) {
 // Функция для обновления баланса пользователя
 async function updateUserBalance() {
     try {
+        if (!state.supabase || !state.currentUserProfile) {
+            return;
+        }
+        
         const { data: profile, error } = await state.supabase
             .from('profiles')
             .select('coins')
-            .eq('id', state.currentUser.id)
+            .eq('id', state.currentUserProfile.id)
             .single();
         
         if (error) {
