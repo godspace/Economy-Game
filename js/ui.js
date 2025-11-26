@@ -3,7 +3,7 @@ import { dom, state } from './config.js';
 import { setupSearchDebounce } from './users.js';
 
 export function initDOMElements() {
-    // Инициализируем свойства объекта dom, а не переопределяем переменные
+    // Инициализируем свойства объекта dom
     dom.authSection = document.getElementById('authSection');
     dom.profileSection = document.getElementById('profileSection');
     dom.authForm = document.getElementById('authForm');
@@ -136,11 +136,6 @@ export function showProfileSection() {
     if (dom.authError) {
         dom.authError.style.display = 'none';
     }
-    
-    // Показываем вкладку админа если пользователь админ
-    if (state.currentUser && state.currentUser.id === 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b' && dom.adminOrdersTab) {
-        dom.adminOrdersTab.style.display = 'flex';
-    }
 }
 
 // Функция для закрытия предупреждения о техработах
@@ -154,38 +149,41 @@ function closeMaintenanceWarning() {
     localStorage.setItem('maintenanceWarningClosed', 'true');
 }
 
-// Импортируем loadTabModule из main.js
 async function loadTabModule(tabName) {
     console.log('Loading tab module:', tabName);
     
-    switch(tabName) {
-        case 'users':
-            const { loadUsers } = await import('./users.js');
-            loadUsers();
-            break;
-        case 'deals':
-            const { loadDeals } = await import('./deals.js');
-            loadDeals();
-            break;
-        case 'ranking':
-            const { loadRanking } = await import('./deals.js');
-            loadRanking();
-            break;
-        case 'investments':
-            const { loadInvestments } = await import('./investments.js');
-            loadInvestments();
-            break;
-        case 'shop':
-            const { loadShop } = await import('./shop.js');
-            loadShop();
-            break;
-        case 'adminOrders':
-            console.log('Loading admin orders...');
-            const { loadAdminOrders } = await import('./shop.js');
-            loadAdminOrders();
-            break;
-        default:
-            console.warn('Unknown tab:', tabName);
+    try {
+        switch(tabName) {
+            case 'users':
+                const { loadUsers } = await import('./users.js');
+                loadUsers();
+                break;
+            case 'deals':
+                const { loadDeals } = await import('./deals.js');
+                loadDeals();
+                break;
+            case 'ranking':
+                const { loadRanking } = await import('./deals.js');
+                loadRanking();
+                break;
+            case 'investments':
+                const { loadInvestments } = await import('./investments.js');
+                loadInvestments();
+                break;
+            case 'shop':
+                const { loadShop } = await import('./shop.js');
+                loadShop();
+                break;
+            case 'adminOrders':
+                console.log('Loading admin orders...');
+                const { loadAdminOrders } = await import('./shop.js');
+                loadAdminOrders();
+                break;
+            default:
+                console.warn('Unknown tab:', tabName);
+        }
+    } catch (error) {
+        console.error('Error loading tab module:', tabName, error);
     }
 }
 
