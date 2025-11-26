@@ -17,7 +17,7 @@ export async function loadTopRanking(forceRefresh = false) {
         
         const { data: users, error } = await state.supabase
             .from('profiles')
-            .select('id, username, class, coins, reputation') // Только нужные поля
+            .select('id, username, class, coins, reputation')
             .order('coins', { ascending: false })
             .limit(10);
         
