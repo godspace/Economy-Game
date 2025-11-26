@@ -89,36 +89,40 @@ async function initializeApplication() {
     }
 }
 
-// Ленивая загрузка модулей для табов
-async function loadTabModule(tabName) {
-    switch(tabName) {
-        case 'users':
-            const { loadUsers } = await import('./users.js');
-            loadUsers();
-            break;
-        case 'deals':
-            const { loadDeals } = await import('./deals.js');
-            loadDeals();
-            break;
-        case 'ranking':
-            const { loadRanking } = await import('./deals.js');
-            loadRanking();
-            break;
-        case 'investments':
-            const { loadInvestments } = await import('./investments.js');
-            loadInvestments();
-            break;
-        case 'shop':
-            const { loadShop } = await import('./shop.js');
-            loadShop();
-            break;
-        case 'adminOrders':
-            console.log('Loading admin orders...');
-            const { loadAdminOrders } = await import('./shop.js');
-            loadAdminOrders();
-            break;
-        default:
-            console.warn('Unknown tab:', tabName);
+// Ленивая загрузка модулей для табов (экспортируем для использования в других модулях)
+export async function loadTabModule(tabName) {
+    try {
+        switch(tabName) {
+            case 'users':
+                const { loadUsers } = await import('./users.js');
+                loadUsers();
+                break;
+            case 'deals':
+                const { loadDeals } = await import('./deals.js');
+                loadDeals();
+                break;
+            case 'ranking':
+                const { loadRanking } = await import('./deals.js');
+                loadRanking();
+                break;
+            case 'investments':
+                const { loadInvestments } = await import('./investments.js');
+                loadInvestments();
+                break;
+            case 'shop':
+                const { loadShop } = await import('./shop.js');
+                loadShop();
+                break;
+            case 'adminOrders':
+                console.log('Loading admin orders...');
+                const { loadAdminOrders } = await import('./shop.js');
+                loadAdminOrders();
+                break;
+            default:
+                console.warn('Unknown tab:', tabName);
+        }
+    } catch (error) {
+        console.error('Error loading tab module:', tabName, error);
     }
 }
 
@@ -127,6 +131,3 @@ document.addEventListener('DOMContentLoaded', function() {
     // Даем время для загрузки всех скриптов
     setTimeout(initializeApplication, 100);
 });
-
-// Экспортируем функцию для использования в других модулях
-export { loadTabModule };
