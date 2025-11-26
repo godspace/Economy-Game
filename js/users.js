@@ -9,59 +9,30 @@ export async function loadUserProfile(userId) {
         
         const { data: profile, error } = await state.supabase
             .from('profiles')
-            .select('id, username, coins, reputation') // Только нужные поля
+            .select('id, username, coins, reputation')
             .eq('id', userId)
             .single();
         
         if (error) {
             console.error('Ошибка загрузки профиля:', error);
-            await createUserProfile(userId);
             return;
         }
         
-        state.currentUserProfile = profile;
+        // ИСПРАВЛЕНИЕ: Обновляем состояние только если это текущий пользователь
+        if (state.currentUser && state.currentUser.id === userId) {
+            state.currentUserProfile = profile;
+            
+            if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${profile.username}!`;
+            if (dom.userAvatar) dom.userAvatar.textContent = profile.username.charAt(0).toUpperCase();
+            if (dom.coinsValue) dom.coinsValue.textContent = profile.coins;
+            if (dom.reputationValue) dom.reputationValue.textContent = profile.reputation;
+        }
         
-        if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${profile.username}!`;
-        if (dom.userAvatar) dom.userAvatar.textContent = profile.username.charAt(0).toUpperCase();
-        if (dom.coinsValue) dom.coinsValue.textContent = profile.coins;
-        if (dom.reputationValue) dom.reputationValue.textContent = profile.reputation;
+        return profile;
         
     } catch (error) {
         console.error('Ошибка загрузки профиля:', error);
-    }
-}
-
-export async function createUserProfile(userId) {
-    try {
-        if (!state.supabase || !state.currentUser) {
-            return;
-        }
-        
-        const username = document.getElementById('username').value;
-        const userClass = document.getElementById('class').value;
-        
-        if (!username || !userClass) {
-            return;
-        }
-        
-        const { error } = await state.supabase
-            .from('profiles')
-            .insert([
-                { 
-                    id: userId, 
-                    username: username, 
-                    class: userClass 
-                }
-            ]);
-        
-        if (error) {
-            console.error('Ошибка создания профиля:', error);
-            return;
-        }
-        
-        await loadUserProfile(userId);
-    } catch (error) {
-        console.error('Ошибка создания профиля:', error);
+        return null;
     }
 }
 
@@ -86,9 +57,9 @@ export async function loadUsers(forceRefresh = false) {
         
         let query = state.supabase
             .from('profiles')
-            .select('id, username, class, coins, reputation') // Только нужные поля
+            .select('id, username, class, coins, reputation')
             .neq('id', state.currentUserProfile.id)
-            .limit(50); // Ограничение количества
+            .limit(50);
         
         if (searchTerm) {
             query = query.ilike('username', `%${searchTerm}%`);
@@ -218,3 +189,5 @@ export function setupSearchDebounce() {
         });
     }
 }
+
+// Удаляем неиспользуемую функцию createUserProfile, так как она теперь в auth.js
