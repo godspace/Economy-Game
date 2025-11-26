@@ -440,7 +440,7 @@ export function openDepositModal(type, duration, profit, isRisky) {
         </div>
         <div class="form-group">
             <label for="depositAmount">Сумма вклада</label>
-            <input type="number" id="depositAmount" placeholder="Введите сумму" min="1" required>
+            <input type="number" id="depositAmount" placeholder="Введите сумму" min="1" max="${state.currentUserProfile?.coins || 0}" required>
         </div>
         <button id="confirmDepositBtn" class="${isRisky ? 'btn-warning' : 'btn-success'}">
             <i class="fas fa-lock-open"></i> ${isRisky ? 'Испытать удачу' : 'Открыть вклад'}
@@ -463,6 +463,7 @@ export function openDepositModal(type, duration, profit, isRisky) {
     dom.depositModal.classList.add('active');
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ: Создание вклада с использованием RPC для атомарного списания средств
 async function createDeposit(type, amount, duration, profit, isRisky) {
     try {
         if (!state.supabase || !state.currentUser) {
@@ -480,29 +481,24 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
         if (isRisky) {
             expectedProfit = 20; // Для отображения в интерфейсе
         }
-        
-        const { data: deposit, error } = await state.supabase
-            .from('deposits')
-            .insert([
-                {
-                    user_id: state.currentUser.id,
-                    type: type,
-                    amount: amount,
-                    expected_profit: expectedProfit,
-                    start_time: startTime.toISOString(),
-                    end_time: endTime.toISOString(),
-                    status: 'active',
-                    is_risky: isRisky
-                }
-            ])
-            .select()
-            .single();
-        
+
+        // ИСПРАВЛЕНИЕ: Используем RPC функцию для атомарного создания вклада и списания средств
+        const { data: result, error } = await state.supabase.rpc('create_deposit_with_charge', {
+            p_user_id: state.currentUser.id,
+            p_type: type,
+            p_amount: amount,
+            p_duration: parseInt(duration),
+            p_profit: expectedProfit,
+            p_is_risky: isRisky
+        });
+
         if (error) {
-            if (error.message.includes('Недостаточно средств')) {
-                throw new Error('Недостаточно монет для открытия вклада');
-            }
-            throw error;
+            console.error('RPC Error:', error);
+            throw new Error('Ошибка создания вклада: ' + error.message);
+        }
+
+        if (!result || !result.success) {
+            throw new Error(result?.error || 'Неизвестная ошибка при создании вклада');
         }
         
         // Обновляем баланс на клиенте
