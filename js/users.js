@@ -87,7 +87,7 @@ export async function loadUsers(forceRefresh = false) {
         let query = state.supabase
             .from('profiles')
             .select('id, username, class, coins, reputation') // Только нужные поля
-            .neq('id', state.currentUser.id)
+            .neq('id', state.currentUserProfile.id)
             .limit(50); // Ограничение количества
         
         if (searchTerm) {
