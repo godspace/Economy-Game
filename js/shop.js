@@ -300,7 +300,6 @@ export async function loadAdminOrders() {
             return;
         }
 
-        // ИСПОЛЬЗУЕМ ГЛОБАЛЬНЫЙ СТАТУС АДМИНА ВМЕСТО ПРОВЕРКИ В БАЗЕ ДАННЫХ
         console.log('🛠️ Using global admin status:', state.isAdmin);
         
         if (!state.isAdmin) {
@@ -310,23 +309,48 @@ export async function loadAdminOrders() {
 
         console.log('🔧 User is admin, loading orders...');
 
-        // Загружаем заказы
-        const { data: orders, error } = await state.supabase
+        // Загружаем заказы с информацией о товарах
+        const { data: orders, error: ordersError } = await state.supabase
             .from('orders')
             .select(`
                 *,
-                products:product_id (name, image_url),
-                profiles:user_id (username, class)
+                products:product_id (name, image_url)
             `)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('❌ Ошибка загрузки заказов для админа:', error);
+        if (ordersError) {
+            console.error('❌ Ошибка загрузки заказов:', ordersError);
             return;
         }
 
-        console.log('🛠️ Admin orders loaded:', orders);
-        renderAdminOrders(orders);
+        // Получаем все user_id из заказов
+        const userIds = [...new Set(orders.map(order => order.user_id))];
+        
+        // Загружаем профили пользователей отдельным запросом
+        const { data: profiles, error: profilesError } = await state.supabase
+            .from('profiles')
+            .select('id, username, class')
+            .in('id', userIds);
+
+        if (profilesError) {
+            console.error('❌ Ошибка загрузки профилей:', profilesError);
+            return;
+        }
+
+        // Создаем карту профилей для быстрого доступа
+        const profilesMap = {};
+        profiles.forEach(profile => {
+            profilesMap[profile.id] = profile;
+        });
+
+        // Объединяем заказы с профилями
+        const ordersWithProfiles = orders.map(order => ({
+            ...order,
+            user_profile: profilesMap[order.user_id] || { username: 'Неизвестный пользователь', class: 'Неизвестно' }
+        }));
+
+        console.log('🛠️ Admin orders loaded:', ordersWithProfiles);
+        renderAdminOrders(ordersWithProfiles);
 
     } catch (error) {
         console.error('❌ Ошибка загрузки заказов для админа:', error);
@@ -358,14 +382,16 @@ function renderAdminOrders(orders) {
         
         const statusInfo = getStatusInfo(order.status);
         const totalAmount = order.total_amount;
+        const userData = order.user_profile;
+        const productData = order.products;
 
         orderItem.innerHTML = `
             <div class="order-header">
                 <div class="order-product-info">
-                    <img src="${order.products.image_url}" alt="${order.products.name}" class="order-product-image">
+                    <img src="${productData.image_url}" alt="${productData.name}" class="order-product-image" onerror="this.src='https://via.placeholder.com/50x50?text=Товар'">
                     <div>
-                        <div class="order-product-name">${order.products.name}</div>
-                        <div class="order-user-info">От: ${order.profiles.username} (${order.profiles.class})</div>
+                        <div class="order-product-name">${productData.name}</div>
+                        <div class="order-user-info">От: ${userData.username} (${userData.class})</div>
                         <div class="order-quantity">Количество: ${order.quantity}</div>
                     </div>
                 </div>
