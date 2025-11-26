@@ -146,11 +146,3 @@ export async function handleLogout() {
         console.error('Ошибка выхода:', error);
     }
 }
-
-// Явный экспорт всех функций
-export {
-    initSupabase,
-    checkAuth,
-    handleAuth,
-    handleLogout
-};
