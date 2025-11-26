@@ -13,7 +13,7 @@ export async function loadInvestments() {
         const { data: activeDeposits, error: activeError } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', state.currentUser.id)
+            .eq('user_id', state.currentUserProfile.id)
             .eq('status', 'active');
         
         if (activeError) {
@@ -126,7 +126,7 @@ async function loadDepositHistory() {
         const { data: depositHistory, error: historyError } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', state.currentUser.id)
+            .eq('user_id', state.currentUserProfile.id)
             .eq('status', 'completed')
             .order('updated_at', { ascending: false })
             .limit(50);
