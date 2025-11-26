@@ -7,14 +7,18 @@ export async function loadInvestments() {
             return;
         }
         
+        console.log('Загрузка вкладов для пользователя:', state.currentUserProfile.id);
+        
         // Сначала проверяем и завершаем просроченные вклады
         await checkAndCompleteExpiredDeposits();
         
         const { data: activeDeposits, error: activeError } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', state.currentUserProfile.id) // ИСПРАВЛЕНО: используем currentUserProfile.id
+            .eq('user_id', state.currentUserProfile.id)
             .eq('status', 'active');
+        
+        console.log('Активные вклады:', activeDeposits);
         
         if (activeError) {
             console.error('Ошибка загрузки активных вкладов:', activeError);
@@ -28,7 +32,7 @@ export async function loadInvestments() {
             if (dom.activeDepositsList) {
                 dom.activeDepositsList.innerHTML = '';
                 
-                if (activeDeposits.length === 0) {
+                if (!activeDeposits || activeDeposits.length === 0) {
                     dom.activeDepositsList.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-clock"></i>
@@ -43,6 +47,7 @@ export async function loadInvestments() {
                         
                         if (endTime <= now) {
                             // Немедленно завершаем просроченный вклад
+                            console.log('Вклад просрочен, завершаем:', deposit.id);
                             completeDeposit(deposit.id);
                         } else {
                             // Создаем таймер для активного вклада
@@ -65,12 +70,12 @@ export async function loadInvestments() {
 // Новая функция: проверка и завершение просроченных вкладов
 async function checkAndCompleteExpiredDeposits() {
     try {
-        if (!state.supabase || !state.currentUserProfile) return; // ИСПРАВЛЕНО
+        if (!state.supabase || !state.currentUserProfile) return;
 
         const { data: expiredDeposits, error } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', state.currentUserProfile.id) // ИСПРАВЛЕНО
+            .eq('user_id', state.currentUserProfile.id)
             .eq('status', 'active')
             .lt('end_time', new Date().toISOString());
 
@@ -126,7 +131,7 @@ async function loadDepositHistory() {
         const { data: depositHistory, error: historyError } = await state.supabase
             .from('deposits')
             .select('*')
-            .eq('user_id', state.currentUserProfile.id) // ИСПРАВЛЕНО
+            .eq('user_id', state.currentUserProfile.id)
             .eq('status', 'completed')
             .order('updated_at', { ascending: false })
             .limit(50);
@@ -223,7 +228,7 @@ export function startDepositTimer(depositId, endTime) {
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Завершение вклада
 export async function completeDeposit(depositId) {
     try {
-        if (!state.supabase || !state.currentUserProfile) { // ИСПРАВЛЕНО
+        if (!state.supabase || !state.currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return;
         }
@@ -307,7 +312,7 @@ async function manualCompleteDeposit(depositId, profit) {
         const { data: profile, error: profileError } = await state.supabase
             .from('profiles')
             .select('coins')
-            .eq('id', state.currentUserProfile.id) // ИСПРАВЛЕНО
+            .eq('id', state.currentUserProfile.id)
             .single();
         
         if (profileError) {
@@ -334,7 +339,7 @@ async function manualCompleteDeposit(depositId, profit) {
         const { error: updateError } = await state.supabase
             .from('profiles')
             .update({ coins: newCoins })
-            .eq('id', state.currentUserProfile.id); // ИСПРАВЛЕНО
+            .eq('id', state.currentUserProfile.id);
         
         if (updateError) {
             console.error('Ошибка обновления баланса:', updateError);
@@ -386,7 +391,7 @@ async function updateUserBalance() {
         const { data: profile, error } = await state.supabase
             .from('profiles')
             .select('coins')
-            .eq('id', state.currentUserProfile.id) // ИСПРАВЛЕНО
+            .eq('id', state.currentUserProfile.id)
             .single();
         
         if (error) {
@@ -407,7 +412,7 @@ async function updateUserBalance() {
 }
 
 export function openDepositModal(type, duration, profit, isRisky) {
-    if (!state.currentUserProfile) { // ИСПРАВЛЕНО
+    if (!state.currentUserProfile) {
         alert('Необходимо авторизоваться');
         return;
     }
@@ -470,29 +475,30 @@ export function openDepositModal(type, duration, profit, isRisky) {
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Создание вклада с использованием RPC для атомарного списания средств
 async function createDeposit(type, amount, duration, profit, isRisky) {
     try {
-        if (!state.supabase || !state.currentUserProfile) { // ИСПРАВЛЕНО
+        // Блокируем кнопку для предотвращения двойного нажатия
+        const confirmBtn = document.getElementById('confirmDepositBtn');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+        }
+
+        if (!state.supabase || !state.currentUserProfile) {
             throw new Error('Система не инициализирована');
         }
         
         if (amount < 1) {
             throw new Error('Минимальная сумма вклада - 1 монета');
         }
-        
-        const startTime = new Date();
-        const endTime = new Date(startTime.getTime() + parseInt(duration) * 60000);
-        
-        let expectedProfit = profit;
-        if (isRisky) {
-            expectedProfit = 20; // Для отображения в интерфейсе
-        }
 
-        // ИСПРАВЛЕНИЕ: Используем RPC функцию для атомарного создания вклада и списания средств
+        console.log('Создание вклада:', { type, amount, duration, profit, isRisky });
+
+        // Используем RPC функцию для атомарного создания вклада и списания средств
         const { data: result, error } = await state.supabase.rpc('create_deposit_with_charge', {
-            p_user_id: state.currentUserProfile.id, // ИСПРАВЛЕНО
+            p_user_id: state.currentUserProfile.id,
             p_type: type,
             p_amount: amount,
             p_duration: parseInt(duration),
-            p_profit: expectedProfit,
+            p_profit: profit, // Используем переданный profit, а не хардкод 20
             p_is_risky: isRisky
         });
 
@@ -504,6 +510,8 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
         if (!result || !result.success) {
             throw new Error(result?.error || 'Неизвестная ошибка при создании вклада');
         }
+        
+        console.log('Вклад создан успешно:', result);
         
         // Обновляем баланс на клиенте
         await updateUserBalance();
@@ -517,6 +525,13 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
     } catch (error) {
         console.error('Ошибка создания вклада:', error);
         alert('Ошибка: ' + error.message);
+    } finally {
+        // Разблокируем кнопку в любом случае
+        const confirmBtn = document.getElementById('confirmDepositBtn');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = `<i class="fas fa-lock-open"></i> ${isRisky ? 'Испытать удачу' : 'Открыть вклад'}`;
+        }
     }
 }
 
