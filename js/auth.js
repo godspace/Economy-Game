@@ -118,6 +118,9 @@ export async function handleAuth(e) {
             state.currentUserProfile = newProfile;
         }
         
+        // Устанавливаем состояние аутентификации
+        state.isAuthenticated = true;
+        
         // Обновляем UI
         if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${state.currentUserProfile.username}!`;
         if (dom.userAvatar) dom.userAvatar.textContent = state.currentUserProfile.username.charAt(0).toUpperCase();
@@ -148,6 +151,7 @@ export async function handleLogout() {
         // Очищаем состояние пользователя
         state.currentUser = null;
         state.currentUserProfile = null;
+        state.isAuthenticated = false;
         
         // Показываем экран аутентификации
         showAuthSection();
