@@ -1,5 +1,8 @@
 import { state, dom } from './config.js';
 
+// Глобальная переменная для отслеживания состояния создания вклада
+let isCreatingDeposit = false;
+
 export async function loadInvestments() {
     try {
         if (!state.supabase || !state.isAuthenticated || !state.currentUserProfile) {
@@ -417,6 +420,9 @@ export function openDepositModal(type, duration, profit, isRisky) {
         return;
     }
     
+    // Сбрасываем флаг создания вклада
+    isCreatingDeposit = false;
+    
     const depositTypeNames = {
         'call': '«По звонку»',
         'night': '«Спокойная ночь»',
@@ -456,16 +462,38 @@ export function openDepositModal(type, duration, profit, isRisky) {
         </button>
     `;
     
-    document.getElementById('confirmDepositBtn').addEventListener('click', function() {
+    // Удаляем старые обработчики перед добавлением новых
+    const oldConfirmBtn = document.getElementById('confirmDepositBtn');
+    if (oldConfirmBtn) {
+        oldConfirmBtn.replaceWith(oldConfirmBtn.cloneNode(true));
+    }
+    
+    // Добавляем новый обработчик
+    document.getElementById('confirmDepositBtn').addEventListener('click', function depositHandler() {
+        if (isCreatingDeposit) {
+            console.log('Создание вклада уже в процессе, игнорируем повторный клик');
+            return;
+        }
+        
+        isCreatingDeposit = true;
+        
         const amount = parseInt(document.getElementById('depositAmount').value);
         if (isNaN(amount) || amount <= 0) {
             alert('Введите корректную сумму');
+            isCreatingDeposit = false;
             return;
         }
         if (amount > (state.currentUserProfile?.coins || 0)) {
             alert('Недостаточно монет для открытия вклада');
+            isCreatingDeposit = false;
             return;
         }
+        
+        // Блокируем кнопку
+        const confirmBtn = document.getElementById('confirmDepositBtn');
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+        
         createDeposit(type, amount, duration, profit, isRisky);
     });
     
@@ -475,21 +503,6 @@ export function openDepositModal(type, duration, profit, isRisky) {
 // ИСПРАВЛЕННАЯ ФУНКЦИЯ: Создание вклада с использованием RPC для атомарного списания средств
 async function createDeposit(type, amount, duration, profit, isRisky) {
     try {
-        // Блокируем кнопку для предотвращения двойного нажатия
-        const confirmBtn = document.getElementById('confirmDepositBtn');
-        if (confirmBtn) {
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
-        }
-
-        if (!state.supabase || !state.currentUserProfile) {
-            throw new Error('Система не инициализирована');
-        }
-        
-        if (amount < 1) {
-            throw new Error('Минимальная сумма вклада - 1 монета');
-        }
-
         console.log('Создание вклада:', { type, amount, duration, profit, isRisky });
 
         // Используем RPC функцию для атомарного создания вклада и списания средств
@@ -498,7 +511,7 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
             p_type: type,
             p_amount: amount,
             p_duration: parseInt(duration),
-            p_profit: profit, // Используем переданный profit, а не хардкод 20
+            p_profit: parseInt(profit), // Убедимся, что profit число
             p_is_risky: isRisky
         });
 
@@ -526,7 +539,8 @@ async function createDeposit(type, amount, duration, profit, isRisky) {
         console.error('Ошибка создания вклада:', error);
         alert('Ошибка: ' + error.message);
     } finally {
-        // Разблокируем кнопку в любом случае
+        // Разблокируем кнопку и сбрасываем флаг
+        isCreatingDeposit = false;
         const confirmBtn = document.getElementById('confirmDepositBtn');
         if (confirmBtn) {
             confirmBtn.disabled = false;
