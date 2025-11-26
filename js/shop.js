@@ -279,13 +279,28 @@ export async function loadAdminOrders() {
         }
 
         // ИСПРАВЛЕНИЕ: Проверяем, является ли пользователь админом через таблицу admins
-        const { data: admin, error: adminError } = await state.supabase
-            .from('admins')
-            .select('user_id')
-            .eq('user_id', state.currentUser.id)
-            .single();
+        // Если таблица admins не существует или пуста, используем fallback на основе username
+        let isAdmin = false;
+        
+        try {
+            const { data: admin, error: adminError } = await state.supabase
+                .from('admins')
+                .select('user_id')
+                .eq('user_id', state.currentUser.id)
+                .single();
 
-        if (adminError || !admin) {
+            if (!adminError && admin) {
+                isAdmin = true;
+            }
+        } catch (error) {
+            console.log('Table admins might not exist, checking by username...');
+            // Fallback: проверка по username (если пользователь "Администратор")
+            if (state.currentUserProfile && state.currentUserProfile.username === 'Администратор') {
+                isAdmin = true;
+            }
+        }
+
+        if (!isAdmin) {
             console.log('User is not admin, hiding admin tab');
             if (dom.adminOrdersTab) {
                 dom.adminOrdersTab.style.display = 'none';
