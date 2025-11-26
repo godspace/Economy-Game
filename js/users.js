@@ -67,8 +67,8 @@ export async function createUserProfile(userId) {
 
 export async function loadUsers(forceRefresh = false) {
     try {
-        if (!state.supabase || !state.currentUser || !state.currentUserProfile) {
-            console.error('Supabase or current user not initialized');
+        if (!state.supabase || !state.isAuthenticated || !state.currentUserProfile) {
+            console.error('Supabase or authentication not initialized');
             return;
         }
         
