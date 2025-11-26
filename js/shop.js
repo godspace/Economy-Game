@@ -1,4 +1,3 @@
-// shop.js
 import { state, dom } from './config.js';
 
 export async function loadShop() {
@@ -53,8 +52,9 @@ function renderProducts(products) {
         
         // Проверяем, доступен ли товар для покупки
         const isAvailable = product.is_active;
-        const buttonClass = isAvailable ? 'btn-success' : 'btn-disabled';
-        const buttonText = isAvailable ? 'Купить' : 'Недоступно';
+        const canAfford = state.currentUserProfile.coins >= product.price;
+        const buttonClass = isAvailable && canAfford ? 'btn-success' : 'btn-disabled';
+        const buttonText = isAvailable ? (canAfford ? 'Купить' : 'Недостаточно монет') : 'Недоступно';
         
         productCard.innerHTML = `
             <div class="product-image">
@@ -64,11 +64,14 @@ function renderProducts(products) {
                 <h3 class="product-name">${product.name}</h3>
                 <p class="product-description">${product.description}</p>
                 <div class="product-price">${product.price} монет</div>
+                <div class="user-balance" style="margin-bottom: 10px; font-size: 0.9rem; color: var(--gray);">
+                    Ваш баланс: ${state.currentUserProfile.coins} монет
+                </div>
                 <button class="${buttonClass} buy-product-btn" 
                         data-product-id="${product.id}" 
                         data-product-name="${product.name}" 
                         data-product-price="${product.price}"
-                        ${isAvailable ? '' : 'disabled'}>
+                        ${(isAvailable && canAfford) ? '' : 'disabled'}>
                     <i class="fas fa-shopping-cart"></i> ${buttonText}
                 </button>
             </div>
@@ -121,7 +124,8 @@ async function purchaseProduct(productId, price) {
         });
 
         if (error) {
-            throw error;
+            console.error('RPC Error:', error);
+            throw new Error('Ошибка покупки товара: ' + error.message);
         }
 
         if (result && result.success) {
@@ -133,8 +137,11 @@ async function purchaseProduct(productId, price) {
             // Перезагружаем историю заказов
             await loadOrderHistory();
             
+            // Перезагружаем магазин для обновления кнопок (баланс изменился)
+            await loadShop();
+            
         } else {
-            throw new Error(result.message || 'Неизвестная ошибка при покупке');
+            throw new Error(result?.error || 'Неизвестная ошибка при покупке');
         }
 
     } catch (error) {
@@ -271,8 +278,14 @@ export async function loadAdminOrders() {
             return;
         }
 
-        // Проверяем, является ли пользователь админом
-        if (state.currentUser.id !== 'e22b418b-4abb-44fa-a9e0-2f92b1386a8b') {
+        // ИСПРАВЛЕНИЕ: Проверяем, является ли пользователь админом через таблицу admins
+        const { data: admin, error: adminError } = await state.supabase
+            .from('admins')
+            .select('user_id')
+            .eq('user_id', state.currentUser.id)
+            .single();
+
+        if (adminError || !admin) {
             console.log('User is not admin, hiding admin tab');
             if (dom.adminOrdersTab) {
                 dom.adminOrdersTab.style.display = 'none';
@@ -360,6 +373,16 @@ function renderAdminOrders(orders) {
                 </button>
                 <button class="btn-outline complete-order-btn" data-order-id="${order.id}">
                     <i class="fas fa-box"></i> Выполнен
+                </button>
+            </div>
+            ` : ''}
+            ${order.status === 'confirmed' ? `
+            <div class="admin-order-actions">
+                <button class="btn-success complete-order-btn" data-order-id="${order.id}">
+                    <i class="fas fa-box"></i> Отметить выполненным
+                </button>
+                <button class="btn-danger cancel-order-btn" data-order-id="${order.id}">
+                    <i class="fas fa-times"></i> Отменить
                 </button>
             </div>
             ` : ''}
