@@ -293,44 +293,39 @@ function getStatusInfo(status) {
 // Функции для админа
 export async function loadAdminOrders() {
     try {
-        console.log('Loading admin orders...');
+        console.log('🛠️ Loading admin orders...');
         
         if (!state.supabase || !state.currentUserProfile) {
-            console.error('Supabase or current user not initialized');
+            console.error('❌ Supabase or current user not initialized');
             return;
         }
 
-        // Проверяем, является ли пользователь админом через таблицу admins
-        // Если таблица admins не существует или пуста, используем fallback на основе username
-        let isAdmin = false;
-        
-        try {
-            const { data: admin, error: adminError } = await state.supabase
-                .from('admins')
-                .select('user_id')
-                .eq('user_id', state.currentUserProfile.id)
-                .single();
+        // Проверяем админ-статус ТОЛЬКО через таблицу admins
+        console.log('🛠️ Checking admins table for user:', state.currentUserProfile.id);
+        const { data: admin, error: adminError } = await state.supabase
+            .from('admins')
+            .select('user_id')
+            .eq('user_id', state.currentUserProfile.id)
+            .single();
 
-            if (!adminError && admin) {
-                isAdmin = true;
-            }
-        } catch (error) {
-            console.log('Table admins might not exist, checking by username...');
-            // Fallback: проверка по username (если пользователь "Администратор")
-            if (state.currentUserProfile && state.currentUserProfile.username === 'Администратор') {
-                isAdmin = true;
-            }
-        }
+        const isAdmin = !adminError && admin;
+
+        console.log('🛠️ Admin check result:', { isAdmin, adminError, admin });
 
         if (!isAdmin) {
-            console.log('User is not admin, hiding admin tab');
+            console.log('👤 User is not admin, hiding admin tab');
             if (dom.adminOrdersTab) {
                 dom.adminOrdersTab.style.display = 'none';
             }
             return;
         }
 
-        console.log('User is admin, loading orders...');
+        console.log('🔧 User is admin, loading orders...');
+
+        // Показываем вкладку админа
+        if (dom.adminOrdersTab) {
+            dom.adminOrdersTab.style.display = 'flex';
+        }
 
         const { data: orders, error } = await state.supabase
             .from('orders')
@@ -342,16 +337,15 @@ export async function loadAdminOrders() {
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('Ошибка загрузки заказов для админа:', error);
+            console.error('❌ Ошибка загрузки заказов для админа:', error);
             return;
         }
 
-        console.log('Admin orders loaded:', orders);
-
+        console.log('🛠️ Admin orders loaded:', orders);
         renderAdminOrders(orders);
 
     } catch (error) {
-        console.error('Ошибка загрузки заказов для админа:', error);
+        console.error('❌ Ошибка загрузки заказов для админа:', error);
     }
 }
 
@@ -466,6 +460,35 @@ async function updateOrderStatus(orderId, status) {
             if (adminNotes === null) return; // пользователь отменил
         }
 
+        // Получаем данные заказа перед обновлением
+        const { data: order, error: orderError } = await state.supabase
+            .from('orders')
+            .select('user_id, total_amount, status')
+            .eq('id', orderId)
+            .single();
+
+        if (orderError) {
+            throw orderError;
+        }
+
+        console.log(`🛠️ Updating order ${orderId} from ${order.status} to ${status}`);
+
+        // Если отменяем заказ - возвращаем деньги
+        if (status === 'cancelled' && order.status !== 'cancelled') {
+            console.log(`💰 Returning ${order.total_amount} coins to user ${order.user_id}`);
+            
+            const { error: refundError } = await state.supabase
+                .from('profiles')
+                .update({ coins: state.supabase.raw('coins + ?', order.total_amount) })
+                .eq('id', order.user_id);
+
+            if (refundError) {
+                console.error('❌ Refund error:', refundError);
+                throw refundError;
+            }
+        }
+
+        // Обновляем статус заказа
         const { error } = await state.supabase
             .from('orders')
             .update({ 
@@ -479,18 +502,23 @@ async function updateOrderStatus(orderId, status) {
             throw error;
         }
 
-        alert(`Статус заказа обновлен на: ${getStatusInfo(status).text}`);
+        alert(`✅ Статус заказа обновлен на: ${getStatusInfo(status).text}`);
         
         // Перезагружаем списки заказов
         await loadAdminOrders();
         
-        // Если пользователь смотрит свою историю заказов, обновляем и её
+        // Обновляем историю заказов пользователя если она открыта
         if (dom.shopOrderHistory && dom.shopOrderHistory.innerHTML !== '') {
             await loadOrderHistory();
         }
 
+        // Обновляем баланс если нужно
+        if (status === 'cancelled') {
+            await updateUserBalance();
+        }
+
     } catch (error) {
-        console.error('Ошибка обновления статуса заказа:', error);
-        alert('Ошибка: ' + error.message);
+        console.error('❌ Ошибка обновления статуса заказа:', error);
+        alert('❌ Ошибка: ' + error.message);
     }
 }
