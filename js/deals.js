@@ -237,8 +237,12 @@ export async function respondToDeal(choice) {
             throw new Error(result?.error || 'Неизвестная ошибка при обработке сделки');
         }
         
-        // Обновляем репутацию после сделки
-        await updateReputationAfterDeal(state.selectedDeal, choice);
+        // ОБНОВЛЯЕМ РЕПУТАЦИЮ И ЖДЕМ ЗАВЕРШЕНИЯ
+        const reputationUpdated = await updateReputationAfterDeal(state.selectedDeal, choice);
+        
+        if (!reputationUpdated) {
+            console.warn('⚠️ Репутация не была обновлена, но сделка завершена');
+        }
         
         await showDealResult(state.selectedDeal, choice, result);
         
@@ -251,7 +255,7 @@ export async function respondToDeal(choice) {
         cache.deals.timestamp = 0;
         loadDeals(true); // force refresh
         
-        // ОБНОВЛЯЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ВАЖНО!)
+        // ОБНОВЛЯЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ДЛЯ СИНХРОНИЗАЦИИ
         await updateUserProfile();
         
     } catch (error) {
@@ -260,10 +264,10 @@ export async function respondToDeal(choice) {
     }
 }
 
-// Новая функция для обновления репутации после сделки
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ: Обновление репутации после сделки
 async function updateReputationAfterDeal(deal, userChoice) {
     try {
-        if (!state.supabase) return;
+        if (!state.supabase) return false;
 
         const fromChoice = deal.from_choice;
         const toChoice = userChoice;
@@ -278,28 +282,34 @@ async function updateReputationAfterDeal(deal, userChoice) {
 
         // Логика изменения репутации
         if (fromChoice === 'cooperate' && toChoice === 'cooperate') {
-            // Оба сотрудничают
             fromReputationChange = 1;    // +1 за сотрудничество
             toReputationChange = 1;     // +1 за сотрудничество
             console.log('✅ Оба сотрудничают: +1 репутация каждому');
         } else if (fromChoice === 'cooperate' && toChoice === 'cheat') {
-            // Инициатор сотрудничает, responder жульничает
             fromReputationChange = 1;    // +1 за попытку сотрудничества
             toReputationChange = -1;    // -1 за жульничество
             console.log('🎭 Инициатор честный, responder обманул: +1 / -1 репутация');
         } else if (fromChoice === 'cheat' && toChoice === 'cooperate') {
-            // Инициатор жульничает, responder сотрудничает
             fromReputationChange = -1;   // -1 за жульничество
             toReputationChange = 1;     // +1 за попытку сотрудничества
             console.log('🎭 Инициатор обманул, responder честный: -1 / +1 репутация');
         } else {
-            // Оба жульничают
             fromReputationChange = -1;   // -1 за жульничество
             toReputationChange = -1;    // -1 за жульничество
             console.log('💥 Оба обманули: -1 репутация каждому');
         }
 
-        // Обновляем репутацию в базе данных
+        console.log('📊 Изменения репутации:', {
+            инициатор: fromReputationChange,
+            responder: toReputationChange
+        });
+
+        // Получаем правильные ID пользователей
+        const fromUserId = deal.from_user?.id || deal.from_user;
+        const toUserId = state.currentUserProfile.id;
+
+        console.log('👥 ID пользователей:', { fromUserId, toUserId });
+
         const updates = [];
 
         // Обновление для инициатора сделки
@@ -310,7 +320,7 @@ async function updateReputationAfterDeal(deal, userChoice) {
                     .update({
                         reputation: state.supabase.raw(`GREATEST(0, reputation + ${fromReputationChange})`)
                     })
-                    .eq('id', deal.from_user.id)
+                    .eq('id', fromUserId)
             );
         }
 
@@ -322,31 +332,45 @@ async function updateReputationAfterDeal(deal, userChoice) {
                     .update({
                         reputation: state.supabase.raw(`GREATEST(0, reputation + ${toReputationChange})`)
                     })
-                    .eq('id', state.currentUserProfile.id)
+                    .eq('id', toUserId)
             );
         }
 
-        // Выполняем все обновления
+        // Выполняем все обновления и возвращаем Promise
         if (updates.length > 0) {
             const results = await Promise.all(updates);
             
             // Проверяем ошибки
+            let hasError = false;
             for (const result of results) {
                 if (result.error) {
-                    console.error('Ошибка обновления репутации:', result.error);
+                    console.error('❌ Ошибка обновления репутации:', result.error);
+                    hasError = true;
                 }
             }
+            
+            if (!hasError) {
+                console.log('✅ Репутация успешно обновлена в базе данных');
+                
+                // Немедленно обновляем интерфейс текущего пользователя
+                if (toReputationChange !== 0 && state.currentUserProfile) {
+                    const newReputation = Math.max(0, state.currentUserProfile.reputation + toReputationChange);
+                    state.currentUserProfile.reputation = newReputation;
+                    if (dom.reputationValue) {
+                        dom.reputationValue.textContent = newReputation;
+                    }
+                    console.log('🔄 Обновлена репутация в интерфейсе:', newReputation);
+                }
+            }
+            
+            return !hasError;
         }
-
-        console.log('⭐ Обновление репутации завершено:', {
-            инициатор: deal.from_user.id,
-            изменение_инициатора: fromReputationChange,
-            responder: state.currentUserProfile.id,
-            изменение_responder: toReputationChange
-        });
+        
+        return true;
 
     } catch (error) {
-        console.error('❌ Ошибка при обновлении репутации:', error);
+        console.error('❌ Критическая ошибка при обновлении репутации:', error);
+        return false;
     }
 }
 
@@ -851,7 +875,3 @@ async function updateUserProfile() {
         console.error('Ошибка при обновлении профиля:', error);
     }
 }
-
-// Добавляем вызов updateUserProfile при загрузке приложения
-// Это можно сделать в auth.js после успешной аутентификации
-// или в ui.js при показе профиля
