@@ -1510,3 +1510,18 @@ button:active {
         color: #ffd700;
     }
 }
+
+/* style.css - ДОБАВЛЯЕМ ДОПОЛНИТЕЛЬНЫЕ СТИЛИ */
+
+.boost-product .product-image img {
+    max-height: 180px;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.boost-product .product-image {
+    background: linear-gradient(135deg, #fff9e6, #fff3cd);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+}
