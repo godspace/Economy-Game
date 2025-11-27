@@ -1,3 +1,4 @@
+// auth.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { state, dom, SUPABASE_CONFIG } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError } from './ui.js';
 
@@ -150,6 +151,15 @@ export async function handleAuth(e) {
         // ПРОВЕРЯЕМ СТАТУС АДМИНИСТРАТОРА
         await checkAdminStatus();
         
+        // ЗАГРУЖАЕМ СТАТУС БУСТА ПОСЛЕ АУТЕНТИФИКАЦИИ
+        try {
+            const { updateBoostStatus } = await import('./shop.js');
+            await updateBoostStatus();
+            console.log('Boost status loaded after authentication');
+        } catch (error) {
+            console.error('Error loading boost status after authentication:', error);
+        }
+        
         // Обновляем UI
         if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${state.currentUserProfile.username}!`;
         if (dom.userAvatar) dom.userAvatar.textContent = state.currentUserProfile.username.charAt(0).toUpperCase();
@@ -182,6 +192,19 @@ export async function handleLogout() {
         state.currentUserProfile = null;
         state.isAuthenticated = false;
         state.isAdmin = false; // СБРАСЫВАЕМ СТАТУС АДМИНА
+        state.hasActiveUniquePlayersBoost = false; // СБРАСЫВАЕМ СТАТУС БУСТА
+        
+        // Убираем индикатор буста из интерфейса
+        const boostIndicator = document.getElementById('boostIndicator');
+        if (boostIndicator) {
+            boostIndicator.style.display = 'none';
+        }
+        
+        // Убираем индикатор лимитов
+        const limitIndicator = document.getElementById('limitIndicator');
+        if (limitIndicator) {
+            limitIndicator.remove();
+        }
         
         // Показываем экран аутентификации
         showAuthSection();
