@@ -204,7 +204,21 @@ export async function showResponseModal(dealId) {
                     <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету, но вы теряете 1 очко репутации</p>
                     <p style="margin-top: 10px; font-style: italic;">Репутация влияет на доверие других игроков к вам!</p>
                 </div>
+                <div class="reject-section" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
+                    <button class="btn-warning reject-deal-btn" data-deal-id="${deal.id}" style="width: 100%;">
+                        <i class="fas fa-times"></i> Отклонить сделку
+                    </button>
+                    <p style="font-size: 0.9rem; color: var(--gray); margin-top: 8px; text-align: center;">
+                        При отклонении инициатор получит свою резервную монету обратно
+                    </p>
+                </div>
             `;
+            
+            // Добавляем обработчик для кнопки отклонения
+            document.querySelector('.reject-deal-btn').addEventListener('click', function() {
+                const dealId = this.dataset.dealId;
+                rejectDeal(dealId);
+            });
         }
         
         if (dom.responseModal) {
@@ -212,6 +226,51 @@ export async function showResponseModal(dealId) {
         }
     } catch (error) {
         console.error('Ошибка показа модального окна ответа:', error);
+    }
+}
+
+// Функция отклонения сделки
+export async function rejectDeal(dealId) {
+    try {
+        if (!state.supabase || !state.currentUserProfile) {
+            console.error('Supabase or current user not initialized');
+            return false;
+        }
+
+        const confirmed = confirm('Вы уверены, что хотите отклонить сделку? Инициатор получит свою резервную монету обратно.');
+        if (!confirmed) return false;
+
+        const { data: result, error } = await state.supabase.rpc('reject_deal', {
+            p_deal_id: dealId
+        });
+
+        if (error) {
+            console.error('RPC Error:', error);
+            throw new Error('Ошибка отклонения сделки: ' + error.message);
+        }
+
+        if (!result || !result.success) {
+            throw new Error(result?.error || 'Неизвестная ошибка при отклонении сделки');
+        }
+
+        alert('Сделка отклонена! Резервная монета возвращена инициатору.');
+        
+        // Закрываем модальное окно если оно открыто
+        if (dom.responseModal) {
+            dom.responseModal.classList.remove('active');
+        }
+        
+        // Обновляем список сделок
+        cache.deals.data = null;
+        cache.deals.timestamp = 0;
+        loadDeals(true);
+        
+        return true;
+
+    } catch (error) {
+        console.error('Ошибка отклонения сделки:', error);
+        alert('Ошибка: ' + error.message);
+        return false;
     }
 }
 
@@ -490,6 +549,9 @@ function renderDealsList(deals, container, type) {
                         <button class="btn-success respond-deal" data-deal-id="${deal.id}">
                             <i class="fas fa-reply"></i> Ответить
                         </button>
+                        <button class="btn-warning reject-deal-list" data-deal-id="${deal.id}" style="margin-top: 5px;">
+                            <i class="fas fa-times"></i> Отклонить
+                        </button>
                     </div>
                 `;
             } else {
@@ -512,6 +574,14 @@ function renderDealsList(deals, container, type) {
             btn.addEventListener('click', function() {
                 const dealId = this.dataset.dealId;
                 showResponseModal(dealId);
+            });
+        });
+        
+        // Добавляем обработчики для кнопок отклонения в списке
+        document.querySelectorAll('.reject-deal-list').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const dealId = this.dataset.dealId;
+                rejectDeal(dealId);
             });
         });
     }
