@@ -237,12 +237,7 @@ export async function respondToDeal(choice) {
             throw new Error(result?.error || 'Неизвестная ошибка при обработке сделки');
         }
         
-        // ОБНОВЛЯЕМ РЕПУТАЦИЮ И ЖДЕМ ЗАВЕРШЕНИЯ
-        const reputationUpdated = await updateReputationAfterDeal(state.selectedDeal, choice);
-        
-        if (!reputationUpdated) {
-            console.warn('⚠️ Репутация не была обновлена, но сделка завершена');
-        }
+        console.log('✅ Сделка обработана, результат:', result);
         
         await showDealResult(state.selectedDeal, choice, result);
         
@@ -255,122 +250,12 @@ export async function respondToDeal(choice) {
         cache.deals.timestamp = 0;
         loadDeals(true); // force refresh
         
-        // ОБНОВЛЯЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ДЛЯ СИНХРОНИЗАЦИИ
+        // ОБНОВЛЯЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ВАЖНО!)
         await updateUserProfile();
         
     } catch (error) {
         console.error('Ошибка ответа на сделку:', error);
         alert('Ошибка: ' + error.message);
-    }
-}
-
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ: Обновление репутации после сделки
-async function updateReputationAfterDeal(deal, userChoice) {
-    try {
-        if (!state.supabase) return false;
-
-        const fromChoice = deal.from_choice;
-        const toChoice = userChoice;
-
-        let fromReputationChange = 0;
-        let toReputationChange = 0;
-
-        console.log('🎲 Обработка репутации сделки:', {
-            fromChoice,
-            toChoice
-        });
-
-        // Логика изменения репутации
-        if (fromChoice === 'cooperate' && toChoice === 'cooperate') {
-            fromReputationChange = 1;    // +1 за сотрудничество
-            toReputationChange = 1;     // +1 за сотрудничество
-            console.log('✅ Оба сотрудничают: +1 репутация каждому');
-        } else if (fromChoice === 'cooperate' && toChoice === 'cheat') {
-            fromReputationChange = 1;    // +1 за попытку сотрудничества
-            toReputationChange = -1;    // -1 за жульничество
-            console.log('🎭 Инициатор честный, responder обманул: +1 / -1 репутация');
-        } else if (fromChoice === 'cheat' && toChoice === 'cooperate') {
-            fromReputationChange = -1;   // -1 за жульничество
-            toReputationChange = 1;     // +1 за попытку сотрудничества
-            console.log('🎭 Инициатор обманул, responder честный: -1 / +1 репутация');
-        } else {
-            fromReputationChange = -1;   // -1 за жульничество
-            toReputationChange = -1;    // -1 за жульничество
-            console.log('💥 Оба обманули: -1 репутация каждому');
-        }
-
-        console.log('📊 Изменения репутации:', {
-            инициатор: fromReputationChange,
-            responder: toReputationChange
-        });
-
-        // Получаем правильные ID пользователей
-        const fromUserId = deal.from_user?.id || deal.from_user;
-        const toUserId = state.currentUserProfile.id;
-
-        console.log('👥 ID пользователей:', { fromUserId, toUserId });
-
-        const updates = [];
-
-        // Обновление для инициатора сделки
-        if (fromReputationChange !== 0) {
-            updates.push(
-                state.supabase
-                    .from('profiles')
-                    .update({
-                        reputation: state.supabase.raw(`GREATEST(0, reputation + ${fromReputationChange})`)
-                    })
-                    .eq('id', fromUserId)
-            );
-        }
-
-        // Обновление для responder'а (текущий пользователь)
-        if (toReputationChange !== 0) {
-            updates.push(
-                state.supabase
-                    .from('profiles')
-                    .update({
-                        reputation: state.supabase.raw(`GREATEST(0, reputation + ${toReputationChange})`)
-                    })
-                    .eq('id', toUserId)
-            );
-        }
-
-        // Выполняем все обновления и возвращаем Promise
-        if (updates.length > 0) {
-            const results = await Promise.all(updates);
-            
-            // Проверяем ошибки
-            let hasError = false;
-            for (const result of results) {
-                if (result.error) {
-                    console.error('❌ Ошибка обновления репутации:', result.error);
-                    hasError = true;
-                }
-            }
-            
-            if (!hasError) {
-                console.log('✅ Репутация успешно обновлена в базе данных');
-                
-                // Немедленно обновляем интерфейс текущего пользователя
-                if (toReputationChange !== 0 && state.currentUserProfile) {
-                    const newReputation = Math.max(0, state.currentUserProfile.reputation + toReputationChange);
-                    state.currentUserProfile.reputation = newReputation;
-                    if (dom.reputationValue) {
-                        dom.reputationValue.textContent = newReputation;
-                    }
-                    console.log('🔄 Обновлена репутация в интерфейсе:', newReputation);
-                }
-            }
-            
-            return !hasError;
-        }
-        
-        return true;
-
-    } catch (error) {
-        console.error('❌ Критическая ошибка при обновлении репутации:', error);
-        return false;
     }
 }
 
@@ -385,26 +270,9 @@ async function showDealResult(deal, userChoice, result) {
         const toCoinsChange = result.to_coins_change || 0;
         const reservationReturned = result.reservation_returned || false;
         
-        // Определяем изменения репутации для отображения
-        const fromChoice = deal.from_choice;
-        const toChoice = userChoice;
-        
-        let fromRepChange = 0;
-        let toRepChange = 0;
-        
-        if (fromChoice === 'cooperate' && toChoice === 'cooperate') {
-            fromRepChange = 1;
-            toRepChange = 1;
-        } else if (fromChoice === 'cooperate' && toChoice === 'cheat') {
-            fromRepChange = 1;
-            toRepChange = -1;
-        } else if (fromChoice === 'cheat' && toChoice === 'cooperate') {
-            fromRepChange = -1;
-            toRepChange = 1;
-        } else {
-            fromRepChange = -1;
-            toRepChange = -1;
-        }
+        // Используем изменения репутации из RPC результата
+        const fromRepChange = result.from_reputation_change || 0;
+        const toRepChange = result.to_reputation_change || 0;
         
         // Добавляем информацию о возврате резервной монеты и изменении репутации
         const reservationHtml = reservationReturned ? 
