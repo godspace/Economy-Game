@@ -1,3 +1,4 @@
+// users.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
 export async function loadUserProfile(userId) {
@@ -82,6 +83,10 @@ export async function loadUsers(forceRefresh = false) {
         markUpdated('users');
         
         renderUsers(users);
+        
+        // После загрузки пользователей показываем информацию о лимитах
+        await renderLimitInfo();
+        
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
     }
@@ -167,6 +172,126 @@ function renderUsers(users) {
     });
 }
 
+// Функция для отображения информации о лимитах уникальных игроков
+async function renderLimitInfo() {
+    try {
+        if (!state.supabase || !state.currentUserProfile) return;
+
+        // Проверяем текущие лимиты
+        const limitCheck = await checkUniquePlayersLimit(null); // null - общая проверка
+        
+        // Создаем или обновляем индикатор лимитов
+        let limitIndicator = document.getElementById('limitIndicator');
+        
+        if (!limitIndicator) {
+            limitIndicator = document.createElement('div');
+            limitIndicator.id = 'limitIndicator';
+            limitIndicator.className = 'limit-info';
+            
+            // Вставляем перед списком пользователей
+            const usersList = document.getElementById('usersList');
+            if (usersList && usersList.parentNode) {
+                usersList.parentNode.insertBefore(limitIndicator, usersList);
+            }
+        }
+
+        const totalLimit = limitCheck.baseLimit + limitCheck.boostLimit;
+        const usedPercentage = totalLimit > 0 ? (limitCheck.usedSlots / totalLimit) * 100 : 0;
+        const progressColor = usedPercentage >= 100 ? 'var(--danger)' : 
+                            usedPercentage >= 80 ? 'var(--warning)' : 'var(--success)';
+        
+        limitIndicator.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <i class="fas fa-users" style="color: var(--primary);"></i>
+                <strong>Лимит уникальных игроков сегодня:</strong>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <span style="font-weight: bold;">${limitCheck.usedSlots}/${totalLimit} игроков</span>
+                    <div class="limit-progress">
+                        <div class="limit-progress-bar" style="width: ${usedPercentage}%; background: ${progressColor};"></div>
+                    </div>
+                    ${limitCheck.hasActiveBoost ? 
+                        '<span style="color: var(--success); display: flex; align-items: center; gap: 5px;"><i class="fas fa-rocket"></i> Буст активен!</span>' : 
+                        ''
+                    }
+                </div>
+                ${limitCheck.availableSlots <= 2 ? `
+                <div style="text-align: right;">
+                    <small style="color: ${limitCheck.availableSlots === 0 ? 'var(--danger)' : 'var(--warning)'}; display: block; margin-bottom: 5px;">
+                        ${limitCheck.availableSlots === 0 ? '❌ Лимит исчерпан' : `⚠️ Осталось ${limitCheck.availableSlots} слот${limitCheck.availableSlots === 1 ? '' : 'а'}`}
+                    </small>
+                    ${!limitCheck.hasActiveBoost ? `
+                    <button class="btn-outline btn-small" onclick="openShopTab()">
+                        <i class="fas fa-store"></i> Купить буст
+                    </button>
+                    ` : ''}
+                </div>
+                ` : ''}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Ошибка отображения информации о лимитах:', error);
+    }
+}
+
+// Функция для проверки лимитов уникальных игроков
+async function checkUniquePlayersLimit(targetUserId) {
+    try {
+        if (!state.supabase || !state.currentUserProfile) {
+            return { canMakeDeal: false, error: 'Не инициализирован' };
+        }
+
+        const { data: result, error } = await state.supabase.rpc('check_daily_unique_players_limit', {
+            p_user_id: state.currentUserProfile.id
+        });
+
+        if (error) {
+            console.error('Ошибка проверки лимита:', error);
+            return { canMakeDeal: false, error: 'Ошибка проверки лимита' };
+        }
+
+        return {
+            canMakeDeal: result.available_slots > 0,
+            baseLimit: result.base_limit,
+            boostLimit: result.boost_limit,
+            usedSlots: result.used_slots,
+            availableSlots: result.available_slots,
+            hasActiveBoost: result.has_active_boost
+        };
+
+    } catch (error) {
+        console.error('Ошибка при проверке лимита:', error);
+        return { canMakeDeal: false, error: 'Ошибка системы' };
+    }
+}
+
+// Функция для открытия вкладки магазина
+function openShopTab() {
+    const shopTab = document.querySelector('.tab[data-tab="shop"]');
+    if (shopTab) {
+        shopTab.click();
+        
+        // Прокручиваем к бусту в магазине
+        setTimeout(() => {
+            const boostProduct = document.querySelector('[data-product-type="unique_players_boost"]');
+            if (boostProduct) {
+                boostProduct.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Подсвечиваем буст
+                boostProduct.style.animation = 'pulse 2s 3';
+                setTimeout(() => {
+                    boostProduct.style.animation = '';
+                }, 6000);
+            }
+        }, 500);
+    }
+}
+
+// Добавляем функцию в глобальную область видимости
+window.openShopTab = openShopTab;
+
 // Debounce поиска
 let searchTimeout = null;
 
@@ -189,5 +314,3 @@ export function setupSearchDebounce() {
         });
     }
 }
-
-// Удаляем неиспользуемую функцию createUserProfile, так как она теперь в auth.js
