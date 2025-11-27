@@ -143,7 +143,7 @@ export async function proposeDeal(choice) {
         }
         
         // Обновляем баланс пользователя (так как 1 монета была зарезервирована)
-        await updateUserBalance();
+        await updateUserProfile();
         
         // Инвалидируем кэш сделок
         cache.deals.data = null;
@@ -200,9 +200,9 @@ export async function showResponseModal(dealId) {
                 </div>
                 <div class="deal-info">
                     <h3 style="margin-bottom: 10px;">Выберите вашу стратегию:</h3>
-                    <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
-                    <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
-                    <p style="margin-top: 10px; font-style: italic;">Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
+                    <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты и +1 к репутации</p>
+                    <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету, но вы теряете 1 очко репутации</p>
+                    <p style="margin-top: 10px; font-style: italic;">Репутация влияет на доверие других игроков к вам!</p>
                 </div>
             `;
         }
@@ -237,6 +237,9 @@ export async function respondToDeal(choice) {
             throw new Error(result?.error || 'Неизвестная ошибка при обработке сделки');
         }
         
+        // Обновляем репутацию после сделки
+        await updateReputationAfterDeal(state.selectedDeal, choice);
+        
         await showDealResult(state.selectedDeal, choice, result);
         
         if (dom.responseModal) {
@@ -249,13 +252,103 @@ export async function respondToDeal(choice) {
         loadDeals(true); // force refresh
         
         if (state.currentUserProfile) {
-            // Обновляем баланс пользователя
-            await updateUserBalance();
+            // Обновляем профиль пользователя (монеты и репутацию)
+            await updateUserProfile();
         }
         
     } catch (error) {
         console.error('Ошибка ответа на сделку:', error);
         alert('Ошибка: ' + error.message);
+    }
+}
+
+// Новая функция для обновления репутации после сделки
+async function updateReputationAfterDeal(deal, userChoice) {
+    try {
+        if (!state.supabase) return;
+
+        const fromChoice = deal.from_choice;
+        const toChoice = userChoice;
+
+        let fromReputationChange = 0;
+        let toReputationChange = 0;
+
+        console.log('🎲 Обработка репутации сделки:', {
+            fromChoice,
+            toChoice
+        });
+
+        // Логика изменения репутации
+        if (fromChoice === 'cooperate' && toChoice === 'cooperate') {
+            // Оба сотрудничают
+            fromReputationChange = 1;    // +1 за сотрудничество
+            toReputationChange = 1;     // +1 за сотрудничество
+            console.log('✅ Оба сотрудничают: +1 репутация каждому');
+        } else if (fromChoice === 'cooperate' && toChoice === 'cheat') {
+            // Инициатор сотрудничает, responder жульничает
+            fromReputationChange = 1;    // +1 за попытку сотрудничества
+            toReputationChange = -1;    // -1 за жульничество
+            console.log('🎭 Инициатор честный, responder обманул: +1 / -1 репутация');
+        } else if (fromChoice === 'cheat' && toChoice === 'cooperate') {
+            // Инициатор жульничает, responder сотрудничает
+            fromReputationChange = -1;   // -1 за жульничество
+            toReputationChange = 1;     // +1 за попытку сотрудничества
+            console.log('🎭 Инициатор обманул, responder честный: -1 / +1 репутация');
+        } else {
+            // Оба жульничают
+            fromReputationChange = -1;   // -1 за жульничество
+            toReputationChange = -1;    // -1 за жульничество
+            console.log('💥 Оба обманули: -1 репутация каждому');
+        }
+
+        // Обновляем репутацию в базе данных
+        const updates = [];
+
+        // Обновление для инициатора сделки
+        if (fromReputationChange !== 0) {
+            updates.push(
+                state.supabase
+                    .from('profiles')
+                    .update({
+                        reputation: state.supabase.raw(`GREATEST(0, reputation + ${fromReputationChange})`)
+                    })
+                    .eq('id', deal.from_user.id)
+            );
+        }
+
+        // Обновление для responder'а (текущий пользователь)
+        if (toReputationChange !== 0) {
+            updates.push(
+                state.supabase
+                    .from('profiles')
+                    .update({
+                        reputation: state.supabase.raw(`GREATEST(0, reputation + ${toReputationChange})`)
+                    })
+                    .eq('id', state.currentUserProfile.id)
+            );
+        }
+
+        // Выполняем все обновления
+        if (updates.length > 0) {
+            const results = await Promise.all(updates);
+            
+            // Проверяем ошибки
+            for (const result of results) {
+                if (result.error) {
+                    console.error('Ошибка обновления репутации:', result.error);
+                }
+            }
+        }
+
+        console.log('⭐ Обновление репутации завершено:', {
+            инициатор: deal.from_user.id,
+            изменение_инициатора: fromReputationChange,
+            responder: state.currentUserProfile.id,
+            изменение_responder: toReputationChange
+        });
+
+    } catch (error) {
+        console.error('❌ Ошибка при обновлении репутации:', error);
     }
 }
 
@@ -270,9 +363,38 @@ async function showDealResult(deal, userChoice, result) {
         const toCoinsChange = result.to_coins_change || 0;
         const reservationReturned = result.reservation_returned || false;
         
-        // Добавляем информацию о возврате резервной монеты
+        // Определяем изменения репутации для отображения
+        const fromChoice = deal.from_choice;
+        const toChoice = userChoice;
+        
+        let fromRepChange = 0;
+        let toRepChange = 0;
+        
+        if (fromChoice === 'cooperate' && toChoice === 'cooperate') {
+            fromRepChange = 1;
+            toRepChange = 1;
+        } else if (fromChoice === 'cooperate' && toChoice === 'cheat') {
+            fromRepChange = 1;
+            toRepChange = -1;
+        } else if (fromChoice === 'cheat' && toChoice === 'cooperate') {
+            fromRepChange = -1;
+            toRepChange = 1;
+        } else {
+            fromRepChange = -1;
+            toRepChange = -1;
+        }
+        
+        // Добавляем информацию о возврате резервной монеты и изменении репутации
         const reservationHtml = reservationReturned ? 
             `<p><i class="fas fa-shield-alt" style="color: var(--primary);"></i> <strong>Резервная монета возвращена инициатору сделки</strong></p>` : '';
+        
+        const reputationHtml = `
+            <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                <strong>Изменение репутации:</strong><br>
+                ${deal.from_user.username}: ${fromRepChange > 0 ? '+' : ''}${fromRepChange} ⭐<br>
+                ${state.currentUserProfile.username}: ${toRepChange > 0 ? '+' : ''}${toRepChange} ⭐
+            </div>
+        `;
         
         if (deal.from_choice === 'cooperate' && userChoice === 'cooperate') {
             resultHtml = `
@@ -283,9 +405,10 @@ async function showDealResult(deal, userChoice, result) {
                     <p>Оба игрока выбрали "Сотрудничать"!</p>
                     <p>Вы получили: +${toCoinsChange} монет</p>
                     <p>Другой игрок получил: +${fromCoinsChange} монет</p>
+                    ${reputationHtml}
                     ${reservationHtml}
                 </div>
-                <p>Отличный результат взаимовыгодного сотрудничества!</p>
+                <p>Отличный результат взаимовыгодного сотрудничества! Оба получают +1 к репутации.</p>
             `;
         } else if (deal.from_choice === 'cooperate' && userChoice === 'cheat') {
             resultHtml = `
@@ -296,9 +419,10 @@ async function showDealResult(deal, userChoice, result) {
                     <p>Вы выбрали "Жульничать", другой игрок выбрал "Сотрудничать"</p>
                     <p>Вы получили: +${toCoinsChange} монет</p>
                     <p>Другой игрок потерял: ${fromCoinsChange} монет</p>
+                    ${reputationHtml}
                     ${reservationHtml}
                 </div>
-                <p>Вы получили преимущество, но ваша репутация может пострадать.</p>
+                <p>Вы получили преимущество в монетах, но потеряли 1 очко репутации. Другой игрок сохранил свою репутацию.</p>
             `;
         } else if (deal.from_choice === 'cheat' && userChoice === 'cooperate') {
             resultHtml = `
@@ -309,9 +433,10 @@ async function showDealResult(deal, userChoice, result) {
                     <p>Вы выбрали "Сотрудничать", другой игрок выбрал "Жульничать"</p>
                     <p>Вы потеряли: ${toCoinsChange} монет</p>
                     <p>Другой игрок получил: +${fromCoinsChange} монет</p>
+                    ${reputationHtml}
                     ${reservationHtml}
                 </div>
-                <p>К сожалению, другой игрок воспользовался вашим доверием.</p>
+                <p>К сожалению, другой игрок воспользовался вашим доверием. Вы сохранили свою репутацию (+1), а обманщик потерял 1 очко репутации.</p>
             `;
         } else if (deal.from_choice === 'cheat' && userChoice === 'cheat') {
             resultHtml = `
@@ -322,9 +447,10 @@ async function showDealResult(deal, userChoice, result) {
                     <p>Оба игрока выбрали "Жульничать"!</p>
                     <p>Вы потеряли: ${Math.abs(toCoinsChange)} монет</p>
                     <p>Другой игрок потерял: ${Math.abs(fromCoinsChange)} монет</p>
+                    ${reputationHtml}
                     ${reservationHtml}
                 </div>
-                <p>Никто не выиграл - взаимное недоверие привело к потерям для обоих.</p>
+                <p>Никто не выиграл - взаимное недоверие привело к потерям для обоих. Оба теряют по 1 очку репутации.</p>
             `;
         }
         
@@ -468,7 +594,7 @@ function renderDealsList(deals, container, type) {
                     <div>
                         <p><strong>От:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
                         <p><strong>Монеты:</strong> ${deal.from_user.coins}</p>
-                        <p><strong>Репутация:</strong> ${deal.from_user.reputation}</p>
+                        <p><strong>Репутация:</strong> ${deal.from_user.reputation} ⭐</p>
                     </div>
                     <div class="deal-actions">
                         <button class="btn-success respond-deal" data-deal-id="${deal.id}">
@@ -522,6 +648,7 @@ function renderCompletedDeals(deals, container, type) {
             dealItem.className = 'deal-item';
             
             let coinsChange = 0;
+            let reputationChange = 0;
             let resultClass = '';
             let resultText = '';
             
@@ -529,20 +656,24 @@ function renderCompletedDeals(deals, container, type) {
                 // Для входящих: to_choice - наш выбор
                 if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
                     coinsChange = 2;
+                    reputationChange = 1;
                     resultClass = 'profit-positive';
-                    resultText = `+${coinsChange} монет`;
+                    resultText = `+${coinsChange} монет, +${reputationChange} репутации`;
                 } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
                     coinsChange = 3;
+                    reputationChange = -1;
                     resultClass = 'profit-positive';
-                    resultText = `+${coinsChange} монет`;
+                    resultText = `+${coinsChange} монет, ${reputationChange} репутации`;
                 } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
                     coinsChange = -1;
+                    reputationChange = 1;
                     resultClass = 'profit-negative';
-                    resultText = `${coinsChange} монет`;
+                    resultText = `${coinsChange} монет, +${reputationChange} репутации`;
                 } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
                     coinsChange = -1;
+                    reputationChange = -1;
                     resultClass = 'profit-negative';
-                    resultText = `${coinsChange} монет`;
+                    resultText = `${coinsChange} монет, ${reputationChange} репутации`;
                 }
                 
                 const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
@@ -559,20 +690,24 @@ function renderCompletedDeals(deals, container, type) {
                 // Для исходящих: from_choice - наш выбор
                 if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
                     coinsChange = 2;
+                    reputationChange = 1;
                     resultClass = 'profit-positive';
-                    resultText = `+${coinsChange} монет`;
+                    resultText = `+${coinsChange} монет, +${reputationChange} репутации`;
                 } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
                     coinsChange = -1;
+                    reputationChange = 1;
                     resultClass = 'profit-negative';
-                    resultText = `${coinsChange} монет`;
+                    resultText = `${coinsChange} монет, +${reputationChange} репутации`;
                 } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
                     coinsChange = 3;
+                    reputationChange = -1;
                     resultClass = 'profit-positive';
-                    resultText = `+${coinsChange} монет`;
+                    resultText = `+${coinsChange} монет, ${reputationChange} репутации`;
                 } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
                     coinsChange = -1;
+                    reputationChange = -1;
                     resultClass = 'profit-negative';
-                    resultText = `${coinsChange} монет`;
+                    resultText = `${coinsChange} монет, ${reputationChange} репутации`;
                 }
                 
                 const resultHtml = `<div class="deal-result ${resultClass}">Результат: ${resultText}</div>`;
@@ -663,7 +798,7 @@ function renderRanking(users) {
                 <td>${user.username} ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '(Вы)' : ''}</td>
                 <td>${user.class}</td>
                 <td>${user.coins}</td>
-                <td>${user.reputation}</td>
+                <td>${user.reputation} ⭐</td>
             `;
             
             fragment.appendChild(row);
@@ -673,8 +808,8 @@ function renderRanking(users) {
     }
 }
 
-// Функция для обновления баланса пользователя
-async function updateUserBalance() {
+// Функция для обновления профиля пользователя (монеты и репутация)
+async function updateUserProfile() {
     try {
         if (!state.supabase || !state.currentUserProfile) {
             return;
@@ -682,23 +817,29 @@ async function updateUserBalance() {
         
         const { data: profile, error } = await state.supabase
             .from('profiles')
-            .select('coins')
+            .select('coins, reputation')
             .eq('id', state.currentUserProfile.id)
             .single();
         
         if (error) {
-            console.error('Ошибка обновления баланса:', error);
+            console.error('Ошибка обновления профиля:', error);
             return;
         }
         
-        if (profile && dom.coinsValue) {
-            dom.coinsValue.textContent = profile.coins;
-            // Обновляем также в currentUserProfile
-            if (state.currentUserProfile) {
-                state.currentUserProfile.coins = profile.coins;
+        if (profile) {
+            // Обновляем состояние
+            state.currentUserProfile.coins = profile.coins;
+            state.currentUserProfile.reputation = profile.reputation;
+            
+            // Обновляем DOM
+            if (dom.coinsValue) {
+                dom.coinsValue.textContent = profile.coins;
+            }
+            if (dom.reputationValue) {
+                dom.reputationValue.textContent = profile.reputation;
             }
         }
     } catch (error) {
-        console.error('Ошибка при обновлении баланса:', error);
+        console.error('Ошибка при обновлении профиля:', error);
     }
 }
