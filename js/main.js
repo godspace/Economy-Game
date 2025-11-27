@@ -1,3 +1,4 @@
+// main.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
@@ -78,6 +79,17 @@ async function initializeApplication() {
         // Проверка авторизации
         await checkAuth();
         
+        // Если пользователь авторизован - загружаем статус буста
+        if (state.isAuthenticated) {
+            try {
+                const { updateBoostStatus } = await import('./shop.js');
+                await updateBoostStatus();
+                console.log('Boost status loaded successfully');
+            } catch (error) {
+                console.error('Error loading boost status:', error);
+            }
+        }
+        
         // Скрываем сообщение о загрузке
         hideLoading();
         
@@ -95,28 +107,30 @@ export async function loadTabModule(tabName) {
         switch(tabName) {
             case 'users':
                 const { loadUsers } = await import('./users.js');
-                loadUsers();
+                await loadUsers();
                 break;
             case 'deals':
                 const { loadDeals } = await import('./deals.js');
-                loadDeals();
+                await loadDeals();
                 break;
             case 'ranking':
                 const { loadRanking } = await import('./deals.js');
-                loadRanking();
+                await loadRanking();
                 break;
             case 'investments':
                 const { loadInvestments } = await import('./investments.js');
-                loadInvestments();
+                await loadInvestments();
                 break;
             case 'shop':
-                const { loadShop } = await import('./shop.js');
-                loadShop();
+                const { loadShop, updateBoostStatus } = await import('./shop.js');
+                await loadShop();
+                // Обновляем статус буста при открытии магазина
+                await updateBoostStatus();
                 break;
             case 'adminOrders':
                 console.log('Loading admin orders...');
                 const { loadAdminOrders } = await import('./shop.js');
-                loadAdminOrders();
+                await loadAdminOrders();
                 break;
             default:
                 console.warn('Unknown tab:', tabName);
