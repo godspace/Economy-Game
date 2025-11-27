@@ -1248,3 +1248,93 @@ button:active {
         font-size: 1.2rem;
     }
 }
+
+/* Стили для функционала отклонения сделок */
+.reject-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.reject-deal-btn {
+    background-color: var(--warning);
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.reject-deal-btn:hover {
+    background-color: #e68900;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.reject-deal-btn:active {
+    transform: translateY(0);
+}
+
+.reject-deal-list {
+    background-color: var(--warning);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    font-weight: 600;
+}
+
+.reject-deal-list:hover {
+    background-color: #e68900;
+    transform: translateY(-1px);
+}
+
+.reject-deal-list:active {
+    transform: translateY(0);
+}
+
+/* Адаптивность для кнопок отклонения */
+@media (max-width: 768px) {
+    .reject-deal-btn {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
+    
+    .reject-deal-list {
+        padding: 6px 10px;
+        font-size: 0.85rem;
+    }
+    
+    .deal-actions {
+        width: 100%;
+    }
+    
+    .deal-actions button {
+        width: 100%;
+    }
+}
+
+/* Дополнительные стили для модального окна с кнопкой отклонения */
+.modal-content .reject-section p {
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-top: 8px;
+    text-align: center;
+    line-height: 1.4;
+}
