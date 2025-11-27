@@ -1,3 +1,4 @@
+// deals.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
 // Функция для проверки лимита уникальных игроков
@@ -132,16 +133,20 @@ export async function showDealModal(userId) {
         if (dom.dealPlayerCoins) dom.dealPlayerCoins.textContent = user.coins;
         if (dom.dealPlayerReputation) dom.dealPlayerReputation.textContent = user.reputation;
         
-        // Обновляем информацию о лимите
+        // Обновляем информацию о лимите с учетом буста
         if (dom.dealLimitInfo && dom.dealLimitText) {
             if (!limitCheck.canMakeDeal) {
                 dom.dealLimitText.innerHTML = `
                     ${limitCheck.error}<br>
                     <strong>Лимит:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit} игроков<br>
-                    ${limitCheck.hasActiveBoost ? '🎯 Активен буст +5 игроков!' : '💡 Можете купить буст в магазине!'}
+                    ${limitCheck.hasActiveBoost ? 
+                        '🎯 Активен буст +5 игроков!' : 
+                        '💡 <button class="btn-outline btn-small" onclick="openShopFromDealModal()" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8rem;">Купить буст +5 игроков</button>'
+                    }
                 `;
                 dom.dealLimitInfo.style.display = 'block';
                 
+                // Блокируем кнопки
                 if (dom.cooperateBtn) {
                     dom.cooperateBtn.disabled = true;
                     dom.cooperateBtn.classList.add('btn-disabled');
@@ -157,6 +162,7 @@ export async function showDealModal(userId) {
                 if (todayDealsCount >= 5) {
                     dealLimitText = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
                     
+                    // Блокируем кнопки
                     if (dom.cooperateBtn) {
                         dom.cooperateBtn.disabled = true;
                         dom.cooperateBtn.classList.add('btn-disabled');
@@ -169,9 +175,13 @@ export async function showDealModal(userId) {
                     dealLimitText = `
                         Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.<br>
                         <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
-                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст +5 игроков!' : ''}
+                        ${limitCheck.hasActiveBoost ? 
+                            '🎯 Активен буст +5 игроков!' : 
+                            '💡 Можете купить буст в магазине!'
+                        }
                     `;
                     
+                    // Разблокируем кнопки
                     if (dom.cooperateBtn) {
                         dom.cooperateBtn.disabled = false;
                         dom.cooperateBtn.classList.remove('btn-disabled');
@@ -194,6 +204,38 @@ export async function showDealModal(userId) {
         console.error('Ошибка показа модального окна:', error);
     }
 }
+
+// Функция для открытия магазина из модального окна сделки
+function openShopFromDealModal() {
+    if (dom.dealModal) {
+        dom.dealModal.classList.remove('active');
+    }
+    
+    // Даем время на закрытие модального окна
+    setTimeout(() => {
+        const shopTab = document.querySelector('.tab[data-tab="shop"]');
+        if (shopTab) {
+            shopTab.click();
+            
+            // Прокручиваем к бусту в магазине
+            setTimeout(() => {
+                const boostProduct = document.querySelector('[data-product-type="unique_players_boost"]');
+                if (boostProduct) {
+                    boostProduct.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Подсвечиваем буст
+                    boostProduct.style.animation = 'pulse 2s 3';
+                    setTimeout(() => {
+                        boostProduct.style.animation = '';
+                    }, 6000);
+                }
+            }, 500);
+        }
+    }, 300);
+}
+
+// Добавляем функцию в глобальную область видимости
+window.openShopFromDealModal = openShopFromDealModal;
 
 async function getTodayDealsCount(targetUserId) {
     try {
@@ -294,9 +336,6 @@ export async function proposeDeal(choice) {
         alert('Ошибка: ' + error.message);
     }
 }
-
-// Остальные функции остаются без изменений (showResponseModal, rejectDeal, respondToDeal, и т.д.)
-// ... [остальной код файла остается без изменений] ...
 
 export async function showResponseModal(dealId) {
     try {
