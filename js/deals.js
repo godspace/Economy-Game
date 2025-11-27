@@ -251,10 +251,8 @@ export async function respondToDeal(choice) {
         cache.deals.timestamp = 0;
         loadDeals(true); // force refresh
         
-        if (state.currentUserProfile) {
-            // Обновляем профиль пользователя (монеты и репутацию)
-            await updateUserProfile();
-        }
+        // ОБНОВЛЯЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ВАЖНО!)
+        await updateUserProfile();
         
     } catch (error) {
         console.error('Ошибка ответа на сделку:', error);
@@ -812,6 +810,7 @@ function renderRanking(users) {
 async function updateUserProfile() {
     try {
         if (!state.supabase || !state.currentUserProfile) {
+            console.log('updateUserProfile: нет supabase или currentUserProfile');
             return;
         }
         
@@ -827,6 +826,7 @@ async function updateUserProfile() {
         }
         
         if (profile) {
+            console.log('updateUserProfile: получены данные', profile);
             // Обновляем состояние
             state.currentUserProfile.coins = profile.coins;
             state.currentUserProfile.reputation = profile.reputation;
@@ -834,12 +834,24 @@ async function updateUserProfile() {
             // Обновляем DOM
             if (dom.coinsValue) {
                 dom.coinsValue.textContent = profile.coins;
+                console.log('updateUserProfile: обновлены монеты на', profile.coins);
+            } else {
+                console.log('updateUserProfile: dom.coinsValue не найден');
             }
             if (dom.reputationValue) {
                 dom.reputationValue.textContent = profile.reputation;
+                console.log('updateUserProfile: обновлена репутация на', profile.reputation);
+            } else {
+                console.log('updateUserProfile: dom.reputationValue не найден');
             }
+        } else {
+            console.log('updateUserProfile: профиль не найден');
         }
     } catch (error) {
         console.error('Ошибка при обновлении профиля:', error);
     }
 }
+
+// Добавляем вызов updateUserProfile при загрузке приложения
+// Это можно сделать в auth.js после успешной аутентификации
+// или в ui.js при показе профиля
