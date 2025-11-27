@@ -1338,3 +1338,175 @@ button:active {
     text-align: center;
     line-height: 1.4;
 }
+
+/* style.css - ДОБАВЛЯЕМ В КОНЕЦ ФАЙЛА */
+
+/* Стили для индикатора буста */
+#boostIndicator {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: linear-gradient(135deg, #ffd700, #ff6b00);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    animation: pulse 2s infinite;
+    border: 2px solid #ffa500;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Стили для индикатора лимитов */
+.limit-info {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--primary);
+}
+
+.limit-progress {
+    flex: 1;
+    max-width: 200px;
+    background: #e9ecef;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.limit-progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+/* Стили для карточки буста в магазине */
+.boost-product {
+    border: 2px solid #ffd700 !important;
+    background: linear-gradient(135deg, #fff9e6, #fff3cd) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.boost-product::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, #ffd700, #ff6b00);
+    transform: rotate(45deg);
+    box-shadow: 0 2px 8px rgba(255, 107, 0, 0.3);
+}
+
+.boost-product .product-price {
+    color: #ff6b00;
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+.boost-product .product-name {
+    color: #ff6b00;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.boost-product .product-name::before {
+    content: '🚀';
+    font-size: 1.2em;
+}
+
+/* Анимация для подсветки буста при переходе из сделки */
+@keyframes highlightBoost {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.7);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 0 0 0 10px rgba(255, 107, 0, 0);
+        transform: scale(1.05);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(255, 107, 0, 0);
+        transform: scale(1);
+    }
+}
+
+.boost-product.highlight {
+    animation: highlightBoost 2s ease-in-out;
+}
+
+/* Адаптивность для индикатора буста */
+@media (max-width: 768px) {
+    #boostIndicator {
+        top: 70px;
+        right: 10px;
+        left: 10px;
+        font-size: 0.8rem;
+        padding: 8px 12px;
+        justify-content: center;
+    }
+    
+    .limit-info {
+        padding: 12px;
+    }
+    
+    .limit-progress {
+        max-width: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    #boostIndicator {
+        position: relative;
+        top: auto;
+        right: auto;
+        left: auto;
+        margin: 10px 0;
+        border-radius: 10px;
+    }
+    
+    .limit-info {
+        margin-bottom: 15px;
+    }
+    
+    .limit-progress {
+        max-width: 120px;
+    }
+}
+
+/* Темная тема для новых элементов */
+@media (prefers-color-scheme: dark) {
+    .limit-info {
+        background: #2a2a2a;
+        border-color: #444;
+        color: var(--dark);
+    }
+    
+    .limit-progress {
+        background: #444;
+    }
+    
+    .boost-product {
+        background: linear-gradient(135deg, #332b00, #665200) !important;
+        border-color: #ffd700 !important;
+    }
+    
+    .boost-product .product-name {
+        color: #ffd700;
+    }
+}
