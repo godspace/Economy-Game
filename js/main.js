@@ -1,4 +1,5 @@
-// main.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
+// main.js - ИСПРАВЛЕННЫЙ ФАЙЛ
+import { state } from './config.js';
 import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
