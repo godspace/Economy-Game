@@ -1,3 +1,4 @@
+// shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { state, dom } from './config.js';
 
 export async function loadShop() {
@@ -63,12 +64,37 @@ function renderProducts(products) {
     products.forEach(product => {
         const productCard = document.createElement('div');
         productCard.className = 'product-card';
+        if (product.product_type === 'unique_players_boost') {
+            productCard.classList.add('boost-product');
+        }
+        productCard.dataset.productType = product.product_type;
         
         // Проверяем, доступен ли товар для покупки
         const isAvailable = product.is_active;
         const canAfford = state.currentUserProfile.coins >= product.price;
-        const buttonClass = isAvailable && canAfford ? 'btn-success' : 'btn-disabled';
-        const buttonText = isAvailable ? (canAfford ? 'Купить' : 'Недостаточно монет') : 'Недоступно';
+        
+        // Особые условия для бустов
+        let buttonClass, buttonText, disabled, specialInfo = '';
+        
+        if (product.product_type === 'unique_players_boost') {
+            const hasActiveBoost = state.hasActiveUniquePlayersBoost;
+            
+            if (hasActiveBoost) {
+                buttonClass = 'btn-disabled';
+                buttonText = 'Буст активен';
+                disabled = true;
+                specialInfo = '<div style="color: var(--success); margin: 10px 0; padding: 10px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #4caf50;"><i class="fas fa-check-circle"></i> У вас уже активен буст уникальных игроков</div>';
+            } else {
+                buttonClass = canAfford ? 'btn-warning' : 'btn-disabled';
+                buttonText = canAfford ? 'Купить и активировать' : 'Недостаточно монет';
+                disabled = !canAfford;
+                specialInfo = '<div style="color: var(--warning); margin: 10px 0; padding: 10px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;"><i class="fas fa-rocket"></i> +5 слотов для уникальных игроков на 24 часа</div>';
+            }
+        } else {
+            buttonClass = isAvailable && canAfford ? 'btn-success' : 'btn-disabled';
+            buttonText = isAvailable ? (canAfford ? 'Купить' : 'Недостаточно монет') : 'Недоступно';
+            disabled = !(isAvailable && canAfford);
+        }
         
         productCard.innerHTML = `
             <div class="product-image">
@@ -77,6 +103,7 @@ function renderProducts(products) {
             <div class="product-info">
                 <h3 class="product-name">${product.name}</h3>
                 <p class="product-description">${product.description}</p>
+                ${specialInfo}
                 <div class="product-price">${product.price} монет</div>
                 <div class="user-balance" style="margin-bottom: 10px; font-size: 0.9rem; color: var(--gray);">
                     Ваш баланс: ${state.currentUserProfile.coins} монет
@@ -85,8 +112,9 @@ function renderProducts(products) {
                         data-product-id="${product.id}" 
                         data-product-name="${product.name}" 
                         data-product-price="${product.price}"
-                        ${(isAvailable && canAfford) ? '' : 'disabled'}>
-                    <i class="fas fa-shopping-cart"></i> ${buttonText}
+                        data-product-type="${product.product_type}"
+                        ${disabled ? 'disabled' : ''}>
+                    <i class="fas ${product.product_type === 'unique_players_boost' ? 'fa-rocket' : 'fa-shopping-cart'}"></i> ${buttonText}
                 </button>
             </div>
         `;
@@ -96,15 +124,151 @@ function renderProducts(products) {
     dom.shopProductsList.innerHTML = '';
     dom.shopProductsList.appendChild(fragment);
 
-    // Добавляем обработчики событий только для доступных товаров
+    // Добавляем обработчики событий
     document.querySelectorAll('.buy-product-btn:not(:disabled)').forEach(btn => {
         btn.addEventListener('click', function() {
             const productId = this.dataset.productId;
             const productName = this.dataset.productName;
             const productPrice = parseInt(this.dataset.productPrice);
-            showBuyConfirmation(productId, productName, productPrice);
+            const productType = this.dataset.productType;
+            
+            if (productType === 'unique_players_boost') {
+                const confirmed = confirm(`Активировать буст "${productName}" за ${productPrice} монет? Вы получите +5 слотов для уникальных игроков на 24 часа.`);
+                if (confirmed) {
+                    purchaseAndActivateBoost(productId, productPrice);
+                }
+            } else {
+                showBuyConfirmation(productId, productName, productPrice);
+            }
         });
     });
+}
+
+// Функция для покупки и активации буста
+async function purchaseAndActivateBoost(productId, price) {
+    try {
+        if (!state.supabase || !state.currentUserProfile) {
+            throw new Error('Система не инициализирована');
+        }
+
+        console.log('Покупка буста уникальных игроков:', {
+            productId,
+            price,
+            userId: state.currentUserProfile.id
+        });
+
+        // Используем RPC функцию для покупки и активации буста
+        const { data: result, error } = await state.supabase.rpc('purchase_and_activate_boost', {
+            p_user_id: state.currentUserProfile.id,
+            p_product_id: productId
+        });
+
+        if (error) {
+            console.error('RPC Error:', error);
+            throw new Error('Ошибка покупки буста: ' + error.message);
+        }
+
+        if (result && result.success) {
+            alert('🎯 Буст уникальных игроков активирован! +5 слотов на 24 часа!');
+            
+            // Обновляем баланс пользователя
+            await updateUserBalance();
+            
+            // Перезагружаем магазин для обновления кнопок
+            await loadShop();
+            
+            // Обновляем статус буста в интерфейсе
+            await updateBoostStatus();
+            
+        } else {
+            throw new Error(result?.error || 'Неизвестная ошибка при покупке буста');
+        }
+
+    } catch (error) {
+        console.error('Ошибка покупки буста:', error);
+        alert('Ошибка: ' + error.message);
+    }
+}
+
+// Функция для обновления статуса буста в интерфейсе
+export async function updateBoostStatus() {
+    try {
+        if (!state.supabase || !state.currentUserProfile) return;
+
+        // Проверяем активные бусты
+        const { data: activeBoosts, error } = await state.supabase
+            .from('user_boosts')
+            .select('*')
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('boost_type', 'unique_players')
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString())
+            .order('expires_at', { ascending: true })
+            .limit(1);
+
+        if (error) {
+            console.error('Ошибка проверки бустов:', error);
+            return;
+        }
+
+        const hasActiveBoost = activeBoosts && activeBoosts.length > 0;
+        
+        // Сохраняем статус в state для использования в других модулях
+        state.hasActiveUniquePlayersBoost = hasActiveBoost;
+        
+        // Обновляем UI
+        updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
+
+    } catch (error) {
+        console.error('Ошибка обновления статуса буста:', error);
+    }
+}
+
+// Функция для обновления UI буста
+function updateBoostUI(hasActiveBoost, boostData) {
+    // Создаем или обновляем индикатор буста в хедере
+    let boostIndicator = document.getElementById('boostIndicator');
+    
+    if (!boostIndicator) {
+        boostIndicator = document.createElement('div');
+        boostIndicator.id = 'boostIndicator';
+        boostIndicator.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, #ffd700, #ff6b00);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        `;
+        document.body.appendChild(boostIndicator);
+    }
+
+    if (hasActiveBoost && boostData) {
+        const expiresAt = new Date(boostData.expires_at);
+        const timeLeft = expiresAt - new Date();
+        const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
+        const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
+        
+        boostIndicator.innerHTML = `
+            <i class="fas fa-rocket"></i>
+            <span>Буст +5 игроков</span>
+            <small>(${hoursLeft}ч ${minutesLeft}м)</small>
+        `;
+        boostIndicator.style.display = 'flex';
+        
+        // Обновляем таймер каждую минуту
+        setTimeout(() => updateBoostStatus(), 60000);
+    } else {
+        boostIndicator.style.display = 'none';
+    }
 }
 
 function showBuyConfirmation(productId, productName, productPrice) {
