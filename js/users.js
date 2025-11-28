@@ -44,6 +44,14 @@ export async function loadUsers(forceRefresh = false) {
             return;
         }
         
+        // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТУС БУСТА ПРИ ОТКРЫТИИ ВКЛАДКИ
+        try {
+            const { updateBoostStatus } = await import('./shop.js');
+            await updateBoostStatus();
+        } catch (error) {
+            console.error('Error updating boost status in users tab:', error);
+        }
+        
         // Проверка кэша
         const now = Date.now();
         if (!forceRefresh && cache.users.data && 
@@ -204,6 +212,9 @@ async function renderLimitInfo() {
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                 <i class="fas fa-users" style="color: var(--primary);"></i>
                 <strong>Лимит уникальных игроков сегодня:</strong>
+                <button class="btn-outline btn-small" onclick="refreshBoostStatus()" style="margin-left: auto; padding: 2px 8px; font-size: 0.7rem;">
+                    <i class="fas fa-sync-alt"></i> Обновить
+                </button>
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
                 <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
@@ -229,10 +240,53 @@ async function renderLimitInfo() {
                 </div>
                 ` : ''}
             </div>
+            ${limitCheck.hasActiveBoost ? `
+            <div style="margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; border-left: 3px solid #4caf50;">
+                <small style="color: #2e7d32;">
+                    <i class="fas fa-info-circle"></i> 
+                    Активен буст +${limitCheck.boostLimit} игроков. Общий лимит: ${totalLimit} игроков
+                </small>
+            </div>
+            ` : ''}
         `;
 
     } catch (error) {
         console.error('Ошибка отображения информации о лимитах:', error);
+    }
+}
+
+// Функция для принудительного обновления статуса буста
+async function refreshBoostStatus() {
+    try {
+        const { updateBoostStatus } = await import('./shop.js');
+        await updateBoostStatus();
+        
+        // Перезагружаем пользователей для обновления лимитов
+        loadUsers(true);
+        
+        // Показываем уведомление
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 120px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            z-index: 1001;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        `;
+        notification.innerHTML = '<i class="fas fa-check"></i> Статус обновлен';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Ошибка обновления статуса буста:', error);
+        alert('Ошибка обновления статуса: ' + error.message);
     }
 }
 
@@ -289,7 +343,8 @@ function openShopTab() {
     }
 }
 
-// Добавляем функцию в глобальную область видимости
+// Добавляем функции в глобальную область видимости
+window.refreshBoostStatus = refreshBoostStatus;
 window.openShopTab = openShopTab;
 
 // Debounce поиска
