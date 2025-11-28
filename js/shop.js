@@ -1,6 +1,9 @@
 // shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { state, dom } from './config.js';
 
+// Глобальная переменная для таймера обновления статуса буста
+let boostStatusTimer = null;
+
 export async function loadShop() {
     try {
         console.log('Loading shop...');
@@ -40,6 +43,130 @@ export async function loadShop() {
 
     } catch (error) {
         console.error('Ошибка загрузки магазина:', error);
+    }
+}
+
+// Функция для периодической проверки статуса буста
+export function startBoostStatusPolling() {
+    if (boostStatusTimer) {
+        clearInterval(boostStatusTimer);
+    }
+    
+    // Проверяем статус буста каждые 30 секунд
+    boostStatusTimer = setInterval(async () => {
+        if (state.isAuthenticated && state.currentUserProfile) {
+            await updateBoostStatus();
+        }
+    }, 30000);
+}
+
+// Останавливаем polling при выходе
+export function stopBoostStatusPolling() {
+    if (boostStatusTimer) {
+        clearInterval(boostStatusTimer);
+        boostStatusTimer = null;
+    }
+}
+
+// Обновляем функцию updateBoostStatus для более детального логирования
+export async function updateBoostStatus() {
+    try {
+        if (!state.supabase || !state.currentUserProfile) return;
+
+        console.log('🔄 Checking boost status for user:', state.currentUserProfile.id);
+
+        // Проверяем активные бусты
+        const { data: activeBoosts, error } = await state.supabase
+            .from('user_boosts')
+            .select('*')
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('boost_type', 'unique_players')
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString())
+            .order('expires_at', { ascending: true })
+            .limit(1);
+
+        if (error) {
+            console.error('Ошибка проверки бустов:', error);
+            return;
+        }
+
+        const hasActiveBoost = activeBoosts && activeBoosts.length > 0;
+        const previousBoostStatus = state.hasActiveUniquePlayersBoost;
+        
+        // Сохраняем статус в state для использования в других модулях
+        state.hasActiveUniquePlayersBoost = hasActiveBoost;
+        
+        console.log('🔧 Boost status updated:', {
+            previous: previousBoostStatus,
+            current: hasActiveBoost,
+            activeBoosts: activeBoosts
+        });
+
+        // Обновляем UI только если статус изменился
+        if (previousBoostStatus !== hasActiveBoost) {
+            console.log('🎯 Boost status changed, updating UI');
+            updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
+            
+            // Принудительно обновляем лимиты на вкладке пользователей
+            if (document.getElementById('usersTab')?.classList.contains('active')) {
+                const { loadUsers } = await import('./users.js');
+                loadUsers(true);
+            }
+        } else {
+            // Обновляем таймер даже если статус не изменился
+            updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
+        }
+
+    } catch (error) {
+        console.error('Ошибка обновления статуса буста:', error);
+    }
+}
+
+// Функция для обновления UI буста
+function updateBoostUI(hasActiveBoost, boostData) {
+    // Создаем или обновляем индикатор буста в хедере
+    let boostIndicator = document.getElementById('boostIndicator');
+    
+    if (!boostIndicator) {
+        boostIndicator = document.createElement('div');
+        boostIndicator.id = 'boostIndicator';
+        boostIndicator.style.cssText = `
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, #ffd700, #ff6b00);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        `;
+        document.body.appendChild(boostIndicator);
+    }
+
+    if (hasActiveBoost && boostData) {
+        const expiresAt = new Date(boostData.expires_at);
+        const timeLeft = expiresAt - new Date();
+        const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
+        const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
+        
+        boostIndicator.innerHTML = `
+            <i class="fas fa-rocket"></i>
+            <span>Буст +5 игроков</span>
+            <small>(${hoursLeft}ч ${minutesLeft}м)</small>
+        `;
+        boostIndicator.style.display = 'flex';
+        
+        // Обновляем таймер каждую минуту
+        setTimeout(() => updateBoostStatus(), 60000);
+    } else {
+        boostIndicator.style.display = 'none';
     }
 }
 
@@ -187,87 +314,6 @@ async function purchaseAndActivateBoost(productId, price) {
     } catch (error) {
         console.error('Ошибка покупки буста:', error);
         alert('Ошибка: ' + error.message);
-    }
-}
-
-// Функция для обновления статуса буста в интерфейсе
-export async function updateBoostStatus() {
-    try {
-        if (!state.supabase || !state.currentUserProfile) return;
-
-        // Проверяем активные бусты
-        const { data: activeBoosts, error } = await state.supabase
-            .from('user_boosts')
-            .select('*')
-            .eq('user_id', state.currentUserProfile.id)
-            .eq('boost_type', 'unique_players')
-            .eq('is_active', true)
-            .gt('expires_at', new Date().toISOString())
-            .order('expires_at', { ascending: true })
-            .limit(1);
-
-        if (error) {
-            console.error('Ошибка проверки бустов:', error);
-            return;
-        }
-
-        const hasActiveBoost = activeBoosts && activeBoosts.length > 0;
-        
-        // Сохраняем статус в state для использования в других модулях
-        state.hasActiveUniquePlayersBoost = hasActiveBoost;
-        
-        // Обновляем UI
-        updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
-
-    } catch (error) {
-        console.error('Ошибка обновления статуса буста:', error);
-    }
-}
-
-// Функция для обновления UI буста
-function updateBoostUI(hasActiveBoost, boostData) {
-    // Создаем или обновляем индикатор буста в хедере
-    let boostIndicator = document.getElementById('boostIndicator');
-    
-    if (!boostIndicator) {
-        boostIndicator = document.createElement('div');
-        boostIndicator.id = 'boostIndicator';
-        boostIndicator.style.cssText = `
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            background: linear-gradient(135deg, #ffd700, #ff6b00);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: bold;
-            font-size: 0.9rem;
-        `;
-        document.body.appendChild(boostIndicator);
-    }
-
-    if (hasActiveBoost && boostData) {
-        const expiresAt = new Date(boostData.expires_at);
-        const timeLeft = expiresAt - new Date();
-        const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
-        const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
-        
-        boostIndicator.innerHTML = `
-            <i class="fas fa-rocket"></i>
-            <span>Буст +5 игроков</span>
-            <small>(${hoursLeft}ч ${minutesLeft}м)</small>
-        `;
-        boostIndicator.style.display = 'flex';
-        
-        // Обновляем таймер каждую минуту
-        setTimeout(() => updateBoostStatus(), 60000);
-    } else {
-        boostIndicator.style.display = 'none';
     }
 }
 
