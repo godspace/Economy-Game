@@ -1,5 +1,4 @@
-// main.js - ИСПРАВЛЕННЫЙ ФАЙЛ
-import { state } from './config.js';
+// main.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
 import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
 import { initSupabase, checkAuth } from './auth.js';
 import { loadTopRanking } from './data.js';
@@ -80,12 +79,13 @@ async function initializeApplication() {
         // Проверка авторизации
         await checkAuth();
         
-        // Если пользователь авторизован - загружаем статус буста
+        // Если пользователь авторизован - загружаем статус буста и запускаем polling
         if (state.isAuthenticated) {
             try {
-                const { updateBoostStatus } = await import('./shop.js');
+                const { updateBoostStatus, startBoostStatusPolling } = await import('./shop.js');
                 await updateBoostStatus();
-                console.log('Boost status loaded successfully');
+                startBoostStatusPolling();
+                console.log('Boost status loaded and polling started successfully');
             } catch (error) {
                 console.error('Error loading boost status:', error);
             }
