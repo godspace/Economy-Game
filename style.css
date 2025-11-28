@@ -1341,6 +1341,8 @@ button:active {
 
 /* style.css - ДОБАВЛЯЕМ В КОНЕЦ ФАЙЛА */
 
+/* style.css - ДОБАВЛЯЕМ СТИЛИ ДЛЯ СИСТЕМЫ БУСТОВ В КОНЕЦ ФАЙЛА */
+
 /* Стили для индикатора буста */
 #boostIndicator {
     position: fixed;
@@ -1450,6 +1452,22 @@ button:active {
     animation: highlightBoost 2s ease-in-out;
 }
 
+/* Стили для уведомлений */
+.boost-notification {
+    position: fixed;
+    top: 120px;
+    right: 20px;
+    background: var(--success);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    z-index: 1001;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 /* Адаптивность для индикатора буста */
 @media (max-width: 768px) {
     #boostIndicator {
@@ -1467,6 +1485,12 @@ button:active {
     
     .limit-progress {
         max-width: 150px;
+    }
+    
+    .boost-notification {
+        top: 100px;
+        right: 10px;
+        left: 10px;
     }
 }
 
@@ -1509,19 +1533,39 @@ button:active {
     .boost-product .product-name {
         color: #ffd700;
     }
+    
+    .boost-product .product-price {
+        color: #ffd700;
+    }
 }
 
-/* style.css - ДОБАВЛЯЕМ ДОПОЛНИТЕЛЬНЫЕ СТИЛИ */
-
-.boost-product .product-image img {
-    max-height: 180px;
-    object-fit: contain;
-    border-radius: 8px;
+/* Стили для кнопки обновления в лимитах */
+.limit-info .btn-outline {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: transparent;
 }
 
-.boost-product .product-image {
-    background: linear-gradient(135deg, #fff9e6, #fff3cd);
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 15px;
+.limit-info .btn-outline:hover {
+    background: var(--primary);
+    color: white;
+}
+
+/* Дополнительные стили для информации о бусте */
+.boost-info {
+    background: #e8f5e8;
+    color: #2e7d32;
+    padding: 8px;
+    border-radius: 5px;
+    border-left: 3px solid #4caf50;
+    margin-top: 10px;
+}
+
+.boost-warning {
+    background: #fff3cd;
+    color: #856404;
+    padding: 8px;
+    border-radius: 5px;
+    border-left: 3px solid #ffc107;
+    margin-top: 10px;
 }
