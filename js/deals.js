@@ -19,7 +19,7 @@ async function checkUniquePlayersLimit(targetUserId) {
 
         console.log('Результат проверки лимита:', result);
 
-        // Проверяем, не превышен ли лимит для этого игрока
+        // Проверяем, не превышен ли лимит уникальных игроков
         if (result.available_slots <= 0) {
             return {
                 canMakeDeal: false,
@@ -47,24 +47,41 @@ async function checkUniquePlayersLimit(targetUserId) {
         }
 
         if (existingDeal) {
-            return {
-                canMakeDeal: false,
-                baseLimit: result.base_limit,
-                boostLimit: result.boost_limit,
-                usedSlots: result.used_slots,
-                availableSlots: result.available_slots,
-                hasActiveBoost: result.has_active_boost,
-                error: `Вы уже совершали сделку с этим игроком сегодня!`
-            };
+            // Если сделка с этим игроком уже была, проверяем количество сделок с ним сегодня
+            const todayDealsCount = await getTodayDealsCount(targetUserId);
+            
+            if (todayDealsCount >= 5) {
+                return {
+                    canMakeDeal: false,
+                    baseLimit: result.base_limit,
+                    boostLimit: result.boost_limit,
+                    usedSlots: result.used_slots,
+                    availableSlots: result.available_slots,
+                    hasActiveBoost: result.has_active_boost,
+                    error: `Вы уже совершили максимальное количество сделок (5) с этим игроком сегодня!`
+                };
+            } else {
+                return {
+                    canMakeDeal: true,
+                    baseLimit: result.base_limit,
+                    boostLimit: result.boost_limit,
+                    usedSlots: result.used_slots,
+                    availableSlots: result.available_slots,
+                    hasActiveBoost: result.has_active_boost,
+                    todayDealsWithTarget: todayDealsCount
+                };
+            }
         }
 
+        // Если это первый раз с этим игроком сегодня
         return {
             canMakeDeal: true,
             baseLimit: result.base_limit,
             boostLimit: result.boost_limit,
             usedSlots: result.used_slots,
             availableSlots: result.available_slots,
-            hasActiveBoost: result.has_active_boost
+            hasActiveBoost: result.has_active_boost,
+            todayDealsWithTarget: 0
         };
 
     } catch (error) {
@@ -72,7 +89,6 @@ async function checkUniquePlayersLimit(targetUserId) {
         return { canMakeDeal: false, error: 'Ошибка системы' };
     }
 }
-
 // Функция для записи уникального игрока
 async function recordUniquePlayer(targetUserId) {
     try {
@@ -124,7 +140,7 @@ export async function showDealModal(userId) {
         
         state.selectedUser = user;
         
-        // Проверяем лимит уникальных игроков
+        // Проверяем лимит уникальных игроков и сделок с этим игроком
         const limitCheck = await checkUniquePlayersLimit(userId);
         
         if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
@@ -133,12 +149,15 @@ export async function showDealModal(userId) {
         if (dom.dealPlayerCoins) dom.dealPlayerCoins.textContent = user.coins;
         if (dom.dealPlayerReputation) dom.dealPlayerReputation.textContent = user.reputation;
         
-        // Обновляем информацию о лимите с учетом буста
+        // Обновляем информацию о лимите с учетом буста и сделок с игроком
         if (dom.dealLimitInfo && dom.dealLimitText) {
             if (!limitCheck.canMakeDeal) {
                 dom.dealLimitText.innerHTML = `
                     ${limitCheck.error}<br>
-                    <strong>Лимит:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit} игроков<br>
+                    <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                    ${limitCheck.todayDealsWithTarget !== undefined ? 
+                        `<strong>Сделок с ${user.username}:</strong> ${limitCheck.todayDealsWithTarget}/5<br>` : 
+                        ''}
                     ${limitCheck.hasActiveBoost ? 
                         '🎯 Активен буст +5 игроков!' : 
                         '💡 <button class="btn-outline btn-small" onclick="openShopFromDealModal()" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8rem;">Купить буст +5 игроков</button>'
@@ -156,7 +175,7 @@ export async function showDealModal(userId) {
                     dom.cheatBtn.classList.add('btn-disabled');
                 }
             } else {
-                const todayDealsCount = await getTodayDealsCount(userId);
+                const todayDealsCount = limitCheck.todayDealsWithTarget || 0;
                 let dealLimitText = '';
                 
                 if (todayDealsCount >= 5) {
@@ -173,8 +192,8 @@ export async function showDealModal(userId) {
                     }
                 } else {
                     dealLimitText = `
-                        Вы уже совершили ${todayDealsCount} из 5 возможных сделок с этим игроком сегодня.<br>
                         <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                        <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
                         ${limitCheck.hasActiveBoost ? 
                             '🎯 Активен буст +5 игроков!' : 
                             '💡 Можете купить буст в магазине!'
@@ -283,17 +302,19 @@ export async function proposeDeal(choice) {
             return;
         }
         
-        // Проверяем лимит уникальных игроков
+        // Проверяем лимит уникальных игроков и сделок с этим игроком
         const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
         if (!limitCheck.canMakeDeal) {
             alert(limitCheck.error + '\n\nЛимит уникальных игроков: ' + 
                   limitCheck.usedSlots + '/' + (limitCheck.baseLimit + limitCheck.boostLimit) +
+                  (limitCheck.todayDealsWithTarget !== undefined ? 
+                   '\nСделок с игроком: ' + limitCheck.todayDealsWithTarget + '/5' : '') +
                   '\n' + (limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'));
             return;
         }
         
+        // Дополнительная проверка на случай, если что-то изменилось
         const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
-        
         if (todayDealsCount >= 5) {
             alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${state.selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
             return;
@@ -315,8 +336,20 @@ export async function proposeDeal(choice) {
             throw new Error(result?.error || 'Неизвестная ошибка при создании сделки');
         }
         
-        // Записываем уникального игрока
-        await recordUniquePlayer(state.selectedUser.id);
+        // Записываем уникального игрока (только если это первая сделка с ним сегодня)
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existingRecord, error: recordError } = await state.supabase
+            .from('daily_unique_players')
+            .select('id')
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('target_user_id', state.selectedUser.id)
+            .eq('deal_date', today)
+            .single();
+        
+        if (recordError && recordError.code === 'PGRST116') { // Not found
+            // Это первая сделка с этим игроком сегодня - записываем
+            await recordUniquePlayer(state.selectedUser.id);
+        }
         
         alert('Сделка предложена успешно! 1 монета зарезервирована и будет возвращена после завершения сделки.');
         if (dom.dealModal) {
