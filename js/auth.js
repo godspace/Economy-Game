@@ -151,11 +151,12 @@ export async function handleAuth(e) {
         // ПРОВЕРЯЕМ СТАТУС АДМИНИСТРАТОРА
         await checkAdminStatus();
         
-        // ЗАГРУЖАЕМ СТАТУС БУСТА ПОСЛЕ АУТЕНТИФИКАЦИИ
+        // ЗАГРУЖАЕМ СТАТУС БУСТА ПОСЛЕ АУТЕНТИФИКАЦИИ И ЗАПУСКАЕМ POLLING
         try {
-            const { updateBoostStatus } = await import('./shop.js');
+            const { updateBoostStatus, startBoostStatusPolling } = await import('./shop.js');
             await updateBoostStatus();
-            console.log('Boost status loaded after authentication');
+            startBoostStatusPolling(); // ЗАПУСКАЕМ POLLING
+            console.log('Boost status loaded and polling started');
         } catch (error) {
             console.error('Error loading boost status after authentication:', error);
         }
@@ -186,6 +187,14 @@ export async function handleLogout() {
         // Очищаем таймеры вкладов
         Object.values(state.depositTimers).forEach(timer => clearInterval(timer));
         state.depositTimers = {};
+        
+        // ОСТАНАВЛИВАЕМ POLLING СТАТУСА БУСТА
+        try {
+            const { stopBoostStatusPolling } = await import('./shop.js');
+            stopBoostStatusPolling();
+        } catch (error) {
+            console.error('Error stopping boost polling:', error);
+        }
         
         // Очищаем состояние пользователя
         state.currentUser = null;
