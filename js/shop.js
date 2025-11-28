@@ -68,7 +68,69 @@ export function stopBoostStatusPolling() {
     }
 }
 
-// Обновляем функцию updateBoostStatus для более детального логирования
+// Функция для принудительной проверки статуса буста
+async function forceCheckBoostStatus() {
+    try {
+        console.log('🔍 Принудительная проверка статуса буста...');
+        
+        // Сначала проверяем заказы на бусты
+        const { data: boostOrders, error: ordersError } = await state.supabase
+            .from('orders')
+            .select('*')
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('product_id', 'aa370d4c-9779-4056-a7a5-9808c4096f8f') // ID буста
+            .in('status', ['confirmed', 'completed'])
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (ordersError) {
+            console.error('Ошибка проверки заказов буста:', ordersError);
+        } else {
+            console.log('📦 Заказы на бусты:', boostOrders);
+        }
+
+        // Затем проверяем активные бусты
+        const { data: activeBoosts, error: boostsError } = await state.supabase
+            .from('user_boosts')
+            .select('*')
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('boost_type', 'unique_players')
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString())
+            .order('expires_at', { ascending: true })
+            .limit(1);
+
+        if (boostsError) {
+            console.error('Ошибка проверки активных бустов:', boostsError);
+        } else {
+            console.log('🚀 Активные бусты:', activeBoosts);
+        }
+
+        // Обновляем статус в state
+        const hasActiveBoost = activeBoosts && activeBoosts.length > 0;
+        state.hasActiveUniquePlayersBoost = hasActiveBoost;
+        
+        console.log('🔧 Итоговый статус буста:', {
+            hasActiveBoost: hasActiveBoost,
+            boostOrdersCount: boostOrders?.length || 0,
+            activeBoostsCount: activeBoosts?.length || 0
+        });
+
+        // Обновляем UI
+        updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
+        
+        // Принудительно обновляем лимиты
+        if (document.getElementById('usersTab')?.classList.contains('active')) {
+            const { loadUsers } = await import('./users.js');
+            loadUsers(true);
+        }
+
+    } catch (error) {
+        console.error('Ошибка принудительной проверки статуса буста:', error);
+    }
+}
+
+// Обновляем функцию updateBoostStatus для более детальной проверки
 export async function updateBoostStatus() {
     try {
         if (!state.supabase || !state.currentUserProfile) return;
@@ -278,7 +340,7 @@ async function purchaseAndActivateBoost(productId, price) {
             throw new Error('Система не инициализирована');
         }
 
-        console.log('Покупка буста уникальных игроков:', {
+        console.log('🛒 Покупка буста уникальных игроков:', {
             productId,
             price,
             userId: state.currentUserProfile.id
@@ -296,6 +358,7 @@ async function purchaseAndActivateBoost(productId, price) {
         }
 
         if (result && result.success) {
+            console.log('✅ RPC функция успешно выполнена:', result);
             alert('🎯 Буст уникальных игроков активирован! +5 слотов на 24 часа!');
             
             // Обновляем баланс пользователя
@@ -304,8 +367,11 @@ async function purchaseAndActivateBoost(productId, price) {
             // Перезагружаем магазин для обновления кнопок
             await loadShop();
             
-            // Обновляем статус буста в интерфейсе
-            await updateBoostStatus();
+            // Ждем немного и принудительно проверяем статус буста
+            console.log('🔄 Принудительная проверка статуса буста через 2 секунды...');
+            setTimeout(async () => {
+                await forceCheckBoostStatus();
+            }, 2000);
             
         } else {
             throw new Error(result?.error || 'Неизвестная ошибка при покупке буста');
@@ -314,6 +380,37 @@ async function purchaseAndActivateBoost(productId, price) {
     } catch (error) {
         console.error('Ошибка покупки буста:', error);
         alert('Ошибка: ' + error.message);
+    }
+}
+
+// Функция для ручной активации буста (для админов)
+async function manuallyActivateBoost(userId) {
+    try {
+        if (!state.supabase || !state.isAdmin) {
+            throw new Error('Недостаточно прав');
+        }
+
+        const { data: result, error } = await state.supabase.rpc('manually_activate_boost', {
+            p_user_id: userId,
+            p_boost_type: 'unique_players',
+            p_duration_hours: 24
+        });
+
+        if (error) {
+            console.error('Ошибка ручной активации буста:', error);
+            throw new Error('Ошибка активации: ' + error.message);
+        }
+
+        if (result && result.success) {
+            console.log('✅ Буст успешно активирован вручную');
+            return true;
+        } else {
+            throw new Error(result?.error || 'Неизвестная ошибка');
+        }
+
+    } catch (error) {
+        console.error('Ошибка ручной активации буста:', error);
+        throw error;
     }
 }
 
@@ -402,7 +499,7 @@ async function updateUserBalance() {
             }
         }
     } catch (error) {
-        console.error('Ошибка при обновлении баланса:', error);
+        console.error('Ошибка при обновления баланса:', error);
     }
 }
 
@@ -524,7 +621,7 @@ export async function loadAdminOrders() {
             .from('orders')
             .select(`
                 *,
-                products:product_id (name, image_url)
+                products:product_id (name, image_url, product_type)
             `)
             .order('created_at', { ascending: false });
 
@@ -603,6 +700,9 @@ function renderAdminOrders(orders) {
                         <div class="order-product-name">${productData.name}</div>
                         <div class="order-user-info">От: ${userData.username} (${userData.class})</div>
                         <div class="order-quantity">Количество: ${order.quantity}</div>
+                        ${productData.product_type === 'unique_players_boost' ? 
+                            '<div style="color: #ff6b00; font-weight: bold;"><i class="fas fa-rocket"></i> Буст уникальных игроков</div>' : 
+                            ''}
                     </div>
                 </div>
                 <div class="order-status ${statusInfo.class}">
@@ -683,7 +783,7 @@ async function updateOrderStatus(orderId, status) {
         // Получаем данные заказа перед обновлением
         const { data: order, error: orderError } = await state.supabase
             .from('orders')
-            .select('user_id, total_amount, status')
+            .select('user_id, total_amount, status, product_id, products!inner(product_type)')
             .eq('id', orderId)
             .single();
 
@@ -692,6 +792,20 @@ async function updateOrderStatus(orderId, status) {
         }
 
         console.log(`🛠️ Updating order ${orderId} from ${order.status} to ${status}`);
+
+        // Если это заказ на буст и статус меняется на confirmed/completed - активируем буст
+        if ((status === 'confirmed' || status === 'completed') && 
+            order.products.product_type === 'unique_players_boost') {
+            console.log('🚀 Активируем буст для пользователя:', order.user_id);
+            
+            try {
+                await manuallyActivateBoost(order.user_id);
+                adminNotes = (adminNotes || '') + ' Буст активирован автоматически.';
+            } catch (boostError) {
+                console.error('Ошибка активации буста:', boostError);
+                adminNotes = (adminNotes || '') + ' Ошибка активации буста: ' + boostError.message;
+            }
+        }
 
         // Если отменяем заказ - возвращаем деньги
         if (status === 'cancelled' && order.status !== 'cancelled') {
