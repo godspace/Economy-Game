@@ -946,7 +946,7 @@ button:active {
 @media (prefers-color-scheme: dark) {
     :root {
         --light: #1a1d23;
-        --dark: ##fbf9f9;
+        --dark: #f8f9fa;
     }
     
     body {
