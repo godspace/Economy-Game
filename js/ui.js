@@ -161,35 +161,47 @@ function closeMaintenanceWarning() {
     localStorage.setItem('maintenanceWarningClosed', 'true');
 }
 
+// ui.js - ОБНОВЛЯЕМ ФУНКЦИЮ loadTabModule
+
 async function loadTabModule(tabName) {
     console.log('Loading tab module:', tabName);
     
     try {
         switch(tabName) {
             case 'users':
-                const { loadUsers } = await import('./users.js');
-                loadUsers();
+                const usersModule = await import('./users.js');
+                await usersModule.loadUsers();
                 break;
             case 'deals':
-                const { loadDeals } = await import('./deals.js');
-                loadDeals();
+                const dealsModule = await import('./deals.js');
+                await dealsModule.loadDeals();
                 break;
             case 'ranking':
-                const { loadRanking } = await import('./deals.js');
-                loadRanking();
+                const rankingModule = await import('./deals.js');
+                await rankingModule.loadRanking();
                 break;
             case 'investments':
-                const { loadInvestments } = await import('./investments.js');
-                loadInvestments();
+                const investmentsModule = await import('./investments.js');
+                await investmentsModule.loadInvestments();
                 break;
             case 'shop':
-                const { loadShop } = await import('./shop.js');
-                loadShop();
+                console.log('Loading shop module...');
+                const shopModule = await import('./shop.js');
+                console.log('Shop module loaded:', shopModule);
+                if (typeof shopModule.loadShop === 'function') {
+                    await shopModule.loadShop();
+                } else {
+                    console.error('loadShop is not a function in shop module');
+                }
                 break;
             case 'adminOrders':
                 console.log('Loading admin orders...');
-                const { loadAdminOrders } = await import('./shop.js');
-                loadAdminOrders();
+                const adminModule = await import('./shop.js');
+                if (typeof adminModule.loadAdminOrders === 'function') {
+                    await adminModule.loadAdminOrders();
+                } else {
+                    console.error('loadAdminOrders is not a function in shop module');
+                }
                 break;
             default:
                 console.warn('Unknown tab:', tabName);
