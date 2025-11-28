@@ -116,6 +116,11 @@ async function forceCheckBoostStatus() {
             activeBoostsCount: activeBoosts?.length || 0
         });
 
+        // Если появился новый активный буст - сбрасываем состояние закрытия
+        if (hasActiveBoost) {
+            localStorage.removeItem('boostIndicatorClosed');
+        }
+
         // Обновляем UI
         updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
         
