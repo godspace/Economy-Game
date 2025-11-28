@@ -1369,6 +1369,32 @@ button:active {
     100% { transform: scale(1); }
 }
 
+/* style.css - ДОБАВЛЯЕМ СТИЛИ ДЛЯ ЗАКРЫТИЯ */
+
+#boostIndicator:hover::after {
+    content: 'Нажмите, чтобы скрыть';
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    z-index: 1001;
+}
+
+#boostIndicator .fa-times {
+    transition: all 0.2s ease;
+}
+
+#boostIndicator:hover .fa-times {
+    opacity: 1 !important;
+    transform: scale(1.2);
+}
+
 /* Стили для индикатора лимитов */
 .limit-info {
     background: #f8f9fa;
