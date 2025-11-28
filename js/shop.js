@@ -647,12 +647,12 @@ export async function loadAdminOrders() {
 
         console.log('🔧 User is admin, loading orders...');
 
-        // Загружаем заказы с информацией о товарах
+        // Загружаем заказы с информацией о товарах (ИСПРАВЛЕННЫЙ ЗАПРОС)
         const { data: orders, error: ordersError } = await state.supabase
             .from('orders')
             .select(`
                 *,
-                products:product_id (name, image_url, product_type)
+                products:product_id (name, image_url)
             `)
             .order('created_at', { ascending: false });
 
@@ -723,6 +723,9 @@ function renderAdminOrders(orders) {
         const userData = order.user_profile;
         const productData = order.products;
 
+        // Определяем тип товара по названию (fallback метод)
+        const isBoostProduct = productData.name && productData.name.toLowerCase().includes('буст');
+        
         orderItem.innerHTML = `
             <div class="order-header">
                 <div class="order-product-info">
@@ -731,7 +734,7 @@ function renderAdminOrders(orders) {
                         <div class="order-product-name">${productData.name}</div>
                         <div class="order-user-info">От: ${userData.username} (${userData.class})</div>
                         <div class="order-quantity">Количество: ${order.quantity}</div>
-                        ${productData.product_type === 'unique_players_boost' ? 
+                        ${isBoostProduct ? 
                             '<div style="color: #ff6b00; font-weight: bold;"><i class="fas fa-rocket"></i> Буст уникальных игроков</div>' : 
                             ''}
                     </div>
@@ -811,10 +814,16 @@ async function updateOrderStatus(orderId, status) {
             if (adminNotes === null) return; // пользователь отменил
         }
 
-        // Получаем данные заказа перед обновлением
+        // Получаем данные заказа перед обновлением (ИСПРАВЛЕННЫЙ ЗАПРОС)
         const { data: order, error: orderError } = await state.supabase
             .from('orders')
-            .select('user_id, total_amount, status, product_id, products!inner(product_type)')
+            .select(`
+                user_id, 
+                total_amount, 
+                status,
+                product_id,
+                products:product_id (name)
+            `)
             .eq('id', orderId)
             .single();
 
@@ -824,9 +833,11 @@ async function updateOrderStatus(orderId, status) {
 
         console.log(`🛠️ Updating order ${orderId} from ${order.status} to ${status}`);
 
+        // Определяем тип товара по названию
+        const isBoostProduct = order.products.name && order.products.name.toLowerCase().includes('буст');
+        
         // Если это заказ на буст и статус меняется на confirmed/completed - активируем буст
-        if ((status === 'confirmed' || status === 'completed') && 
-            order.products.product_type === 'unique_players_boost') {
+        if ((status === 'confirmed' || status === 'completed') && isBoostProduct) {
             console.log('🚀 Активируем буст для пользователя:', order.user_id);
             
             try {
