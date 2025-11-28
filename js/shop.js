@@ -208,11 +208,36 @@ function updateBoostUI(hasActiveBoost, boostData) {
             gap: 8px;
             font-weight: bold;
             font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #ffa500;
         `;
+        
+        // Добавляем обработчик клика для закрытия
+        boostIndicator.addEventListener('click', function() {
+            this.style.display = 'none';
+            // Сохраняем состояние закрытия в localStorage
+            localStorage.setItem('boostIndicatorClosed', 'true');
+        });
+        
+        // Добавляем hover эффект
+        boostIndicator.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+            this.style.boxShadow = '0 6px 15px rgba(255, 107, 0, 0.4)';
+        });
+        
+        boostIndicator.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+            this.style.boxShadow = '0 4px 12px rgba(255, 107, 0, 0.3)';
+        });
+        
         document.body.appendChild(boostIndicator);
     }
 
-    if (hasActiveBoost && boostData) {
+    // Проверяем, не закрыл ли пользователь индикатор вручную
+    const isManuallyClosed = localStorage.getItem('boostIndicatorClosed') === 'true';
+    
+    if (hasActiveBoost && boostData && !isManuallyClosed) {
         const expiresAt = new Date(boostData.expires_at);
         const timeLeft = expiresAt - new Date();
         const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
@@ -222,6 +247,7 @@ function updateBoostUI(hasActiveBoost, boostData) {
             <i class="fas fa-rocket"></i>
             <span>Буст +5 игроков</span>
             <small>(${hoursLeft}ч ${minutesLeft}м)</small>
+            <i class="fas fa-times" style="margin-left: 5px; font-size: 0.8rem; opacity: 0.8;"></i>
         `;
         boostIndicator.style.display = 'flex';
         
