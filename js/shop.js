@@ -105,3 +105,13 @@ function renderProducts(products) {
         });
     });
 }
+
+// shop.js - ДОБАВЛЯЕМ В КОНЕЦ ФАЙЛА ПРОВЕРКУ ЭКСПОРТОВ
+
+// Убедимся, что все функции правильно экспортируются
+export {
+    loadShop,
+    loadOrderHistory,
+    loadAdminOrders,
+    updateBoostStatus
+};
