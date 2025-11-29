@@ -1,4 +1,4 @@
-// main.js - ИСПРАВЛЕННЫЙ ФАЙЛ
+// main.js - ИСПРАВЛЕННЫЙ ФАЙЛ (убраны дублирующиеся экспорты)
 import { state, addRealtimeSubscription, cleanupRealtimeSubscriptions } from './config.js';
 import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
 import { initSupabase, checkAuth, isSupabaseInitialized } from './auth.js';
@@ -188,7 +188,7 @@ async function initializeApplication() {
 }
 
 // Ленивая загрузка модулей для табов (экспортируем для использования в других модулях)
-export async function loadTabModule(tabName) {
+async function loadTabModule(tabName) {
     try {
         // Показываем индикатор загрузки для таба
         const tabContent = document.getElementById(`${tabName}Tab`);
@@ -248,8 +248,11 @@ function initCleanup() {
         // Останавливаем polling бустов
         if (state.isAuthenticated) {
             try {
-                const { stopBoostStatusPolling } = require('./shop.js');
-                stopBoostStatusPolling();
+                import('./shop.js').then(module => {
+                    if (module.stopBoostStatusPolling) {
+                        module.stopBoostStatusPolling();
+                    }
+                });
             } catch (error) {
                 console.error('Error stopping boost polling:', error);
             }
@@ -266,10 +269,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initializeApplication, 100);
 });
 
-// Экспортируем для тестирования
+// Экспортируем для тестирования - УБРАН ДУБЛИРУЮЩИЙСЯ ЭКСПОРТ loadTabModule
 export { 
     initializeApplication, 
-    loadTabModule, 
     initPerformanceMonitoring, 
     initErrorHandling,
     initRealtimeSubscriptions
