@@ -1,4 +1,4 @@
-// auth.js - ОБНОВЛЕННЫЙ С УЧЕТОМ РЕКОМЕНДАЦИЙ
+// auth.js - УПРОЩЕННАЯ И ИСПРАВЛЕННАЯ ВЕРСИЯ
 import { state, dom, SUPABASE_CONFIG } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError, updateUserBalanceDisplay } from './ui.js';
 
@@ -79,8 +79,8 @@ async function loadUserProfile(authUserId) {
 
         if (error) {
             console.error('Error loading profile:', error);
-            // Если профиль не найден, создадим его
-            await createProfileForUser(authUserId);
+            showAuthError('Профиль не найден. Пожалуйста, войдите снова.');
+            await handleLogout();
             return;
         }
 
@@ -99,56 +99,6 @@ async function loadUserProfile(authUserId) {
     }
 }
 
-async function createProfileForUser(authUserId) {
-    try {
-        // Получаем email пользователя из auth
-        const { data: { user }, error } = await state.supabase.auth.getUser();
-        if (error) throw error;
-
-        // Извлекаем код из email (формат: code@student.game)
-        const code = user.email.split('@')[0];
-        
-        // Ищем студента по коду
-        const { data: student, error: studentError } = await state.supabase
-            .from('students')
-            .select('*')
-            .eq('code', code)
-            .single();
-
-        let username = code; // временное имя
-        
-        if (!studentError && student) {
-            username = `${student.first_name} ${student.last_name}`;
-        }
-
-        const { data: profile, error: createError } = await state.supabase
-            .from('profiles')
-            .insert({
-                auth_user_id: authUserId,
-                username: username,
-                coins: 100,
-                reputation: 50,
-                student_id: student ? student.id : null
-            })
-            .select('*, students(first_name, last_name, class, code)')
-            .single();
-
-        if (createError) throw createError;
-
-        state.currentUserProfile = profile;
-        state.currentUser = { id: profile.id };
-        state.isAuthenticated = true;
-
-        await checkAdminStatus();
-        updateUI();
-        showProfileSection();
-
-    } catch (error) {
-        console.error('Error creating profile:', error);
-        showAuthError('Ошибка создания профиля');
-    }
-}
-
 export async function checkAdminStatus() {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -158,14 +108,12 @@ export async function checkAdminStatus() {
 
         console.log('🔧 Checking admin status for profile ID:', state.currentUserProfile.id);
         
-        // ИСПРАВЛЕНИЕ: используем profile.id вместо auth_user_id
         const { data: admin, error } = await state.supabase
             .from('admins')
             .select('user_id')
-            .eq('user_id', state.currentUserProfile.id) // ← ВАЖНО: используем profile.id
+            .eq('user_id', state.currentUserProfile.id)
             .single();
 
-        // Если ошибка "не найдено" - это нормально, пользователь не админ
         if (error && error.code !== 'PGRST116') {
             console.error('Error checking admin status:', error);
         }
@@ -232,16 +180,17 @@ export async function handleAuth(e) {
 
         console.log('Attempting auth with:', { email, password: '***' });
 
+        // ПРОБУЕМ ПРОСТО ВОЙТИ - большинство пользователей уже созданы
         const { data, error } = await state.supabase.auth.signInWithPassword({
             email: email,
             password: password
         });
 
         if (error) {
-            // Если пользователь не найден, пробуем зарегистрировать
+            // Если пользователь не найден, пробуем упрощенную регистрацию
             if (error.message.includes('Invalid login credentials')) {
-                console.log('User not found, attempting registration...');
-                await handleSignUp(email, password, code);
+                console.log('User not found, attempting simplified registration...');
+                await handleSimplifiedSignUp(email, password, code);
             } else {
                 throw error;
             }
@@ -253,7 +202,7 @@ export async function handleAuth(e) {
         
     } catch (error) {
         console.error('Auth error:', error);
-        showAuthError('Ошибка входа. Проверьте код.');
+        showAuthError('Ошибка входа. Проверьте код или попробуйте позже.');
     } finally {
         if (dom.authBtn) {
             dom.authBtn.disabled = false;
@@ -262,11 +211,11 @@ export async function handleAuth(e) {
     }
 }
 
-async function handleSignUp(email, password, code) {
+async function handleSimplifiedSignUp(email, password, code) {
     try {
         console.log('Checking student with code:', code);
         
-        // Сначала проверяем, что код существует в students
+        // Проверяем, что студент существует
         const { data: student, error: studentError } = await state.supabase
             .from('students')
             .select('*')
@@ -274,35 +223,77 @@ async function handleSignUp(email, password, code) {
             .single();
 
         if (studentError || !student) {
-            throw new Error('Неверный код');
+            throw new Error('Неверный код студента');
         }
 
-        console.log('Student found, registering...');
+        console.log('Student found, attempting registration...');
 
-        // Регистрируем пользователя
+        // Пробуем зарегистрироваться с минимальными данными
         const { data, error } = await state.supabase.auth.signUp({
             email: email,
             password: password,
+            options: {
+                data: {
+                    first_name: student.first_name,
+                    last_name: student.last_name
+                }
+            }
+        });
+
+        if (error) {
+            // Если регистрация не удалась, пробуем альтернативный email
+            console.log('Registration failed, trying alternative email...');
+            await handleAlternativeRegistration(student, code);
+            return;
+        }
+
+        console.log('Registration successful, checking for auto-confirmation...');
+        
+        // Если email подтверждение отключено, сразу входим
+        if (data.user && data.user.email_confirmed_at) {
+            await loadUserProfile(data.user.id);
+        } else {
+            showAuthError('Регистрация успешна! Проверьте email для подтверждения.');
+        }
+
+    } catch (error) {
+        console.error('Simplified sign up error:', error);
+        throw new Error('Не удалось создать аккаунт. Обратитесь к администратору.');
+    }
+}
+
+async function handleAlternativeRegistration(student, code) {
+    try {
+        // Пробуем альтернативный email формат
+        const alternativeEmail = `student${code}@game.local`;
+        const password = code;
+
+        console.log('Trying alternative email:', alternativeEmail);
+
+        const { data, error } = await state.supabase.auth.signUp({
+            email: alternativeEmail,
+            password: password,
+            options: {
+                data: {
+                    first_name: student.first_name,
+                    last_name: student.last_name
+                }
+            }
         });
 
         if (error) throw error;
 
-        console.log('Registration successful, signing in...');
+        console.log('Alternative registration successful');
+        
+        if (data.user && data.user.email_confirmed_at) {
+            await loadUserProfile(data.user.id);
+        } else {
+            showAuthError('Регистрация успешна! Ожидайте подтверждения.');
+        }
 
-        // После регистрации автоматически входим
-        const { data: signInData, error: signInError } = await state.supabase.auth.signInWithPassword({
-            email: email,
-            password: password
-        });
-
-        if (signInError) throw signInError;
-
-        // Загружаем профиль (он должен быть создан триггером)
-        await loadUserProfile(signInData.user.id);
-
-    } catch (error) {
-        console.error('Sign up error:', error);
-        throw new Error('Ошибка регистрации: ' + error.message);
+    } catch (altError) {
+        console.error('Alternative registration failed:', altError);
+        throw new Error('Все попытки регистрации не удались. Обратитесь к администратору.');
     }
 }
 
