@@ -1,4 +1,4 @@
-// auth.js - УПРОЩЕННАЯ И ИСПРАВЛЕННАЯ ВЕРСИЯ
+// auth.js - УПРОЩЕННАЯ ВЕРСИЯ БЕЗ EDGE FUNCTION
 import { state, dom, SUPABASE_CONFIG } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError, updateUserBalanceDisplay } from './ui.js';
 
@@ -79,8 +79,7 @@ async function loadUserProfile(authUserId) {
 
         if (error) {
             console.error('Error loading profile:', error);
-            showAuthError('Профиль не найден. Пожалуйста, войдите снова.');
-            await handleLogout();
+            showAuthError('Профиль не найден');
             return;
         }
 
@@ -175,34 +174,34 @@ export async function handleAuth(e) {
     }
     
     try {
+        // Простая логика: используем код как email и пароль
         const email = `${code}@student.game`;
         const password = code;
 
-        console.log('Attempting auth with:', { email, password: '***' });
+        console.log('Attempting login with:', { email });
 
-        // ПРОБУЕМ ПРОСТО ВОЙТИ - большинство пользователей уже созданы
+        // Пробуем войти
         const { data, error } = await state.supabase.auth.signInWithPassword({
             email: email,
             password: password
         });
 
         if (error) {
-            // Если пользователь не найден, пробуем упрощенную регистрацию
+            // Если пользователь не найден, проверяем есть ли такой студент
             if (error.message.includes('Invalid login credentials')) {
-                console.log('User not found, attempting simplified registration...');
-                await handleSimplifiedSignUp(email, password, code);
+                await handleStudentVerification(code);
             } else {
                 throw error;
             }
         } else {
             // Успешный вход
-            console.log('Login successful, loading profile...');
+            console.log('Login successful');
             await loadUserProfile(data.user.id);
         }
         
     } catch (error) {
         console.error('Auth error:', error);
-        showAuthError('Ошибка входа. Проверьте код или попробуйте позже.');
+        showAuthError('Ошибка входа. Проверьте код.');
     } finally {
         if (dom.authBtn) {
             dom.authBtn.disabled = false;
@@ -211,7 +210,7 @@ export async function handleAuth(e) {
     }
 }
 
-async function handleSimplifiedSignUp(email, password, code) {
+async function handleStudentVerification(code) {
     try {
         console.log('Checking student with code:', code);
         
@@ -226,74 +225,45 @@ async function handleSimplifiedSignUp(email, password, code) {
             throw new Error('Неверный код студента');
         }
 
-        console.log('Student found, attempting registration...');
+        console.log('Student found, creating account...');
 
-        // Пробуем зарегистрироваться с минимальными данными
+        // Создаем аккаунт
+        const email = `${code}@student.game`;
+        const password = code;
+
         const { data, error } = await state.supabase.auth.signUp({
             email: email,
             password: password,
-            options: {
-                data: {
-                    first_name: student.first_name,
-                    last_name: student.last_name
-                }
-            }
         });
 
         if (error) {
-            // Если регистрация не удалась, пробуем альтернативный email
-            console.log('Registration failed, trying alternative email...');
-            await handleAlternativeRegistration(student, code);
-            return;
-        }
-
-        console.log('Registration successful, checking for auto-confirmation...');
-        
-        // Если email подтверждение отключено, сразу входим
-        if (data.user && data.user.email_confirmed_at) {
-            await loadUserProfile(data.user.id);
-        } else {
-            showAuthError('Регистрация успешна! Проверьте email для подтверждения.');
-        }
-
-    } catch (error) {
-        console.error('Simplified sign up error:', error);
-        throw new Error('Не удалось создать аккаунт. Обратитесь к администратору.');
-    }
-}
-
-async function handleAlternativeRegistration(student, code) {
-    try {
-        // Пробуем альтернативный email формат
-        const alternativeEmail = `student${code}@game.local`;
-        const password = code;
-
-        console.log('Trying alternative email:', alternativeEmail);
-
-        const { data, error } = await state.supabase.auth.signUp({
-            email: alternativeEmail,
-            password: password,
-            options: {
-                data: {
-                    first_name: student.first_name,
-                    last_name: student.last_name
-                }
+            console.error('Signup error:', error);
+            
+            // Если аккаунт уже существует, но пароль не подходит
+            if (error.message.includes('User already registered')) {
+                throw new Error('Аккаунт уже существует. Используйте ваш код для входа.');
             }
+            
+            throw error;
+        }
+
+        console.log('Account created successfully');
+        
+        // Пробуем войти с только что созданными данными
+        const { data: signInData, error: signInError } = await state.supabase.auth.signInWithPassword({
+            email: email,
+            password: password
         });
 
-        if (error) throw error;
-
-        console.log('Alternative registration successful');
-        
-        if (data.user && data.user.email_confirmed_at) {
-            await loadUserProfile(data.user.id);
-        } else {
-            showAuthError('Регистрация успешна! Ожидайте подтверждения.');
+        if (signInError) {
+            throw signInError;
         }
 
-    } catch (altError) {
-        console.error('Alternative registration failed:', altError);
-        throw new Error('Все попытки регистрации не удались. Обратитесь к администратору.');
+        await loadUserProfile(signInData.user.id);
+
+    } catch (error) {
+        console.error('Student verification error:', error);
+        throw error;
     }
 }
 
