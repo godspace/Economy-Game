@@ -439,6 +439,7 @@ async function refreshBoostStatus() {
 }
 
 // Функция для проверки лимитов уникальных игроков
+// Функция для проверки лимитов уникальных игроков
 export async function checkUniquePlayersLimit(targetUserId) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -474,12 +475,15 @@ export async function checkUniquePlayersLimit(targetUserId) {
 
         console.log('📊 Лимиты уникальных игроков:', result);
 
+        // ИСПРАВЛЕНИЕ: RPC функция возвращает массив, берем первый элемент
+        const limitData = result && result[0] ? result[0] : {};
+
         // Гарантируем, что все значения являются числами
-        const baseLimit = Number(result?.base_limit) || 5;
-        const boostLimit = Number(result?.boost_limit) || 0;
-        const usedSlots = Number(result?.used_slots) || 0;
-        const availableSlots = Number(result?.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
-        const hasActiveBoost = Boolean(result?.has_active_boost);
+        const baseLimit = Number(limitData.base_limit) || 5;
+        const boostLimit = Number(limitData.boost_limit) || 0;
+        const usedSlots = Number(limitData.used_slots) || 0;
+        const availableSlots = Number(limitData.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
+        const hasActiveBoost = Boolean(limitData.has_active_boost);
 
         return {
             canMakeDeal: availableSlots > 0,
