@@ -1,3 +1,4 @@
+// ui.js - ПОЛНЫЙ ИСПРАВЛЕННЫЙ ФАЙЛ
 import { handleAuth, handleLogout } from './auth.js';
 import { dom, state } from './config.js';
 import { setupSearchDebounce } from './users.js';
@@ -354,6 +355,75 @@ export function setupEventListeners() {
                 }
             }).catch(error => {
                 console.error('Error opening deposit modal:', error);
+            });
+        }
+        
+        // Обработка кнопок ответа на сделку в списке
+        if (event.target.closest('.respond-deal')) {
+            const button = event.target.closest('.respond-deal');
+            const dealId = button.dataset.dealId;
+            event.stopPropagation();
+            
+            // Блокируем кнопку на время обработки
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+            
+            import('./deals.js').then(module => {
+                module.showResponseModal(dealId).finally(() => {
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            }).catch(error => {
+                console.error('Error loading deals module:', error);
+                button.disabled = false;
+                button.innerHTML = originalText;
+            });
+        }
+        
+        // Обработка кнопок отклонения сделки в списке
+        if (event.target.closest('.reject-deal-list')) {
+            const button = event.target.closest('.reject-deal-list');
+            const dealId = button.dataset.dealId;
+            event.stopPropagation();
+            
+            // Блокируем кнопку на время обработки
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отмена...';
+            
+            import('./deals.js').then(module => {
+                module.rejectDeal(dealId).finally(() => {
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            }).catch(error => {
+                console.error('Error loading deals module:', error);
+                button.disabled = false;
+                button.innerHTML = originalText;
+            });
+        }
+        
+        // Обработка кнопки отклонения в модальном окне
+        if (event.target.closest('.reject-deal-btn')) {
+            const button = event.target.closest('.reject-deal-btn');
+            const dealId = button.dataset.dealId;
+            event.stopPropagation();
+            
+            // Блокируем кнопку на время обработки
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Отмена...';
+            
+            import('./deals.js').then(module => {
+                module.rejectDeal(dealId).finally(() => {
+                    button.disabled = false;
+                    button.innerHTML = originalText;
+                });
+            }).catch(error => {
+                console.error('Error loading deals module:', error);
+                button.disabled = false;
+                button.innerHTML = originalText;
             });
         }
         
