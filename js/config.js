@@ -6,7 +6,8 @@ export const SUPABASE_CONFIG = {
         auth: {
             autoRefreshToken: true,
             persistSession: true,
-            detectSessionInUrl: true
+            detectSessionInUrl: true,
+            flowType: 'pkce' // Добавляем PKCE для улучшенной безопасности
         }
     }
 };
@@ -40,7 +41,11 @@ export const state = {
         topRanking: 60000 // 1 минута
     },
     isAuthenticated: false,
-    isAdmin: false // ДОБАВЛЯЕМ СВОЙСТВО ДЛЯ СТАТУСА АДМИНИСТРАТОРА
+    isAdmin: false,
+    // ДОБАВЛЯЕМ НОВЫЕ СВОЙСТВА ДЛЯ УПРАВЛЕНИЯ СОСТОЯНИЕМ
+    isLoading: false,
+    error: null,
+    realtimeSubscriptions: [] // Для управления подписками реального времени
 };
 
 // Функция проверки необходимости обновления
@@ -53,6 +58,35 @@ export function shouldUpdate(resource) {
 // Функция обновления времени последнего обновления
 export function markUpdated(resource) {
     state.lastUpdates[resource] = Date.now();
+}
+
+// Функция для очистки кэша
+export function clearCache(resource = null) {
+    if (resource) {
+        cache[resource] = { data: null, timestamp: 0, ttl: cache[resource].ttl };
+    } else {
+        Object.keys(cache).forEach(key => {
+            cache[key] = { data: null, timestamp: 0, ttl: cache[key].ttl };
+        });
+    }
+}
+
+// Функция для управления подписками реального времени
+export function addRealtimeSubscription(subscription) {
+    state.realtimeSubscriptions.push(subscription);
+}
+
+export function removeRealtimeSubscription(channel) {
+    state.realtimeSubscriptions = state.realtimeSubscriptions.filter(sub => sub !== channel);
+}
+
+export function cleanupRealtimeSubscriptions() {
+    state.realtimeSubscriptions.forEach(sub => {
+        if (sub && sub.unsubscribe) {
+            sub.unsubscribe();
+        }
+    });
+    state.realtimeSubscriptions = [];
 }
 
 // Объект для хранения DOM элементов
@@ -119,4 +153,28 @@ export const dom = {
 export const SHOP_CONFIG = {
     productPrice: 299
     // adminId больше не используется - проверка через таблицу admins
+};
+
+// Константы для типов депозитов и статусов
+export const DEPOSIT_TYPES = {
+    CALL: 'call',
+    NIGHT: 'night',
+    CHAMPION: 'champion',
+    CRYPTO: 'crypto'
+};
+
+export const DEPOSIT_STATUS = {
+    ACTIVE: 'active',
+    COMPLETED: 'completed'
+};
+
+export const DEAL_STATUS = {
+    PENDING: 'pending',
+    COMPLETED: 'completed',
+    REJECTED: 'rejected'
+};
+
+export const DEAL_CHOICES = {
+    COOPERATE: 'cooperate',
+    CHEAT: 'cheat'
 };

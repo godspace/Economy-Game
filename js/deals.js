@@ -1,5 +1,5 @@
 // deals.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
-import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
+import { state, dom, cache, shouldUpdate, markUpdated, DEAL_STATUS, DEAL_CHOICES } from './config.js';
 
 // Функция для проверки лимита уникальных игроков
 async function checkUniquePlayersLimit(targetUserId) {
@@ -89,6 +89,7 @@ async function checkUniquePlayersLimit(targetUserId) {
         return { canMakeDeal: false, error: 'Ошибка системы' };
     }
 }
+
 // Функция для записи уникального игрока
 async function recordUniquePlayer(targetUserId) {
     try {
@@ -135,6 +136,7 @@ export async function showDealModal(userId) {
         
         if (error) {
             console.error('Ошибка загрузки профиля пользователя:', error);
+            alert('Не удалось загрузить профиль пользователя');
             return;
         }
         
@@ -221,6 +223,7 @@ export async function showDealModal(userId) {
         }
     } catch (error) {
         console.error('Ошибка показа модального окна:', error);
+        alert('Ошибка при открытии модального окна сделки');
     }
 }
 
@@ -291,6 +294,7 @@ export async function proposeDeal(choice) {
     try {
         if (!state.supabase || !state.currentUserProfile || !state.selectedUser) {
             console.error('Required data not initialized');
+            alert('Системная ошибка: данные не инициализированы');
             return;
         }
         
@@ -381,13 +385,14 @@ export async function showResponseModal(dealId) {
             .from('deals')
             .select(`
                 id, from_choice, status, created_at,
-                from_user:profiles!fk_deals_from_user(username, class, coins, reputation)
+                from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
             `)
             .eq('id', dealId)
             .single();
         
         if (error) {
             console.error('Ошибка загрузки сделки:', error);
+            alert('Не удалось загрузить данные сделки');
             return;
         }
         
@@ -429,10 +434,13 @@ export async function showResponseModal(dealId) {
             `;
             
             // Добавляем обработчик для кнопки отклонения
-            document.querySelector('.reject-deal-btn').addEventListener('click', function() {
-                const dealId = this.dataset.dealId;
-                rejectDeal(dealId);
-            });
+            const rejectBtn = document.querySelector('.reject-deal-btn');
+            if (rejectBtn) {
+                rejectBtn.addEventListener('click', function() {
+                    const dealId = this.dataset.dealId;
+                    rejectDeal(dealId);
+                });
+            }
         }
         
         if (dom.responseModal) {
@@ -440,6 +448,7 @@ export async function showResponseModal(dealId) {
         }
     } catch (error) {
         console.error('Ошибка показа модального окна ответа:', error);
+        alert('Ошибка при открытии модального окна ответа');
     }
 }
 
@@ -492,6 +501,7 @@ export async function respondToDeal(choice) {
     try {
         if (!state.supabase || !state.selectedDeal || !state.currentUserProfile) {
             console.error('Required data not initialized');
+            alert('Системная ошибка: данные не инициализированы');
             return;
         }
         
@@ -535,6 +545,7 @@ export async function respondToDeal(choice) {
 async function showDealResult(deal, userChoice, result) {
     try {
         if (!dom.resultModal || !dom.resultContent) {
+            console.error('Result modal elements not found');
             return;
         }
         
@@ -648,31 +659,31 @@ export async function loadDeals(forceRefresh = false) {
                 .from('deals')
                 .select(`
                     id, from_choice, status, created_at,
-                    from_user:profiles!fk_deals_from_user(username, class, coins, reputation)
+                    from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
                 `)
                 .eq('to_user', state.currentUserProfile.id)
-                .eq('status', 'pending'),
+                .eq('status', DEAL_STATUS.PENDING),
             
             // Ожидающие ответа сделки
             state.supabase
                 .from('deals')
                 .select(`
                     id, from_choice, status, created_at,
-                    to_user:profiles!fk_deals_to_user(username, class)
+                    to_user:profiles!deals_to_user_fkey(username, class)
                 `)
                 .eq('from_user', state.currentUserProfile.id)
-                .eq('status', 'pending'),
+                .eq('status', DEAL_STATUS.PENDING),
             
             // Завершённые входящие сделки
             state.supabase
                 .from('deals')
                 .select(`
                     id, from_choice, to_choice, status, created_at,
-                    from_user:profiles!fk_deals_from_user(username, class),
-                    to_user:profiles!fk_deals_to_user(username, class)
+                    from_user:profiles!deals_from_user_fkey(username, class),
+                    to_user:profiles!deals_to_user_fkey(username, class)
                 `)
                 .eq('to_user', state.currentUserProfile.id)
-                .eq('status', 'completed')
+                .eq('status', DEAL_STATUS.COMPLETED)
                 .order('created_at', { ascending: false })
                 .limit(20),
             
@@ -681,14 +692,20 @@ export async function loadDeals(forceRefresh = false) {
                 .from('deals')
                 .select(`
                     id, from_choice, to_choice, status, created_at,
-                    from_user:profiles!fk_deals_from_user(username, class),
-                    to_user:profiles!fk_deals_to_user(username, class)
+                    from_user:profiles!deals_from_user_fkey(username, class),
+                    to_user:profiles!deals_to_user_fkey(username, class)
                 `)
                 .eq('from_user', state.currentUserProfile.id)
-                .eq('status', 'completed')
+                .eq('status', DEAL_STATUS.COMPLETED)
                 .order('created_at', { ascending: false })
                 .limit(20)
         ]);
+        
+        // Обработка ошибок для каждого запроса
+        if (incomingResult.error) console.error('Error loading incoming deals:', incomingResult.error);
+        if (pendingResult.error) console.error('Error loading pending deals:', pendingResult.error);
+        if (completedIncomingResult.error) console.error('Error loading completed incoming deals:', completedIncomingResult.error);
+        if (completedOutgoingResult.error) console.error('Error loading completed outgoing deals:', completedOutgoingResult.error);
         
         const dealsData = {
             incoming: incomingResult.data || [],
@@ -733,6 +750,11 @@ function renderDeals(dealsData) {
 }
 
 function renderDealsList(deals, container, type) {
+    if (!container) {
+        console.error('Container not found for deals list:', type);
+        return;
+    }
+    
     container.innerHTML = '';
     
     if (deals.length === 0) {
@@ -772,7 +794,7 @@ function renderDealsList(deals, container, type) {
                 dealItem.innerHTML = `
                     <div>
                         <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === DEAL_CHOICES.COOPERATE ? 'Сотрудничать' : 'Жульничать'}</p>
                         <p><strong>Статус:</strong> <span class="badge badge-warning">Ожидание</span></p>
                     </div>
                 `;
@@ -784,24 +806,31 @@ function renderDealsList(deals, container, type) {
         container.appendChild(fragment);
         
         // Добавляем обработчики событий после рендеринга
-        document.querySelectorAll('.respond-deal').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const dealId = this.dataset.dealId;
-                showResponseModal(dealId);
+        setTimeout(() => {
+            document.querySelectorAll('.respond-deal').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const dealId = this.dataset.dealId;
+                    showResponseModal(dealId);
+                });
             });
-        });
-        
-        // Добавляем обработчики для кнопок отклонения в списке
-        document.querySelectorAll('.reject-deal-list').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const dealId = this.dataset.dealId;
-                rejectDeal(dealId);
+            
+            // Добавляем обработчики для кнопок отклонения в списке
+            document.querySelectorAll('.reject-deal-list').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const dealId = this.dataset.dealId;
+                    rejectDeal(dealId);
+                });
             });
-        });
+        }, 0);
     }
 }
 
 function renderCompletedDeals(deals, container, type) {
+    if (!container) {
+        console.error('Container not found for completed deals:', type);
+        return;
+    }
+    
     container.innerHTML = '';
     
     if (deals.length === 0) {
@@ -828,22 +857,22 @@ function renderCompletedDeals(deals, container, type) {
             
             if (type === 'incoming') {
                 // Для входящих: to_choice - наш выбор
-                if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                if (deal.from_choice === DEAL_CHOICES.COOPERATE && deal.to_choice === DEAL_CHOICES.COOPERATE) {
                     coinsChange = 2;
                     reputationChange = 1;
                     resultClass = 'profit-positive';
                     resultText = `+${coinsChange} монет, +${reputationChange} репутации`;
-                } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                } else if (deal.from_choice === DEAL_CHOICES.COOPERATE && deal.to_choice === DEAL_CHOICES.CHEAT) {
                     coinsChange = 3;
                     reputationChange = -1;
                     resultClass = 'profit-positive';
                     resultText = `+${coinsChange} монет, ${reputationChange} репутации`;
-                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                } else if (deal.from_choice === DEAL_CHOICES.CHEAT && deal.to_choice === DEAL_CHOICES.COOPERATE) {
                     coinsChange = -1;
                     reputationChange = 1;
                     resultClass = 'profit-negative';
                     resultText = `${coinsChange} монет, +${reputationChange} репутации`;
-                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                } else if (deal.from_choice === DEAL_CHOICES.CHEAT && deal.to_choice === DEAL_CHOICES.CHEAT) {
                     coinsChange = -1;
                     reputationChange = -1;
                     resultClass = 'profit-negative';
@@ -855,29 +884,29 @@ function renderCompletedDeals(deals, container, type) {
                 dealItem.innerHTML = `
                     <div>
                         <p><strong>От кого:</strong> ${deal.from_user.username} (${deal.from_user.class})</p>
-                        <p><strong>Ваш выбор:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                        <p><strong>Ответ:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ваш выбор:</strong> ${deal.to_choice === DEAL_CHOICES.COOPERATE ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ответ:</strong> ${deal.from_choice === DEAL_CHOICES.COOPERATE ? 'Сотрудничать' : 'Жульничать'}</p>
                         ${resultHtml}
                     </div>
                 `;
             } else {
                 // Для исходящих: from_choice - наш выбор
-                if (deal.from_choice === 'cooperate' && deal.to_choice === 'cooperate') {
+                if (deal.from_choice === DEAL_CHOICES.COOPERATE && deal.to_choice === DEAL_CHOICES.COOPERATE) {
                     coinsChange = 2;
                     reputationChange = 1;
                     resultClass = 'profit-positive';
                     resultText = `+${coinsChange} монет, +${reputationChange} репутации`;
-                } else if (deal.from_choice === 'cooperate' && deal.to_choice === 'cheat') {
+                } else if (deal.from_choice === DEAL_CHOICES.COOPERATE && deal.to_choice === DEAL_CHOICES.CHEAT) {
                     coinsChange = -1;
                     reputationChange = 1;
                     resultClass = 'profit-negative';
                     resultText = `${coinsChange} монет, +${reputationChange} репутации`;
-                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cooperate') {
+                } else if (deal.from_choice === DEAL_CHOICES.CHEAT && deal.to_choice === DEAL_CHOICES.COOPERATE) {
                     coinsChange = 3;
                     reputationChange = -1;
                     resultClass = 'profit-positive';
                     resultText = `+${coinsChange} монет, ${reputationChange} репутации`;
-                } else if (deal.from_choice === 'cheat' && deal.to_choice === 'cheat') {
+                } else if (deal.from_choice === DEAL_CHOICES.CHEAT && deal.to_choice === DEAL_CHOICES.CHEAT) {
                     coinsChange = -1;
                     reputationChange = -1;
                     resultClass = 'profit-negative';
@@ -889,8 +918,8 @@ function renderCompletedDeals(deals, container, type) {
                 dealItem.innerHTML = `
                     <div>
                         <p><strong>Кому:</strong> ${deal.to_user.username} (${deal.to_user.class})</p>
-                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
-                        <p><strong>Ответ:</strong> ${deal.to_choice === 'cooperate' ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ваш выбор:</strong> ${deal.from_choice === DEAL_CHOICES.COOPERATE ? 'Сотрудничать' : 'Жульничать'}</p>
+                        <p><strong>Ответ:</strong> ${deal.to_choice === DEAL_CHOICES.COOPERATE ? 'Сотрудничать' : 'Жульничать'}</p>
                         ${resultHtml}
                     </div>
                 `;
@@ -986,7 +1015,6 @@ function renderRanking(users) {
 async function updateUserProfile() {
     try {
         if (!state.supabase || !state.currentUserProfile) {
-            console.log('updateUserProfile: нет supabase или currentUserProfile');
             return;
         }
         
@@ -1002,7 +1030,6 @@ async function updateUserProfile() {
         }
         
         if (profile) {
-            console.log('updateUserProfile: получены данные', profile);
             // Обновляем состояние
             state.currentUserProfile.coins = profile.coins;
             state.currentUserProfile.reputation = profile.reputation;
@@ -1010,20 +1037,15 @@ async function updateUserProfile() {
             // Обновляем DOM
             if (dom.coinsValue) {
                 dom.coinsValue.textContent = profile.coins;
-                console.log('updateUserProfile: обновлены монеты на', profile.coins);
-            } else {
-                console.log('updateUserProfile: dom.coinsValue не найден');
             }
             if (dom.reputationValue) {
                 dom.reputationValue.textContent = profile.reputation;
-                console.log('updateUserProfile: обновлена репутация на', profile.reputation);
-            } else {
-                console.log('updateUserProfile: dom.reputationValue не найден');
             }
-        } else {
-            console.log('updateUserProfile: профиль не найден');
         }
     } catch (error) {
         console.error('Ошибка при обновлении профиля:', error);
     }
 }
+
+// Экспортируем для тестирования
+export { checkUniquePlayersLimit, getTodayDealsCount, updateUserProfile };
