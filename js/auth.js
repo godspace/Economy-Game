@@ -174,6 +174,7 @@ export async function checkAdminStatus() {
     try {
         if (!state.supabase || !state.currentUserProfile) {
             state.isAdmin = false;
+            updateAdminTabVisibility();
             return false;
         }
 
@@ -191,12 +192,27 @@ export async function checkAdminStatus() {
 
         state.isAdmin = !error && admin;
         console.log('🔧 User is admin:', state.isAdmin);
+        
+        // Обновляем видимость вкладки администратора
+        updateAdminTabVisibility();
 
         return state.isAdmin;
     } catch (error) {
         console.error('Error checking admin status:', error);
         state.isAdmin = false;
+        updateAdminTabVisibility();
         return false;
+    }
+}
+
+// Функция для обновления видимости вкладки администратора
+function updateAdminTabVisibility() {
+    const adminTab = document.querySelector('.tab[data-tab="admin"]');
+    if (adminTab) {
+        adminTab.style.display = state.isAdmin ? 'flex' : 'none';
+        console.log('Admin tab visibility updated:', state.isAdmin ? 'visible' : 'hidden');
+    } else {
+        console.log('Admin tab not found in HTML');
     }
 }
 
