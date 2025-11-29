@@ -482,17 +482,5 @@ export function setElementLoading(element, isLoading) {
     }
 }
 
-// Экспортируем все необходимые функции для использования в других модулях
-// УБРАН updateUserBalanceDisplay из экспорта, так как он уже экспортирован выше
-export { 
-    closeMaintenanceWarning,
-    showAuthSection,
-    showProfileSection, 
-    showAuthError,
-    hideAuthError,
-    showLoading,
-    hideLoading,
-    showError,
-    hideError
-    // updateUserBalanceDisplay удален - уже экспортирован выше
-};
+// УДАЛЕН ГРУППОВОЙ ЭКСПОРТ В КОНЦЕ ФАЙЛА
+// Все функции уже экспортированы в месте их объявления
