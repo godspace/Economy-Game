@@ -5,7 +5,7 @@ export async function loadUserProfile(userId) {
     try {
         if (!state.supabase) {
             console.error('Supabase not initialized');
-            return;
+            return null;
         }
         
         const { data: profile, error } = await state.supabase
@@ -16,17 +16,13 @@ export async function loadUserProfile(userId) {
         
         if (error) {
             console.error('Ошибка загрузки профиля:', error);
-            return;
+            return null;
         }
         
         // ИСПРАВЛЕНИЕ: Обновляем состояние только если это текущий пользователь
-        if (state.currentUser && state.currentUser.id === userId) {
-            state.currentUserProfile = profile;
-            
-            if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${profile.username}!`;
-            if (dom.userAvatar) dom.userAvatar.textContent = profile.username.charAt(0).toUpperCase();
-            if (dom.coinsValue) dom.coinsValue.textContent = profile.coins;
-            if (dom.reputationValue) dom.reputationValue.textContent = profile.reputation;
+        if (state.currentUserProfile && state.currentUserProfile.id === userId) {
+            state.currentUserProfile = { ...state.currentUserProfile, ...profile };
+            updateUserProfileDisplay();
         }
         
         return profile;
@@ -37,11 +33,34 @@ export async function loadUserProfile(userId) {
     }
 }
 
+// Функция для обновления отображения профиля пользователя
+function updateUserProfileDisplay() {
+    if (!state.currentUserProfile) return;
+    
+    if (dom.userGreeting) {
+        dom.userGreeting.textContent = `Привет, ${state.currentUserProfile.username}!`;
+    }
+    if (dom.userAvatar) {
+        dom.userAvatar.textContent = state.currentUserProfile.username.charAt(0).toUpperCase();
+    }
+    if (dom.coinsValue) {
+        dom.coinsValue.textContent = state.currentUserProfile.coins;
+    }
+    if (dom.reputationValue) {
+        dom.reputationValue.textContent = state.currentUserProfile.reputation;
+    }
+}
+
 export async function loadUsers(forceRefresh = false) {
     try {
         if (!state.supabase || !state.isAuthenticated || !state.currentUserProfile) {
             console.error('Supabase or authentication not initialized');
             return;
+        }
+        
+        // Показываем индикатор загрузки
+        if (dom.usersList) {
+            dom.usersList.classList.add('loading');
         }
         
         // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТУС БУСТА ПРИ ОТКРЫТИИ ВКЛАДКИ
@@ -58,10 +77,13 @@ export async function loadUsers(forceRefresh = false) {
             (now - cache.users.timestamp < cache.users.ttl) &&
             shouldUpdate('users')) {
             renderUsers(cache.users.data);
+            if (dom.usersList) {
+                dom.usersList.classList.remove('loading');
+            }
             return;
         }
         
-        const searchTerm = dom.searchInput ? dom.searchInput.value : '';
+        const searchTerm = dom.searchInput ? dom.searchInput.value.trim() : '';
         const selectedClass = dom.classFilter ? dom.classFilter.value : '';
         
         let query = state.supabase
@@ -74,7 +96,7 @@ export async function loadUsers(forceRefresh = false) {
             query = query.ilike('username', `%${searchTerm}%`);
         }
         
-        if (selectedClass) {
+        if (selectedClass && selectedClass !== 'all') {
             query = query.eq('class', selectedClass);
         }
         
@@ -82,6 +104,7 @@ export async function loadUsers(forceRefresh = false) {
         
         if (error) {
             console.error('Ошибка загрузки пользователей:', error);
+            renderUsersError('Не удалось загрузить пользователей');
             return;
         }
         
@@ -97,87 +120,169 @@ export async function loadUsers(forceRefresh = false) {
         
     } catch (error) {
         console.error('Ошибка загрузки пользователей:', error);
+        renderUsersError('Ошибка при загрузке пользователей');
+    } finally {
+        // Скрываем индикатор загрузки
+        if (dom.usersList) {
+            dom.usersList.classList.remove('loading');
+        }
     }
 }
 
 function renderUsers(users) {
     if (!dom.usersList) return;
     
-    dom.usersList.innerHTML = '';
+    try {
+        dom.usersList.innerHTML = '';
+        
+        if (!users || users.length === 0) {
+            renderEmptyUsersState();
+            return;
+        }
+        
+        const fragment = document.createDocumentFragment();
+        
+        users.forEach(user => {
+            const userCard = createUserCard(user);
+            fragment.appendChild(userCard);
+        });
+        
+        dom.usersList.appendChild(fragment);
+        
+        // Добавляем обработчики событий после рендеринга
+        setTimeout(() => {
+            attachUserCardEventListeners();
+        }, 0);
+        
+    } catch (error) {
+        console.error('Ошибка рендеринга пользователей:', error);
+        renderUsersError('Ошибка отображения пользователей');
+    }
+}
+
+function createUserCard(user) {
+    const userCard = document.createElement('div');
+    userCard.className = 'user-card';
     
-    if (users.length === 0) {
-        dom.usersList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-users"></i>
-                <p>Пользователи не найдены</p>
-            </div>
-        `;
-        return;
+    const currentUserHasCoins = state.currentUserProfile.coins > 0;
+    const targetUserHasCoins = user.coins > 0;
+    const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
+    
+    let buttonClass = 'btn-secondary';
+    let buttonText = 'Сделка';
+    let disabled = false;
+    let tooltip = '';
+    
+    if (!currentUserHasCoins) {
+        buttonClass = 'btn-secondary btn-disabled';
+        buttonText = 'У вас нет монет';
+        disabled = true;
+        tooltip = 'title="Для совершения сделки нужна хотя бы 1 монета"';
+    } else if (!targetUserHasCoins) {
+        buttonClass = 'btn-secondary btn-disabled';
+        buttonText = 'У игрока нет монет';
+        disabled = true;
+        tooltip = 'title="Игрок должен иметь монеты для сделки"';
     }
     
-    // Используем DocumentFragment для оптимизации рендеринга
-    const fragment = document.createDocumentFragment();
-    
-    users.forEach(user => {
-        const userCard = document.createElement('div');
-        userCard.className = 'user-card';
-        
-        const currentUserHasCoins = state.currentUserProfile.coins > 0;
-        const targetUserHasCoins = user.coins > 0;
-        const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
-        
-        let buttonClass = 'btn-secondary';
-        let buttonText = 'Сделка';
-        let disabled = false;
-        
-        if (!currentUserHasCoins) {
-            buttonClass = 'btn-secondary btn-disabled';
-            buttonText = 'У вас нет монет';
-            disabled = true;
-        } else if (!targetUserHasCoins) {
-            buttonClass = 'btn-secondary btn-disabled';
-            buttonText = 'У игрока нет монет';
-            disabled = true;
-        }
-        
-        userCard.innerHTML = `
-            <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-            <div class="user-name">${user.username}</div>
-            <div class="user-details">
-                <div class="user-detail">
-                    <i class="fas fa-users"></i>
-                    <span>${user.class}</span>
-                </div>
-                <div class="user-detail">
-                    <i class="fas fa-coins"></i>
-                    <span>${user.coins}</span>
-                </div>
-                <div class="user-detail">
-                    <i class="fas fa-star"></i>
-                    <span>${user.reputation}</span>
-                </div>
+    userCard.innerHTML = `
+        <div class="user-avatar">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>
+        <div class="user-name">${escapeHtml(user.username)}</div>
+        <div class="user-details">
+            <div class="user-detail">
+                <i class="fas fa-users"></i>
+                <span>${escapeHtml(user.class || 'Не указан')}</span>
             </div>
-            <button class="${buttonClass} propose-deal-btn" data-user-id="${user.id}" ${disabled ? 'disabled' : ''}>
-                <i class="fas fa-handshake"></i> ${buttonText}
-            </button>
-        `;
-        
-        fragment.appendChild(userCard);
-    });
+            <div class="user-detail">
+                <i class="fas fa-coins"></i>
+                <span>${user.coins}</span>
+            </div>
+            <div class="user-detail">
+                <i class="fas fa-star"></i>
+                <span>${user.reputation}</span>
+            </div>
+        </div>
+        <button class="${buttonClass} propose-deal-btn" 
+                data-user-id="${user.id}" 
+                data-user-name="${escapeHtml(user.username)}"
+                ${disabled ? 'disabled' : ''}
+                ${tooltip}>
+            <i class="fas fa-handshake"></i> ${buttonText}
+        </button>
+    `;
     
-    dom.usersList.appendChild(fragment);
-    
-    // Добавляем обработчики событий после рендеринга
-    document.querySelectorAll('.propose-deal-btn').forEach(btn => {
-        if (!btn.disabled) {
-            btn.addEventListener('click', async function() {
-                const userId = this.dataset.userId;
+    return userCard;
+}
+
+function attachUserCardEventListeners() {
+    document.querySelectorAll('.propose-deal-btn:not(:disabled)').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.userId;
+            const userName = this.dataset.userName;
+            
+            // Показываем индикатор загрузки на кнопке
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+            this.disabled = true;
+            
+            try {
                 // Динамический импорт для разрыва циклической зависимости
                 const { showDealModal } = await import('./deals.js');
-                showDealModal(userId);
-            });
-        }
+                await showDealModal(userId);
+            } catch (error) {
+                console.error('Ошибка открытия модального окна сделки:', error);
+                alert(`Не удалось открыть сделку с пользователем ${userName}`);
+            } finally {
+                // Восстанавливаем кнопку
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }
+        });
     });
+}
+
+function renderEmptyUsersState() {
+    if (!dom.usersList) return;
+    
+    const searchTerm = dom.searchInput ? dom.searchInput.value.trim() : '';
+    const selectedClass = dom.classFilter ? dom.classFilter.value : '';
+    
+    let message = 'Пользователи не найдены';
+    let icon = 'fa-users';
+    
+    if (searchTerm && selectedClass && selectedClass !== 'all') {
+        message = `Не найдено пользователей с именем "${searchTerm}" в классе ${selectedClass}`;
+    } else if (searchTerm) {
+        message = `Не найдено пользователей с именем "${searchTerm}"`;
+    } else if (selectedClass && selectedClass !== 'all') {
+        message = `Не найдено пользователей в классе ${selectedClass}`;
+    }
+    
+    dom.usersList.innerHTML = `
+        <div class="empty-state">
+            <i class="fas ${icon}"></i>
+            <p>${message}</p>
+            ${searchTerm || (selectedClass && selectedClass !== 'all') ? `
+                <button class="btn-outline" onclick="clearSearchFilters()" style="margin-top: 10px;">
+                    <i class="fas fa-times"></i> Очистить фильтры
+                </button>
+            ` : ''}
+        </div>
+    `;
+}
+
+function renderUsersError(message) {
+    if (!dom.usersList) return;
+    
+    dom.usersList.innerHTML = `
+        <div class="error-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>${message}</p>
+            <button class="btn-outline" onclick="loadUsers(true)" style="margin-top: 10px;">
+                <i class="fas fa-redo"></i> Попробовать снова
+            </button>
+        </div>
+    `;
 }
 
 // Функция для отображения информации о лимитах уникальных игроков
@@ -186,7 +291,7 @@ async function renderLimitInfo() {
         if (!state.supabase || !state.currentUserProfile) return;
 
         // Проверяем текущие лимиты
-        const limitCheck = await checkUniquePlayersLimit(null); // null - общая проверка
+        const limitCheck = await checkUniquePlayersLimit(null);
         
         // Создаем или обновляем индикатор лимитов
         let limitIndicator = document.getElementById('limitIndicator');
@@ -204,7 +309,7 @@ async function renderLimitInfo() {
         }
 
         const totalLimit = limitCheck.baseLimit + limitCheck.boostLimit;
-        const usedPercentage = totalLimit > 0 ? (limitCheck.usedSlots / totalLimit) * 100 : 0;
+        const usedPercentage = totalLimit > 0 ? Math.min(100, (limitCheck.usedSlots / totalLimit) * 100) : 0;
         const progressColor = usedPercentage >= 100 ? 'var(--danger)' : 
                             usedPercentage >= 80 ? 'var(--warning)' : 'var(--success)';
         
@@ -212,7 +317,7 @@ async function renderLimitInfo() {
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                 <i class="fas fa-users" style="color: var(--primary);"></i>
                 <strong>Лимит уникальных игроков сегодня:</strong>
-                <button class="btn-outline btn-small" onclick="refreshBoostStatus()" style="margin-left: auto; padding: 2px 8px; font-size: 0.7rem;">
+                <button class="btn-outline btn-small" id="refreshBoostBtn" style="margin-left: auto; padding: 2px 8px; font-size: 0.7rem;">
                     <i class="fas fa-sync-alt"></i> Обновить
                 </button>
             </div>
@@ -233,7 +338,7 @@ async function renderLimitInfo() {
                         ${limitCheck.availableSlots === 0 ? '❌ Лимит исчерпан' : `⚠️ Осталось ${limitCheck.availableSlots} слот${limitCheck.availableSlots === 1 ? '' : 'а'}`}
                     </small>
                     ${!limitCheck.hasActiveBoost ? `
-                    <button class="btn-outline btn-small" onclick="openShopTab()">
+                    <button class="btn-outline btn-small" id="openShopBtn">
                         <i class="fas fa-store"></i> Купить буст
                     </button>
                     ` : ''}
@@ -250,6 +355,17 @@ async function renderLimitInfo() {
             ` : ''}
         `;
 
+        // Добавляем обработчики для новых кнопок
+        const refreshBtn = document.getElementById('refreshBoostBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', refreshBoostStatus);
+        }
+        
+        const openShopBtn = document.getElementById('openShopBtn');
+        if (openShopBtn) {
+            openShopBtn.addEventListener('click', openShopTab);
+        }
+
     } catch (error) {
         console.error('Ошибка отображения информации о лимитах:', error);
     }
@@ -258,35 +374,32 @@ async function renderLimitInfo() {
 // Функция для принудительного обновления статуса буста
 async function refreshBoostStatus() {
     try {
+        const button = document.getElementById('refreshBoostBtn');
+        const originalHtml = button?.innerHTML;
+        
+        if (button) {
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+        }
+        
         const { updateBoostStatus } = await import('./shop.js');
         await updateBoostStatus();
         
         // Перезагружаем пользователей для обновления лимитов
-        loadUsers(true);
+        await loadUsers(true);
         
         // Показываем уведомление
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 120px;
-            right: 20px;
-            background: var(--success);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            z-index: 1001;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        `;
-        notification.innerHTML = '<i class="fas fa-check"></i> Статус обновлен';
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
+        showNotification('Статус обновлен', 'success');
         
     } catch (error) {
         console.error('Ошибка обновления статуса буста:', error);
-        alert('Ошибка обновления статуса: ' + error.message);
+        showNotification('Ошибка обновления статуса', 'error');
+    } finally {
+        const button = document.getElementById('refreshBoostBtn');
+        if (button) {
+            button.innerHTML = '<i class="fas fa-sync-alt"></i> Обновить';
+            button.disabled = false;
+        }
     }
 }
 
@@ -303,7 +416,15 @@ async function checkUniquePlayersLimit(targetUserId) {
 
         if (error) {
             console.error('Ошибка проверки лимита:', error);
-            return { canMakeDeal: false, error: 'Ошибка проверки лимита' };
+            return { 
+                canMakeDeal: false, 
+                error: 'Ошибка проверки лимита',
+                baseLimit: 5,
+                boostLimit: 0,
+                usedSlots: 0,
+                availableSlots: 5,
+                hasActiveBoost: false
+            };
         }
 
         return {
@@ -317,7 +438,15 @@ async function checkUniquePlayersLimit(targetUserId) {
 
     } catch (error) {
         console.error('Ошибка при проверке лимита:', error);
-        return { canMakeDeal: false, error: 'Ошибка системы' };
+        return { 
+            canMakeDeal: false, 
+            error: 'Ошибка системы',
+            baseLimit: 5,
+            boostLimit: 0,
+            usedSlots: 0,
+            availableSlots: 5,
+            hasActiveBoost: false
+        };
     }
 }
 
@@ -343,9 +472,64 @@ function openShopTab() {
     }
 }
 
-// Добавляем функции в глобальную область видимости
-window.refreshBoostStatus = refreshBoostStatus;
-window.openShopTab = openShopTab;
+// Вспомогательная функция для показа уведомлений
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    const bgColor = type === 'success' ? 'var(--success)' : 
+                   type === 'error' ? 'var(--danger)' : 'var(--primary)';
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 12px 18px;
+        border-radius: 5px;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+    notification.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check' : type === 'error' ? 'fa-exclamation-triangle' : 'fa-info'}"></i>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Функция для очистки фильтров поиска
+function clearSearchFilters() {
+    if (dom.searchInput) {
+        dom.searchInput.value = '';
+    }
+    if (dom.classFilter) {
+        dom.classFilter.value = 'all';
+    }
+    loadUsers(true);
+}
+
+// Функция для экранирования HTML
+function escapeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return unsafe;
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
 // Debounce поиска
 let searchTimeout = null;
@@ -355,7 +539,7 @@ export function setupSearchDebounce() {
         dom.searchInput.addEventListener('input', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
-                loadUsers(true); // force refresh
+                loadUsers(true);
             }, 500);
         });
     }
@@ -364,8 +548,17 @@ export function setupSearchDebounce() {
         dom.classFilter.addEventListener('change', function() {
             clearTimeout(searchTimeout);
             searchTimeout = setTimeout(() => {
-                loadUsers(true); // force refresh
+                loadUsers(true);
             }, 300);
         });
     }
 }
+
+// Добавляем функции в глобальную область видимости
+window.refreshBoostStatus = refreshBoostStatus;
+window.openShopTab = openShopTab;
+window.clearSearchFilters = clearSearchFilters;
+window.loadUsers = loadUsers;
+
+// Экспортируем для использования в других модулях
+export { checkUniquePlayersLimit, refreshBoostStatus };
