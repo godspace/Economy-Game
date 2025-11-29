@@ -1,278 +1,497 @@
-// main.js - ИСПРАВЛЕННЫЙ ФАЙЛ (убраны дублирующиеся экспорты)
-import { state, addRealtimeSubscription, cleanupRealtimeSubscriptions } from './config.js';
-import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
-import { initSupabase, checkAuth, isSupabaseInitialized } from './auth.js';
-import { loadTopRanking } from './data.js';
+import { handleAuth, handleLogout } from './auth.js';
+import { dom, state } from './config.js';
+import { setupSearchDebounce } from './users.js';
 
-// Мониторинг производительности
-function initPerformanceMonitoring() {
-    if ('PerformanceObserver' in window) {
-        try {
-            const observer = new PerformanceObserver((list) => {
-                list.getEntries().forEach((entry) => {
-                    if (entry.duration > 100) {
-                        console.warn('Long task detected:', entry);
-                    }
-                });
-            });
-            observer.observe({ entryTypes: ['longtask'] });
-        } catch (error) {
-            console.warn('PerformanceObserver not supported:', error);
+// Глобальная переменная для отслеживания активного таба
+let currentActiveTab = null;
+
+export function initDOMElements() {
+    console.log('Initializing DOM elements...');
+    
+    try {
+        // Инициализируем свойства объекта dom
+        dom.authSection = document.getElementById('authSection');
+        dom.profileSection = document.getElementById('profileSection');
+        dom.authForm = document.getElementById('authForm');
+        dom.authBtn = document.getElementById('authBtn');
+        dom.userInfo = document.getElementById('userInfo');
+        dom.userGreeting = document.getElementById('userGreeting');
+        dom.userAvatar = document.getElementById('userAvatar');
+        dom.logoutBtn = document.getElementById('logoutBtn');
+        dom.coinsValue = document.getElementById('coinsValue');
+        dom.reputationValue = document.getElementById('reputationValue');
+        dom.usersList = document.getElementById('usersList');
+        dom.searchInput = document.getElementById('searchInput');
+        dom.classFilter = document.getElementById('classFilter');
+        dom.searchBtn = document.getElementById('searchBtn');
+        dom.incomingDeals = document.getElementById('incomingDeals');
+        dom.pendingDeals = document.getElementById('pendingDeals');
+        dom.completedIncomingDeals = document.getElementById('completedIncomingDeals');
+        dom.completedOutgoingDeals = document.getElementById('completedOutgoingDeals');
+        dom.rankingTable = document.getElementById('rankingTable');
+        dom.dealModal = document.getElementById('dealModal');
+        dom.responseModal = document.getElementById('responseModal');
+        dom.resultModal = document.getElementById('resultModal');
+        dom.dealAvatar = document.getElementById('dealAvatar');
+        dom.dealPlayerName = document.getElementById('dealPlayerName');
+        dom.dealPlayerClass = document.getElementById('dealPlayerClass');
+        dom.dealPlayerCoins = document.getElementById('dealPlayerCoins');
+        dom.dealPlayerReputation = document.getElementById('dealPlayerReputation');
+        dom.cooperateBtn = document.getElementById('cooperateBtn');
+        dom.cheatBtn = document.getElementById('cheatBtn');
+        dom.respondCooperateBtn = document.getElementById('respondCooperateBtn');
+        dom.respondCheatBtn = document.getElementById('respondCheatBtn');
+        dom.responseDealInfo = document.getElementById('responseDealInfo');
+        dom.resultContent = document.getElementById('resultContent');
+        dom.closeResultBtn = document.getElementById('closeResultBtn');
+        dom.loadingMessage = document.getElementById('loadingMessage');
+        dom.errorMessage = document.getElementById('errorMessage');
+        dom.authError = document.getElementById('authError');
+        dom.dealLimitInfo = document.getElementById('dealLimitInfo');
+        dom.dealLimitText = document.getElementById('dealLimitText');
+        dom.depositModal = document.getElementById('depositModal');
+        dom.depositModalContent = document.getElementById('depositModalContent');
+        dom.depositResultModal = document.getElementById('depositResultModal');
+        dom.depositResultContent = document.getElementById('depositResultContent');
+        dom.closeDepositResultBtn = document.getElementById('closeDepositResultBtn');
+        dom.activeDepositsList = document.getElementById('activeDepositsList');
+        dom.depositHistoryList = document.getElementById('depositHistoryList');
+        dom.topRankingTable = document.getElementById('topRankingTable');
+        
+        // Новые DOM элементы для магазина
+        dom.shopProductsList = document.getElementById('shopProductsList');
+        dom.shopOrderHistory = document.getElementById('shopOrderHistory');
+        dom.adminOrdersList = document.getElementById('adminOrdersList');
+        dom.adminOrdersTab = document.getElementById('adminOrdersTab');
+        dom.adminOrdersTabContent = document.getElementById('adminOrdersTabContent');
+        
+        // Модальное окно техработ
+        dom.maintenanceModal = document.getElementById('maintenanceModal');
+        dom.closeMaintenanceModal = document.getElementById('closeMaintenanceModal');
+        dom.maintenanceBanner = document.getElementById('maintenanceBanner');
+        dom.closeMaintenanceBanner = document.getElementById('closeMaintenanceBanner');
+
+        console.log('DOM elements initialized successfully');
+    } catch (error) {
+        console.error('Error initializing DOM elements:', error);
+    }
+}
+
+export function showLoading() {
+    if (dom.loadingMessage) {
+        dom.loadingMessage.style.display = 'block';
+    }
+    if (dom.authSection) {
+        dom.authSection.style.display = 'none';
+    }
+    if (dom.profileSection) {
+        dom.profileSection.style.display = 'none';
+    }
+}
+
+export function hideLoading() {
+    if (dom.loadingMessage) {
+        dom.loadingMessage.style.display = 'none';
+    }
+}
+
+export function showError(message) {
+    hideLoading();
+    if (dom.errorMessage) {
+        dom.errorMessage.innerHTML = `<p>${message}</p>`;
+        dom.errorMessage.style.display = 'block';
+    }
+}
+
+export function hideError() {
+    if (dom.errorMessage) {
+        dom.errorMessage.style.display = 'none';
+    }
+}
+
+export function showAuthError(message) {
+    if (dom.authError) {
+        dom.authError.innerHTML = `<p>${message}</p>`;
+        dom.authError.style.display = 'block';
+    }
+}
+
+export function hideAuthError() {
+    if (dom.authError) {
+        dom.authError.style.display = 'none';
+    }
+}
+
+export function showAuthSection() {
+    if (dom.authSection) {
+        dom.authSection.style.display = 'block';
+    }
+    if (dom.profileSection) {
+        dom.profileSection.style.display = 'none';
+    }
+    if (dom.userInfo) {
+        dom.userInfo.style.display = 'none';
+    }
+    if (dom.errorMessage) {
+        dom.errorMessage.style.display = 'none';
+    }
+    if (dom.authError) {
+        dom.authError.style.display = 'none';
+    }
+}
+
+export function showProfileSection() {
+    if (dom.authSection) {
+        dom.authSection.style.display = 'none';
+    }
+    if (dom.profileSection) {
+        dom.profileSection.style.display = 'block';
+    }
+    if (dom.userInfo) {
+        dom.userInfo.style.display = 'block';
+    }
+    
+    // УПРАВЛЯЕМ ВИДИМОСТЬЮ ВКЛАДКИ АДМИНИСТРАТОРА
+    if (dom.adminOrdersTab) {
+        if (state.isAdmin) {
+            dom.adminOrdersTab.style.display = 'flex';
+            console.log('✅ Admin tab shown');
+        } else {
+            dom.adminOrdersTab.style.display = 'none';
+            console.log('❌ Admin tab hidden - user is not admin');
         }
     }
     
-    // Мониторинг загрузки ресурсов
-    window.addEventListener('load', () => {
-        if (performance.timing) {
-            const perfData = performance.timing;
-            const loadTime = perfData.loadEventEnd - perfData.navigationStart;
-            console.log(`Page load time: ${loadTime}ms`);
-            
-            if (loadTime > 3000) {
-                console.warn('Page load time is slow, consider optimization');
-            }
-        }
-    });
+    if (dom.errorMessage) {
+        dom.errorMessage.style.display = 'none';
+    }
+    if (dom.authError) {
+        dom.authError.style.display = 'none';
+    }
 }
 
-// Обработка ошибок приложения
-function initErrorHandling() {
-    // Обработка необработанных ошибок Promise
-    window.addEventListener('unhandledrejection', (event) => {
-        console.error('Unhandled Promise rejection:', event.reason);
-        event.preventDefault(); // Предотвращаем вывод в консоль браузера
-    });
-
-    // Обработка глобальных ошибок
-    window.addEventListener('error', (event) => {
-        console.error('Global error:', event.error);
-        // Можно отправить ошибку на сервер для мониторинга
-    });
-}
-
-// Функция для скрытия предупреждения и сохранения состояния
+// Функция для закрытия предупреждения о техработах
 function closeMaintenanceWarning() {
-    const maintenanceModal = document.getElementById('maintenanceModal');
-    const maintenanceBanner = document.getElementById('maintenanceBanner');
-    
-    // Для модального окна
-    if (maintenanceModal) {
-        maintenanceModal.classList.remove('active');
+    if (dom.maintenanceModal) {
+        dom.maintenanceModal.classList.remove('active');
     }
-    // Для баннера
-    if (maintenanceBanner) {
-        maintenanceBanner.style.display = 'none';
+    if (dom.maintenanceBanner) {
+        dom.maintenanceBanner.style.display = 'none';
     }
-    // Сохраняем в localStorage, что пользователь закрыл предупреждение
     localStorage.setItem('maintenanceWarningClosed', 'true');
 }
 
-// Инициализация realtime подписок
-function initRealtimeSubscriptions() {
-    if (!isSupabaseInitialized() || !state.isAuthenticated) return;
-
-    try {
-        // Подписка на изменения профиля пользователя
-        const profileSubscription = state.supabase
-            .channel('profile-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'profiles',
-                    filter: `id=eq.${state.currentUserProfile?.id}`
-                },
-                async (payload) => {
-                    console.log('Profile updated:', payload);
-                    // Обновляем данные в реальном времени
-                    if (payload.new && state.currentUserProfile) {
-                        Object.assign(state.currentUserProfile, payload.new);
-                        await updateUI();
-                    }
-                }
-            )
-            .subscribe();
-
-        addRealtimeSubscription(profileSubscription);
-
-    } catch (error) {
-        console.error('Error initializing realtime subscriptions:', error);
-    }
-}
-
-// Обновление UI при изменениях - ИСПРАВЛЕНО: добавлен async
-async function updateUI() {
-    if (!state.currentUserProfile) return;
-
-    // Ищем элементы DOM если они еще не инициализированы
-    if (!dom || !dom.coinsValue || !dom.reputationValue) {
-        const { dom: uiDom } = await import('./ui.js');
-        Object.assign(dom, uiDom);
-    }
-
-    if (dom.coinsValue) dom.coinsValue.textContent = state.currentUserProfile.coins || 0;
-    if (dom.reputationValue) dom.reputationValue.textContent = state.currentUserProfile.reputation || 0;
-}
-
-async function initializeApplication() {
-    try {
-        console.log('Starting app initialization...');
-        
-        // Инициализация обработки ошибок
-        initErrorHandling();
-        
-        // Инициализация мониторинга производительности
-        initPerformanceMonitoring();
-        
-        // Сначала инициализируем DOM элементы
-        initDOMElements();
-        
-        // Показываем сообщение о загрузке
-        showLoading();
-        
-        // Показываем предупреждение о технических работах сразу после инициализации DOM
-        const warningClosed = localStorage.getItem('maintenanceWarningClosed');
-        if (!warningClosed) {
-            const maintenanceBanner = document.getElementById('maintenanceBanner');
-            if (maintenanceBanner) {
-                maintenanceBanner.style.display = 'block';
-            }
-        }
-        
-        // Затем инициализируем Supabase
-        await initSupabase();
-        
-        // Проверяем успешность инициализации
-        if (!isSupabaseInitialized()) {
-            throw new Error('Failed to initialize Supabase client');
-        }
-        
-        // Настройка обработчиков событий
-        setupEventListeners();
-        
-        // Загружаем топ рейтинга для страницы авторизации
-        await loadTopRanking();
-        
-        // Проверка авторизации
-        await checkAuth();
-        
-        // Если пользователь авторизован - инициализируем realtime подписки и бусты
-        if (state.isAuthenticated) {
-            try {
-                // Инициализация realtime подписки
-                initRealtimeSubscriptions();
-                
-                // Загружаем статус буста
-                const { updateBoostStatus, startBoostStatusPolling } = await import('./shop.js');
-                await updateBoostStatus();
-                startBoostStatusPolling();
-                console.log('Boost status loaded and polling started successfully');
-            } catch (error) {
-                console.error('Error loading boost status:', error);
-            }
-        }
-        
-        // Скрываем сообщение о загрузке
-        hideLoading();
-        
-        console.log('App initialized successfully');
-        
-    } catch (error) {
-        console.error('Error initializing app:', error);
-        showError('Не удалось загрузить приложение: ' + error.message);
-        
-        // Все равно скрываем loading сообщение
-        hideLoading();
-    }
-}
-
-// Ленивая загрузка модулей для табов (экспортируем для использования в других модулях)
+// Функция для загрузки модулей табов
 async function loadTabModule(tabName) {
+    // Если таб уже активен, не загружаем повторно
+    if (currentActiveTab === tabName) {
+        return;
+    }
+    
+    console.log('Loading tab module:', tabName);
+    currentActiveTab = tabName;
+    
     try {
-        // Показываем индикатор загрузки для таба
-        const tabContent = document.getElementById(`${tabName}Tab`);
-        if (tabContent) {
-            tabContent.classList.add('loading');
-        }
-
         switch(tabName) {
             case 'users':
-                const { loadUsers } = await import('./users.js');
-                await loadUsers();
+                const usersModule = await import('./users.js');
+                await usersModule.loadUsers();
                 break;
             case 'deals':
-                const { loadDeals } = await import('./deals.js');
-                await loadDeals();
+                const dealsModule = await import('./deals.js');
+                await dealsModule.loadDeals();
                 break;
             case 'ranking':
-                const { loadRanking } = await import('./data.js'); // Исправлен импорт
-                await loadRanking();
+                const rankingModule = await import('./deals.js');
+                await rankingModule.loadRanking();
                 break;
             case 'investments':
-                const { loadInvestments } = await import('./investments.js');
-                await loadInvestments();
+                const investmentsModule = await import('./investments.js');
+                await investmentsModule.loadInvestments();
                 break;
             case 'shop':
-                const { loadShop, updateBoostStatus } = await import('./shop.js');
-                await loadShop();
-                // Обновляем статус буста при открытии магазина
-                await updateBoostStatus();
+                console.log('Loading shop module...');
+                const shopModule = await import('./shop.js');
+                console.log('Shop module loaded:', shopModule);
+                if (typeof shopModule.loadShop === 'function') {
+                    await shopModule.loadShop();
+                } else {
+                    console.error('loadShop is not a function in shop module');
+                }
                 break;
             case 'adminOrders':
                 console.log('Loading admin orders...');
-                const { loadAdminOrders } = await import('./shop.js');
-                await loadAdminOrders();
+                const adminModule = await import('./shop.js');
+                if (typeof adminModule.loadAdminOrders === 'function') {
+                    await adminModule.loadAdminOrders();
+                } else {
+                    console.error('loadAdminOrders is not a function in shop module');
+                }
                 break;
             default:
                 console.warn('Unknown tab:', tabName);
         }
     } catch (error) {
         console.error('Error loading tab module:', tabName, error);
-        showError(`Не удалось загрузить вкладку ${tabName}: ${error.message}`);
-    } finally {
-        // Скрываем индикатор загрузки
-        const tabContent = document.getElementById(`${tabName}Tab`);
-        if (tabContent) {
-            tabContent.classList.remove('loading');
-        }
+        showError(`Ошибка загрузки вкладки ${tabName}: ${error.message}`);
     }
 }
 
-// Очистка ресурсов при закрытии страницы
-function initCleanup() {
-    window.addEventListener('beforeunload', () => {
-        // Останавливаем все подписки и таймеры
-        cleanupRealtimeSubscriptions();
+// Функция для переключения табов
+export function switchTab(tabName) {
+    console.log('Switching to tab:', tabName);
+    
+    // Снимаем активный класс со всех табов и контента
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Активируем выбранный таб
+    const activeTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+    
+    // Активируем соответствующий контент
+    let tabContentId;
+    if (tabName === 'adminOrders') {
+        tabContentId = 'adminOrdersTabContent';
+    } else {
+        tabContentId = tabName + 'Tab';
+    }
+    
+    const tabContent = document.getElementById(tabContentId);
+    if (tabContent) {
+        tabContent.classList.add('active');
+        console.log('Activated tab content:', tabContentId);
         
-        // Останавливаем polling бустов
-        if (state.isAuthenticated) {
+        // Загружаем модуль таба
+        loadTabModule(tabName);
+    } else {
+        console.error('Tab content not found:', tabContentId);
+    }
+}
+
+export function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
+    // Обработчики аутентификации
+    if (dom.authForm) {
+        dom.authForm.addEventListener('submit', handleAuth);
+    }
+    
+    if (dom.logoutBtn) {
+        dom.logoutBtn.addEventListener('click', handleLogout);
+    }
+    
+    // Настройка debounce для поиска
+    if (dom.searchInput || dom.classFilter) {
+        setupSearchDebounce();
+    }
+    
+    if (dom.searchBtn) {
+        dom.searchBtn.addEventListener('click', async () => {
             try {
-                import('./shop.js').then(module => {
-                    if (module.stopBoostStatusPolling) {
-                        module.stopBoostStatusPolling();
-                    }
-                });
+                const { loadUsers } = await import('./users.js');
+                await loadUsers(true);
             } catch (error) {
-                console.error('Error stopping boost polling:', error);
+                console.error('Error loading users:', error);
             }
+        });
+    }
+    
+    // Обработчики для закрытия предупреждения о техработах
+    if (dom.closeMaintenanceModal) {
+        dom.closeMaintenanceModal.addEventListener('click', closeMaintenanceWarning);
+    }
+    
+    if (dom.closeMaintenanceBanner) {
+        dom.closeMaintenanceBanner.addEventListener('click', closeMaintenanceWarning);
+    }
+    
+    // Табы с ленивой загрузкой
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+    
+    // Модальные окна - закрытие по кнопкам
+    const closeModalButtons = document.querySelectorAll('.close-modal');
+    if (closeModalButtons) {
+        closeModalButtons.forEach(closeBtn => {
+            closeBtn.addEventListener('click', function() {
+                closeAllModals();
+            });
+        });
+    }
+    
+    if (dom.closeResultBtn) {
+        dom.closeResultBtn.addEventListener('click', function() {
+            if (dom.resultModal) dom.resultModal.classList.remove('active');
+        });
+    }
+    
+    if (dom.closeDepositResultBtn) {
+        dom.closeDepositResultBtn.addEventListener('click', function() {
+            if (dom.depositResultModal) dom.depositResultModal.classList.remove('active');
+        });
+    }
+    
+    // Делегирование событий для динамических элементов
+    document.addEventListener('click', function(event) {
+        // Обработка открытия вкладов
+        if (event.target.closest('.open-deposit')) {
+            const button = event.target.closest('.open-deposit');
+            import('./investments.js').then(module => {
+                if (module.openDepositModal) {
+                    module.openDepositModal(
+                        button.dataset.type,
+                        button.dataset.duration,
+                        button.dataset.profit,
+                        button.dataset.risk === 'true'
+                    );
+                }
+            }).catch(error => {
+                console.error('Error opening deposit modal:', error);
+            });
+        }
+        
+        // Закрытие модальных окон при клике вне области
+        if (event.target.classList.contains('modal')) {
+            event.target.classList.remove('active');
+        }
+    });
+    
+    // Кнопки выбора стратегии в сделках
+    if (dom.cooperateBtn) {
+        dom.cooperateBtn.addEventListener('click', async function() {
+            try {
+                const { proposeDeal } = await import('./deals.js');
+                await proposeDeal('cooperate');
+            } catch (error) {
+                console.error('Error proposing cooperate deal:', error);
+            }
+        });
+    }
+    
+    if (dom.cheatBtn) {
+        dom.cheatBtn.addEventListener('click', async function() {
+            try {
+                const { proposeDeal } = await import('./deals.js');
+                await proposeDeal('cheat');
+            } catch (error) {
+                console.error('Error proposing cheat deal:', error);
+            }
+        });
+    }
+    
+    if (dom.respondCooperateBtn) {
+        dom.respondCooperateBtn.addEventListener('click', async function() {
+            try {
+                const { respondToDeal } = await import('./deals.js');
+                await respondToDeal('cooperate');
+            } catch (error) {
+                console.error('Error responding with cooperate:', error);
+            }
+        });
+    }
+    
+    if (dom.respondCheatBtn) {
+        dom.respondCheatBtn.addEventListener('click', async function() {
+            try {
+                const { respondToDeal } = await import('./deals.js');
+                await respondToDeal('cheat');
+            } catch (error) {
+                console.error('Error responding with cheat:', error);
+            }
+        });
+    }
+    
+    // Предотвращение закрытия при клике внутри модального окна
+    document.querySelectorAll('.modal-content').forEach(content => {
+        if (content) {
+            content.addEventListener('click', function(event) {
+                event.stopPropagation();
+            });
+        }
+    });
+    
+    // Обработка клавиши Escape для закрытия модальных окон
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeAllModals();
+        }
+    });
+    
+    console.log('Event listeners setup completed');
+}
+
+// Функция для закрытия всех модальных окон
+export function closeAllModals() {
+    const modals = [
+        dom.dealModal,
+        dom.responseModal,
+        dom.resultModal,
+        dom.depositModal,
+        dom.depositResultModal,
+        dom.maintenanceModal
+    ];
+    
+    modals.forEach(modal => {
+        if (modal) {
+            modal.classList.remove('active');
         }
     });
 }
 
-// Запуск приложения после загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация очистки
-    initCleanup();
-    
-    // Даем время для загрузки всех скриптов
-    setTimeout(initializeApplication, 100);
-});
+// Функция для показа модального окна
+export function showModal(modalElement) {
+    closeAllModals();
+    if (modalElement) {
+        modalElement.classList.add('active');
+    }
+}
 
-// Экспортируем для тестирования - УБРАН ДУБЛИРУЮЩИЙСЯ ЭКСПОРТ loadTabModule
+// Функция для обновления отображения баланса пользователя
+export function updateUserBalanceDisplay() {
+    if (!state.currentUserProfile) return;
+    
+    if (dom.coinsValue) {
+        dom.coinsValue.textContent = state.currentUserProfile.coins || 0;
+    }
+    if (dom.reputationValue) {
+        dom.reputationValue.textContent = state.currentUserProfile.reputation || 0;
+    }
+    if (dom.userGreeting && state.currentUserProfile.username) {
+        dom.userGreeting.textContent = `Привет, ${state.currentUserProfile.username}!`;
+    }
+    if (dom.userAvatar && state.currentUserProfile.username) {
+        dom.userAvatar.textContent = state.currentUserProfile.username.charAt(0).toUpperCase();
+    }
+}
+
+// Функция для показа/скрытия индикатора загрузки на конкретном элементе
+export function setElementLoading(element, isLoading) {
+    if (!element) return;
+    
+    if (isLoading) {
+        element.classList.add('loading');
+    } else {
+        element.classList.remove('loading');
+    }
+}
+
+// Экспортируем все необходимые функции для использования в других модулях
 export { 
-    initializeApplication, 
-    initPerformanceMonitoring, 
-    initErrorHandling,
-    initRealtimeSubscriptions
+    closeMaintenanceWarning,
+    showAuthSection,
+    showProfileSection, 
+    showAuthError,
+    hideAuthError,
+    showLoading,
+    hideLoading,
+    showError,
+    hideError,
+    updateUserBalanceDisplay
 };
