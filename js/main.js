@@ -83,12 +83,12 @@ function initRealtimeSubscriptions() {
                     table: 'profiles',
                     filter: `id=eq.${state.currentUserProfile?.id}`
                 },
-                (payload) => {
+                async (payload) => {
                     console.log('Profile updated:', payload);
                     // Обновляем данные в реальном времени
                     if (payload.new && state.currentUserProfile) {
                         Object.assign(state.currentUserProfile, payload.new);
-                        updateUI();
+                        await updateUI();
                     }
                 }
             )
@@ -101,8 +101,8 @@ function initRealtimeSubscriptions() {
     }
 }
 
-// Обновление UI при изменениях
-function updateUI() {
+// Обновление UI при изменениях - ИСПРАВЛЕНО: добавлен async
+async function updateUI() {
     if (!state.currentUserProfile) return;
 
     // Ищем элементы DOM если они еще не инициализированы
@@ -160,7 +160,7 @@ async function initializeApplication() {
         // Если пользователь авторизован - инициализируем realtime подписки и бусты
         if (state.isAuthenticated) {
             try {
-                // Инициализация realtime подписок
+                // Инициализация realtime подписки
                 initRealtimeSubscriptions();
                 
                 // Загружаем статус буста
