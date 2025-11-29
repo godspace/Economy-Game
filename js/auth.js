@@ -249,6 +249,65 @@ async function handleStudentVerification(code) {
 
         console.log('Account created successfully');
         
+        // ДОБАВЛЯЕМ ПРОВЕРКУ - не существует ли уже профиля для этого студента
+        const { data: existingProfile, error: checkError } = await state.supabase
+            .from('profiles')
+            .select('id')
+            .eq('student_id', student.id)
+            .maybeSingle();
+
+        if (checkError) {
+            console.error('Error checking existing profile:', checkError);
+        }
+
+        let profile;
+
+        if (existingProfile) {
+            console.log('Profile already exists for this student, updating auth_user_id...');
+            
+            // Обновляем существующий профиль
+            const { data: updatedProfile, error: updateError } = await state.supabase
+                .from('profiles')
+                .update({ auth_user_id: data.user.id })
+                .eq('student_id', student.id)
+                .select()
+                .single();
+
+            if (updateError) {
+                console.error('Error updating profile:', updateError);
+                throw new Error(`Ошибка обновления профиля: ${updateError.message}`);
+            }
+            
+            profile = updatedProfile;
+            console.log('Profile updated successfully', profile);
+        } else {
+            // СОЗДАЕМ НОВЫЙ ПРОФИЛЬ
+            console.log('Creating new profile...');
+            const { data: newProfile, error: insertError } = await state.supabase
+                .from('profiles')
+                .insert({
+                    student_id: student.id,
+                    auth_user_id: data.user.id,
+                    username: `${student.first_name} ${student.last_name}`,
+                    class: student.class
+                })
+                .select()
+                .single();
+
+            if (insertError) {
+                console.error('Error creating profile:', insertError);
+                console.error('Error details:', {
+                    code: insertError.code,
+                    message: insertError.message,
+                    details: insertError.details,
+                    hint: insertError.hint
+                });
+                throw new Error(`Ошибка создания профиля: ${insertError.message}`);
+            }
+            profile = newProfile;
+            console.log('Profile created successfully', profile);
+        }
+
         // Пробуем войти с только что созданными данными
         const { data: signInData, error: signInError } = await state.supabase.auth.signInWithPassword({
             email: email,
