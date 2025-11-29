@@ -1,7 +1,10 @@
-// deals.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// deals.js - ПОЛНЫЙ ИСПРАВЛЕННЫЙ ФАЙЛ
 import { state, dom, cache, shouldUpdate, markUpdated, DEAL_STATUS, DEAL_CHOICES } from './config.js';
 
-// Функция для проверки лимита уникальных игроков - ИСПРАВЛЕНА
+// Глобальная переменная для защиты от повторных операций
+let pendingOperations = new Set();
+
+// Функция для проверки лимита уникальных игроков
 async function checkUniquePlayersLimit(targetUserId) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -431,15 +434,6 @@ export async function showResponseModal(dealId) {
                     </p>
                 </div>
             `;
-            
-            // Добавляем обработчик для кнопки отклонения
-            const rejectBtn = document.querySelector('.reject-deal-btn');
-            if (rejectBtn) {
-                rejectBtn.addEventListener('click', function() {
-                    const dealId = this.dataset.dealId;
-                    rejectDeal(dealId);
-                });
-            }
         }
         
         if (dom.responseModal) {
@@ -451,9 +445,17 @@ export async function showResponseModal(dealId) {
     }
 }
 
-// Функция отклонения сделки
+// Функция отклонения сделки с защитой от повторных вызовов
 export async function rejectDeal(dealId) {
+    // Защита от повторных вызовов
+    if (pendingOperations.has(dealId)) {
+        console.log('Operation already in progress for deal:', dealId);
+        return false;
+    }
+    
     try {
+        pendingOperations.add(dealId);
+        
         if (!state.supabase || !state.currentUserProfile) {
             console.error('Supabase or current user not initialized');
             return false;
@@ -493,6 +495,8 @@ export async function rejectDeal(dealId) {
         console.error('Ошибка отклонения сделки:', error);
         alert('Ошибка: ' + error.message);
         return false;
+    } finally {
+        pendingOperations.delete(dealId);
     }
 }
 
@@ -503,6 +507,8 @@ export async function respondToDeal(choice) {
             alert('Системная ошибка: данные не инициализированы');
             return;
         }
+        
+        console.log('🔄 Responding to deal:', state.selectedDeal.id, 'with choice:', choice);
         
         // Используем RPC функцию для атомарной обработки сделки с возвратом резервной монеты
         const { data: result, error } = await state.supabase.rpc('process_deal_with_reservation', {
@@ -521,6 +527,9 @@ export async function respondToDeal(choice) {
         
         console.log('✅ Сделка обработана, результат:', result);
         
+        // СРАЗУ ОБНОВЛЯЕМ БАЛАНС ПОЛЬЗОВАТЕЛЯ
+        await updateUserProfile();
+        
         await showDealResult(state.selectedDeal, choice, result);
         
         if (dom.responseModal) {
@@ -531,9 +540,6 @@ export async function respondToDeal(choice) {
         cache.deals.data = null;
         cache.deals.timestamp = 0;
         loadDeals(true); // force refresh
-        
-        // ОБНОВЛЯЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ВАЖНО!)
-        await updateUserProfile();
         
     } catch (error) {
         console.error('Ошибка ответа на сделку:', error);
@@ -803,24 +809,6 @@ function renderDealsList(deals, container, type) {
         });
         
         container.appendChild(fragment);
-        
-        // Добавляем обработчики событий после рендеринга
-        setTimeout(() => {
-            document.querySelectorAll('.respond-deal').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const dealId = this.dataset.dealId;
-                    showResponseModal(dealId);
-                });
-            });
-            
-            // Добавляем обработчики для кнопок отклонения в списке
-            document.querySelectorAll('.reject-deal-list').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const dealId = this.dataset.dealId;
-                    rejectDeal(dealId);
-                });
-            });
-        }, 0);
     }
 }
 
@@ -1014,35 +1002,48 @@ function renderRanking(users) {
 async function updateUserProfile() {
     try {
         if (!state.supabase || !state.currentUserProfile) {
+            console.error('Cannot update profile: supabase or currentUserProfile not initialized');
             return;
         }
         
+        console.log('🔄 Updating user profile for:', state.currentUserProfile.id);
+        
         const { data: profile, error } = await state.supabase
             .from('profiles')
-            .select('coins, reputation')
+            .select('coins, reputation, username')
             .eq('id', state.currentUserProfile.id)
             .single();
         
         if (error) {
-            console.error('Ошибка обновления профиля:', error);
+            console.error('❌ Ошибка обновления профиля:', error);
             return;
         }
         
         if (profile) {
+            console.log('✅ New profile data:', profile);
+            
             // Обновляем состояние
             state.currentUserProfile.coins = profile.coins;
             state.currentUserProfile.reputation = profile.reputation;
+            state.currentUserProfile.username = profile.username;
             
             // Обновляем DOM
             if (dom.coinsValue) {
                 dom.coinsValue.textContent = profile.coins;
+                console.log('💰 Coins updated in DOM:', profile.coins);
             }
             if (dom.reputationValue) {
                 dom.reputationValue.textContent = profile.reputation;
+                console.log('⭐ Reputation updated in DOM:', profile.reputation);
             }
+            if (dom.userGreeting && profile.username) {
+                dom.userGreeting.textContent = `Привет, ${profile.username}!`;
+            }
+        } else {
+            console.error('❌ Profile data is null');
         }
     } catch (error) {
-        console.error('Ошибка при обновлении профиля:', error);
+        console.error('❌ Ошибка при обновлении профиля:', error);
     }
 }
 
