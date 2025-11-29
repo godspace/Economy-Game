@@ -614,5 +614,5 @@ window.openShopTab = openShopTab;
 window.clearSearchFilters = clearSearchFilters;
 window.loadUsers = loadUsers;
 
-// Экспортируем для использования в других модулях
-export { checkUniquePlayersLimit, refreshBoostStatus };
+// Экспортируем только refreshBoostStatus, так как checkUniquePlayersLimit уже экспортирован выше
+export { refreshBoostStatus };
