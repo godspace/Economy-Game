@@ -226,6 +226,25 @@ function attachUserCardEventListeners() {
             this.disabled = true;
             
             try {
+                // Проверяем лимит уникальных игроков перед открытием сделки
+                const limitCheck = await checkUniquePlayersLimit(userId);
+                
+                if (!limitCheck.canMakeDeal) {
+                    let message = 'Лимит уникальных игроков исчерпан. ';
+                    if (limitCheck.availableSlots === 0) {
+                        message += `Вы уже совершили сделки с ${limitCheck.usedSlots} игроками сегодня.`;
+                    } else {
+                        message += `Доступно сделок: ${limitCheck.availableSlots}`;
+                    }
+                    
+                    if (!limitCheck.hasActiveBoost) {
+                        message += '\n\nКупите буст в магазине, чтобы увеличить лимит!';
+                    }
+                    
+                    alert(message);
+                    return;
+                }
+                
                 // Динамический импорт для разрыва циклической зависимости
                 const { showDealModal } = await import('./deals.js');
                 await showDealModal(userId);
@@ -308,8 +327,13 @@ async function renderLimitInfo() {
             }
         }
 
-        const totalLimit = limitCheck.baseLimit + limitCheck.boostLimit;
-        const usedPercentage = totalLimit > 0 ? Math.min(100, (limitCheck.usedSlots / totalLimit) * 100) : 0;
+        // Безопасное извлечение значений с значениями по умолчанию
+        const baseLimit = Number(limitCheck.baseLimit) || 5;
+        const boostLimit = Number(limitCheck.boostLimit) || 0;
+        const usedSlots = Number(limitCheck.usedSlots) || 0;
+        const totalLimit = baseLimit + boostLimit;
+        const availableSlots = Math.max(0, totalLimit - usedSlots);
+        const usedPercentage = totalLimit > 0 ? Math.min(100, (usedSlots / totalLimit) * 100) : 0;
         const progressColor = usedPercentage >= 100 ? 'var(--danger)' : 
                             usedPercentage >= 80 ? 'var(--warning)' : 'var(--success)';
         
@@ -323,7 +347,7 @@ async function renderLimitInfo() {
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
                 <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-                    <span style="font-weight: bold;">${limitCheck.usedSlots}/${totalLimit} игроков</span>
+                    <span style="font-weight: bold;">${usedSlots}/${totalLimit} игроков</span>
                     <div class="limit-progress">
                         <div class="limit-progress-bar" style="width: ${usedPercentage}%; background: ${progressColor};"></div>
                     </div>
@@ -332,10 +356,10 @@ async function renderLimitInfo() {
                         ''
                     }
                 </div>
-                ${limitCheck.availableSlots <= 2 ? `
+                ${availableSlots <= 2 ? `
                 <div style="text-align: right;">
-                    <small style="color: ${limitCheck.availableSlots === 0 ? 'var(--danger)' : 'var(--warning)'}; display: block; margin-bottom: 5px;">
-                        ${limitCheck.availableSlots === 0 ? '❌ Лимит исчерпан' : `⚠️ Осталось ${limitCheck.availableSlots} слот${limitCheck.availableSlots === 1 ? '' : 'а'}`}
+                    <small style="color: ${availableSlots === 0 ? 'var(--danger)' : 'var(--warning)'}; display: block; margin-bottom: 5px;">
+                        ${availableSlots === 0 ? '❌ Лимит исчерпан' : `⚠️ Осталось ${availableSlots} слот${availableSlots === 1 ? '' : 'а'}`}
                     </small>
                     ${!limitCheck.hasActiveBoost ? `
                     <button class="btn-outline btn-small" id="openShopBtn">
@@ -349,7 +373,7 @@ async function renderLimitInfo() {
             <div style="margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; border-left: 3px solid #4caf50;">
                 <small style="color: #2e7d32;">
                     <i class="fas fa-info-circle"></i> 
-                    Активен буст +${limitCheck.boostLimit} игроков. Общий лимит: ${totalLimit} игроков
+                    Активен буст +${boostLimit} игроков. Общий лимит: ${totalLimit} игроков
                 </small>
             </div>
             ` : ''}
@@ -368,6 +392,17 @@ async function renderLimitInfo() {
 
     } catch (error) {
         console.error('Ошибка отображения информации о лимитах:', error);
+        
+        // Fallback: показываем базовую информацию даже при ошибке
+        const limitIndicator = document.getElementById('limitIndicator');
+        if (limitIndicator) {
+            limitIndicator.innerHTML = `
+                <div style="color: var(--warning);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Временные проблемы с отображением лимитов. Базовый лимит: 5 игроков.
+                </div>
+            `;
+        }
     }
 }
 
@@ -404,18 +439,28 @@ async function refreshBoostStatus() {
 }
 
 // Функция для проверки лимитов уникальных игроков
-async function checkUniquePlayersLimit(targetUserId) {
+export async function checkUniquePlayersLimit(targetUserId) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
-            return { canMakeDeal: false, error: 'Не инициализирован' };
+            return { 
+                canMakeDeal: false, 
+                error: 'Не инициализирован',
+                baseLimit: 5,
+                boostLimit: 0,
+                usedSlots: 0,
+                availableSlots: 5,
+                hasActiveBoost: false
+            };
         }
+
+        console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
 
         const { data: result, error } = await state.supabase.rpc('check_daily_unique_players_limit', {
             p_user_id: state.currentUserProfile.id
         });
 
         if (error) {
-            console.error('Ошибка проверки лимита:', error);
+            console.error('❌ Ошибка проверки лимита:', error);
             return { 
                 canMakeDeal: false, 
                 error: 'Ошибка проверки лимита',
@@ -427,17 +472,26 @@ async function checkUniquePlayersLimit(targetUserId) {
             };
         }
 
+        console.log('📊 Лимиты уникальных игроков:', result);
+
+        // Гарантируем, что все значения являются числами
+        const baseLimit = Number(result?.base_limit) || 5;
+        const boostLimit = Number(result?.boost_limit) || 0;
+        const usedSlots = Number(result?.used_slots) || 0;
+        const availableSlots = Number(result?.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
+        const hasActiveBoost = Boolean(result?.has_active_boost);
+
         return {
-            canMakeDeal: result.available_slots > 0,
-            baseLimit: result.base_limit,
-            boostLimit: result.boost_limit,
-            usedSlots: result.used_slots,
-            availableSlots: result.available_slots,
-            hasActiveBoost: result.has_active_boost
+            canMakeDeal: availableSlots > 0,
+            baseLimit: baseLimit,
+            boostLimit: boostLimit,
+            usedSlots: usedSlots,
+            availableSlots: availableSlots,
+            hasActiveBoost: hasActiveBoost
         };
 
     } catch (error) {
-        console.error('Ошибка при проверке лимита:', error);
+        console.error('❌ Ошибка при проверке лимита:', error);
         return { 
             canMakeDeal: false, 
             error: 'Ошибка системы',
