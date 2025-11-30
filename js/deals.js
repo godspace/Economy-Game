@@ -156,7 +156,7 @@ export async function showDealModal(userId) {
             todayDealsCount: todayDealsCount
         });
         
-        // Получаем информацию о лимите только для отображения, не для блокировки
+        // Получаем информацию о лимите только для отображения
         const limitCheck = await checkUniquePlayersLimit(null);
         
         if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
@@ -180,7 +180,7 @@ export async function showDealModal(userId) {
                 shouldBlockDeal = true;
             }
             // ПРОВЕРКА 2: Лимит уникальных игроков (только для НОВЫХ игроков)
-            else if (!isFamiliarPlayer && !limitCheck.canMakeDeal) {
+            else if (!isFamiliarPlayer && limitCheck.availableSlots <= 0) {
                 dealLimitText = `
                     <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
                     <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
@@ -228,6 +228,13 @@ export async function showDealModal(userId) {
                     dom.cheatBtn.classList.remove('btn-disabled');
                 }
             }
+
+            console.log('🔒 Статус блокировки кнопок:', {
+                shouldBlockDeal: shouldBlockDeal,
+                isFamiliarPlayer: isFamiliarPlayer,
+                todayDealsCount: todayDealsCount,
+                availableSlots: limitCheck.availableSlots
+            });
         }
         
         if (dom.dealModal) {
