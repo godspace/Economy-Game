@@ -1,4 +1,4 @@
-// users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ИНТЕГРАЦИЕЙ СИСТЕМЫ БУСТОВ
+// users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ФУНКЦИОНАЛОМ ПЕРЕВОДА ДЛЯ АДМИНОВ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
 // Импортируем функцию из deals.js
@@ -172,57 +172,87 @@ function createUserCard(user) {
     const userCard = document.createElement('div');
     userCard.className = 'user-card';
     
-    const currentUserHasCoins = state.currentUserProfile.coins > 0;
-    const targetUserHasCoins = user.coins > 0;
-    const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
-    
-    let buttonClass = 'btn-secondary';
-    let buttonText = 'Сделка';
-    let disabled = false;
-    let tooltip = '';
-    
-    if (!currentUserHasCoins) {
-        buttonClass = 'btn-secondary btn-disabled';
-        buttonText = 'У вас нет монет';
-        disabled = true;
-        tooltip = 'title="Для совершения сделки нужна хотя бы 1 монета"';
-    } else if (!targetUserHasCoins) {
-        buttonClass = 'btn-secondary btn-disabled';
-        buttonText = 'У игрока нет монет';
-        disabled = true;
-        tooltip = 'title="Игрок должен иметь монеты для сделки"';
+    // РАЗДЕЛЕНИЕ ЛОГИКИ ДЛЯ АДМИНОВ И ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ
+    if (state.isAdmin) {
+        // ЛОГИКА ДЛЯ АДМИНА - кнопка "Перевод"
+        userCard.innerHTML = `
+            <div class="user-avatar">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>
+            <div class="user-name">${escapeHtml(user.username)}</div>
+            <div class="user-details">
+                <div class="user-detail">
+                    <i class="fas fa-users"></i>
+                    <span>${escapeHtml(user.class || 'Не указан')}</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-coins"></i>
+                    <span>${user.coins}</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-star"></i>
+                    <span>${user.reputation}</span>
+                </div>
+            </div>
+            <button class="btn-primary admin-transfer-btn" 
+                    data-user-id="${user.id}" 
+                    data-user-name="${escapeHtml(user.username)}">
+                <i class="fas fa-money-bill-wave"></i> Перевод 5 монет
+            </button>
+        `;
+    } else {
+        // ЛОГИКА ДЛЯ ОБЫЧНОГО ПОЛЬЗОВАТЕЛЯ - кнопка "Сделка"
+        const currentUserHasCoins = state.currentUserProfile.coins > 0;
+        const targetUserHasCoins = user.coins > 0;
+        const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
+        
+        let buttonClass = 'btn-secondary';
+        let buttonText = 'Сделка';
+        let disabled = false;
+        let tooltip = '';
+        
+        if (!currentUserHasCoins) {
+            buttonClass = 'btn-secondary btn-disabled';
+            buttonText = 'У вас нет монет';
+            disabled = true;
+            tooltip = 'title="Для совершения сделки нужна хотя бы 1 монета"';
+        } else if (!targetUserHasCoins) {
+            buttonClass = 'btn-secondary btn-disabled';
+            buttonText = 'У игрока нет монет';
+            disabled = true;
+            tooltip = 'title="Игрок должен иметь монеты для сделки"';
+        }
+        
+        userCard.innerHTML = `
+            <div class="user-avatar">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>
+            <div class="user-name">${escapeHtml(user.username)}</div>
+            <div class="user-details">
+                <div class="user-detail">
+                    <i class="fas fa-users"></i>
+                    <span>${escapeHtml(user.class || 'Не указан')}</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-coins"></i>
+                    <span>${user.coins}</span>
+                </div>
+                <div class="user-detail">
+                    <i class="fas fa-star"></i>
+                    <span>${user.reputation}</span>
+                </div>
+            </div>
+            <button class="${buttonClass} propose-deal-btn" 
+                    data-user-id="${user.id}" 
+                    data-user-name="${escapeHtml(user.username)}"
+                    ${disabled ? 'disabled' : ''}
+                    ${tooltip}>
+                <i class="fas fa-handshake"></i> ${buttonText}
+            </button>
+        `;
     }
-    
-    userCard.innerHTML = `
-        <div class="user-avatar">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>
-        <div class="user-name">${escapeHtml(user.username)}</div>
-        <div class="user-details">
-            <div class="user-detail">
-                <i class="fas fa-users"></i>
-                <span>${escapeHtml(user.class || 'Не указан')}</span>
-            </div>
-            <div class="user-detail">
-                <i class="fas fa-coins"></i>
-                <span>${user.coins}</span>
-            </div>
-            <div class="user-detail">
-                <i class="fas fa-star"></i>
-                <span>${user.reputation}</span>
-            </div>
-        </div>
-        <button class="${buttonClass} propose-deal-btn" 
-                data-user-id="${user.id}" 
-                data-user-name="${escapeHtml(user.username)}"
-                ${disabled ? 'disabled' : ''}
-                ${tooltip}>
-            <i class="fas fa-handshake"></i> ${buttonText}
-        </button>
-    `;
     
     return userCard;
 }
 
 function attachUserCardEventListeners() {
+    // Обработчики для обычных пользователей (сделки)
     document.querySelectorAll('.propose-deal-btn:not(:disabled)').forEach(btn => {
         btn.addEventListener('click', async function() {
             const userId = this.dataset.userId;
@@ -280,6 +310,68 @@ function attachUserCardEventListeners() {
             }
         });
     });
+    
+    // Обработчики для админов (переводы)
+    document.querySelectorAll('.admin-transfer-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.userId;
+            const userName = this.dataset.userName;
+            
+            // Показываем индикатор загрузки на кнопке
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Перевод...';
+            this.disabled = true;
+            
+            try {
+                await makeAdminTransfer(userId, userName);
+            } catch (error) {
+                console.error('❌ Ошибка перевода:', error);
+                alert(`Не удалось выполнить перевод пользователю ${userName}`);
+            } finally {
+                // Восстанавливаем кнопку
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }
+        });
+    });
+}
+
+// Функция для выполнения перевода администратором
+async function makeAdminTransfer(targetUserId, targetUserName) {
+    try {
+        if (!state.supabase || !state.isAdmin) {
+            throw new Error('Недостаточно прав для выполнения перевода');
+        }
+        
+        console.log(`🔄 Админ выполняет перевод пользователю: ${targetUserName}`);
+        
+        // Вызываем RPC функцию в Supabase
+        const { data, error } = await state.supabase.rpc('admin_transfer_coins', {
+            target_user_id: targetUserId,
+            amount: 5
+        });
+        
+        if (error) {
+            console.error('❌ Ошибка RPC вызова:', error);
+            throw new Error(error.message || 'Ошибка при выполнении перевода');
+        }
+        
+        if (!data || !data.success) {
+            throw new Error(data?.error || 'Неизвестная ошибка при переводе');
+        }
+        
+        // Показываем успешное сообщение
+        alert(`✅ ${data.message}`);
+        
+        // Обновляем список пользователей для отображения нового баланса
+        await loadUsers(true);
+        
+        console.log('✅ Перевод выполнен успешно');
+        
+    } catch (error) {
+        console.error('❌ Ошибка при выполнении перевода:', error);
+        throw error;
+    }
 }
 
 function renderEmptyUsersState() {
@@ -723,4 +815,3 @@ window.loadUsers = loadUsers;
 export { 
     refreshBoostStatus
 };
-
