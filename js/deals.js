@@ -20,7 +20,7 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
             };
         }
 
-        console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id, 'targetUserId:', targetUserId);
+        console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
 
         const { data: result, error } = await state.supabase.rpc('check_daily_unique_players_limit', {
             p_user_id: state.currentUserProfile.id
@@ -64,8 +64,7 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
         const availableSlots = Number(limitData.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
         const hasActiveBoost = Boolean(limitData.has_active_boost);
 
-        // ВАЖНО: canMakeDeal должно быть true если availableSlots > 0 ИЛИ если это знакомый игрок
-        // Но эта проверка делается на уровне вызывающего кода
+        // ВАЖНО: canMakeDeal используется только для информации, блокировка делается на уровне вызывающего кода
         const canMakeDeal = availableSlots > 0;
 
         const finalResult = {
@@ -145,12 +144,20 @@ export async function showDealModal(userId) {
         
         state.selectedUser = user;
         
-        // Проверяем лимит уникальных игроков и сделок с этим игроком
-        const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
+        // Проверяем количество сделок с этим игроком сегодня
         const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
         
         // Проверяем, является ли игрок уже знакомым (уже были сделки сегодня)
         const isFamiliarPlayer = todayDealsCount > 0;
+        
+        console.log('🔍 Проверка сделки в модальном окне:', {
+            player: state.selectedUser.username,
+            isFamiliarPlayer: isFamiliarPlayer,
+            todayDealsCount: todayDealsCount
+        });
+        
+        // Получаем информацию о лимите только для отображения, не для блокировки
+        const limitCheck = await checkUniquePlayersLimit(null);
         
         if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
         if (dom.dealAvatar) dom.dealAvatar.textContent = user.username.charAt(0).toUpperCase();
@@ -189,14 +196,14 @@ export async function showDealModal(userId) {
                         <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
                         <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
                         ✅ Это знакомый игрок - сделка разрешена<br>
-                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'}
+                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст для увеличения лимита!'}
                     `;
                 } else {
                     dealLimitText = `
                         <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
                         <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
                         ✅ Можно начать сделку с новым игроком<br>
-                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'}
+                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст для увеличения лимита!'}
                     `;
                 }
             }
