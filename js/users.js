@@ -720,5 +720,8 @@ window.clearSearchFilters = clearSearchFilters;
 window.loadUsers = loadUsers;
 
 // Экспортируем только refreshBoostStatus для совместимости
-export { refreshBoostStatus };
+export { 
+    refreshBoostStatus,
+    getTodayDealsCount
+};
 
