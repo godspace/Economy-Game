@@ -452,23 +452,29 @@ button:active {
 
 /* Универсальные стили для столбцов монет и репутации */
 .ranking-table td:nth-child(4) { /* Столбец монет */
-    display: flex;
-    align-items: center;
-    gap: 5px;
     font-weight: bold;
     color: #d4af37;
+    white-space: nowrap;
 }
 
 .ranking-table td:nth-child(4) i {
     color: #ffd700;
 }
 
+.ranking-table td:nth-child(4)::after {
+    content: " 🪙";
+    margin-left: 5px;
+}
+
 .ranking-table td:nth-child(5) { /* Столбец репутации */
-    display: flex;
-    align-items: center;
-    gap: 5px;
     font-weight: bold;
     color: #ff6b00;
+    white-space: nowrap;
+}
+
+.ranking-table td:nth-child(5)::after {
+    content: " ⭐";
+    margin-left: 5px;
 }
 
 .ranking-table td:nth-child(5) i {
@@ -1420,6 +1426,20 @@ button:active {
         background-color: #2a4d6e !important;
         color: white;
     }
+
+/* Адаптивность для таблиц */
+@media (max-width: 768px) {
+    .ranking-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .ranking-table th, 
+    .ranking-table td {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+}    
     
     .deal-limit-info {
         background-color: #332701;
