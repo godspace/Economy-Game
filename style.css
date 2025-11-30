@@ -461,10 +461,7 @@ button:active {
     color: #ffd700;
 }
 
-.ranking-table td:nth-child(4)::after {
-    content: " 🪙";
-    margin-left: 5px;
-}
+
 
 .ranking-table td:nth-child(5) { /* Столбец репутации */
     font-weight: bold;
@@ -472,10 +469,7 @@ button:active {
     white-space: nowrap;
 }
 
-.ranking-table td:nth-child(5)::after {
-    content: " ⭐";
-    margin-left: 5px;
-}
+
 
 .ranking-table td:nth-child(5) i {
     color: #ff6b00;
