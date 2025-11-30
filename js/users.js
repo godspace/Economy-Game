@@ -1,4 +1,4 @@
-// users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ОПТИМИЗАЦИЕЙ ПРОВЕРОК
+// users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ИНТЕГРАЦИЕЙ СИСТЕМЫ БУСТОВ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
 export async function loadUserProfile(userId) {
@@ -66,8 +66,10 @@ export async function loadUsers(forceRefresh = false) {
         // ОПТИМИЗАЦИЯ: Проверяем статус буста только при принудительном обновлении или если прошло больше 5 минут
         if (forceRefresh || !state.lastBoostCheck || (Date.now() - state.lastBoostCheck > 5 * 60 * 1000)) {
             try {
-                const { updateBoostStatus } = await import('./shop.js');
+                const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
                 await updateBoostStatus();
+                // Дополнительная проверка исчерпанных бустов
+                await deactivateExhaustedBoosts(state.currentUserProfile.id);
                 state.lastBoostCheck = Date.now();
             } catch (error) {
                 console.error('Error updating boost status in users tab:', error);
@@ -405,8 +407,9 @@ async function renderLimitInfo() {
 // Функция для принудительного обновления статуса буста (оставляем для совместимости)
 async function refreshBoostStatus() {
     try {
-        const { updateBoostStatus } = await import('./shop.js');
+        const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
         await updateBoostStatus();
+        await deactivateExhaustedBoosts(state.currentUserProfile.id);
         
         // Перезагружаем пользователей для обновления лимитов
         await loadUsers(true);
@@ -456,26 +459,12 @@ export async function checkUniquePlayersLimit(targetUserId) {
 
         console.log('📊 Лимиты уникальных игроков:', result);
 
-        // ИСПРАВЛЕНИЕ: Теперь result - это объект JSONB
-        if (!result) {
-            console.error('❌ Данные лимита не получены');
-            return { 
-                canMakeDeal: false, 
-                error: 'Данные не получены',
-                baseLimit: 5,
-                boostLimit: 0,
-                usedSlots: 0,
-                availableSlots: 5,
-                hasActiveBoost: false
-            };
-        }
-
         // Гарантируем, что все значения являются числами
-        const baseLimit = Number(result.base_limit) || 5;
-        const boostLimit = Number(result.boost_limit) || 0;
-        const usedSlots = Number(result.used_slots) || 0;
-        const availableSlots = Number(result.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
-        const hasActiveBoost = Boolean(result.has_active_boost);
+        const baseLimit = Number(result?.base_limit) || 5;
+        const boostLimit = Number(result?.boost_limit) || 0;
+        const usedSlots = Number(result?.used_slots) || 0;
+        const availableSlots = Number(result?.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
+        const hasActiveBoost = Boolean(result?.has_active_boost);
 
         return {
             canMakeDeal: availableSlots > 0,
