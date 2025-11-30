@@ -1116,4 +1116,4 @@ async function isFamiliarPlayer(targetUserId) {
 }
 
 // Экспортируем для тестирования
-export { checkUniquePlayersLimit, getTodayDealsCount, updateUserProfile };
+//export { checkUniquePlayersLimit, getTodayDealsCount, updateUserProfile };
