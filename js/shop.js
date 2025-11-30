@@ -1,4 +1,4 @@
-// shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ С ПРОГРЕСС-БАРОМ
+// shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ С АВТОДЕАКТИВАЦИЕЙ БУСТОВ И ЗАПРЕТОМ ПОКУПКИ
 import { state, dom } from './config.js';
 
 // Глобальная переменная для таймера обновления статуса буста
@@ -127,6 +127,103 @@ async function forceCheckBoostStatus() {
     }
 }
 
+// Функция для автоматической деактивации бустов при исчерпании лимита
+export async function deactivateExhaustedBoosts(userId) {
+    try {
+        if (!state.supabase) return;
+
+        console.log('🔍 Проверка исчерпанных бустов для пользователя:', userId);
+
+        // Проверяем текущий лимит
+        const { checkUniquePlayersLimit } = await import('./users.js');
+        const limitCheck = await checkUniquePlayersLimit(userId);
+        
+        const totalLimit = limitCheck.baseLimit + limitCheck.boostLimit;
+        const isLimitExhausted = limitCheck.usedSlots >= totalLimit;
+        
+        console.log('📊 Статус лимита:', {
+            usedSlots: limitCheck.usedSlots,
+            totalLimit: totalLimit,
+            isExhausted: isLimitExhausted
+        });
+
+        // Если лимит исчерпан и есть активные бусты - деактивируем их
+        if (isLimitExhausted && limitCheck.hasActiveBoost) {
+            console.log('🔚 Лимит исчерпан, деактивируем бусты');
+            
+            const { error } = await state.supabase
+                .from('user_boosts')
+                .update({ is_active: false })
+                .eq('user_id', userId)
+                .eq('boost_type', 'unique_players')
+                .eq('is_active', true);
+
+            if (error) {
+                console.error('❌ Ошибка деактивации бустов:', error);
+            } else {
+                console.log('✅ Бусты деактивированы');
+                // Обновляем статус в state
+                state.hasActiveUniquePlayersBoost = false;
+                
+                // Обновляем UI
+                updateBoostUI(false, null);
+                
+                // Показываем уведомление
+                showBoostNotification('Буст деактивирован: лимит уникальных игроков исчерпан');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Ошибка проверки исчерпанных бустов:', error);
+    }
+}
+
+// Функция для показа уведомлений о бустах
+export function showBoostNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    const bgColor = type === 'success' ? '#4caf50' : 
+                   type === 'warning' ? '#ff9800' : 
+                   type === 'error' ? '#f44336' : '#2196f3';
+    
+    notification.style.cssText = `
+        position: fixed;
+        top: 120px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 12px 18px;
+        border-radius: 8px;
+        z-index: 10001;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: 300px;
+        word-wrap: break-word;
+        border-left: 4px solid ${type === 'success' ? '#45a049' : 
+                            type === 'warning' ? '#e68900' : 
+                            type === 'error' ? '#d32f2f' : '#1976d2'};
+    `;
+    
+    notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 
+                          type === 'warning' ? 'fa-exclamation-triangle' : 
+                          type === 'error' ? 'fa-times-circle' : 'fa-info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Автоматическое скрытие через 5 секунд
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 5000);
+}
+
 // Обновляем функцию updateBoostStatus для более детальной проверки
 export async function updateBoostStatus() {
     try {
@@ -134,7 +231,10 @@ export async function updateBoostStatus() {
 
         console.log('🔄 Checking boost status for user:', state.currentUserProfile.id);
 
-        // Проверяем активные бусты
+        // Сначала проверяем и деактивируем исчерпанные бусты
+        await deactivateExhaustedBoosts(state.currentUserProfile.id);
+
+        // Затем проверяем активные бусты
         const { data: activeBoosts, error } = await state.supabase
             .from('user_boosts')
             .select('*')
@@ -166,6 +266,11 @@ export async function updateBoostStatus() {
         if (previousBoostStatus !== hasActiveBoost) {
             console.log('🎯 Boost status changed, updating UI');
             updateBoostUI(hasActiveBoost, activeBoosts?.[0]);
+            
+            // Перезагружаем магазин для обновления кнопок
+            if (document.getElementById('shopTab')?.classList.contains('active')) {
+                await loadShop();
+            }
             
             // Принудительно обновляем лимиты на вкладке пользователей
             if (document.getElementById('usersTab')?.classList.contains('active')) {
@@ -306,22 +411,45 @@ function renderProducts(products) {
         const isAvailable = product.is_active;
         const canAfford = state.currentUserProfile.coins >= product.price;
         
+        // Проверяем активные бусты
+        const hasActiveBoost = state.hasActiveUniquePlayersBoost;
+        
         // Особые условия для бустов
         let buttonClass, buttonText, disabled, specialInfo = '';
         
         if (product.product_type === 'unique_players_boost') {
-            const hasActiveBoost = state.hasActiveUniquePlayersBoost;
-            
             if (hasActiveBoost) {
                 buttonClass = 'btn-disabled';
-                buttonText = 'Буст активен';
+                buttonText = 'Буст уже активен';
                 disabled = true;
-                specialInfo = '<div style="color: var(--success); margin: 10px 0; padding: 10px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #4caf50;"><i class="fas fa-check-circle"></i> У вас уже активен буст уникальных игроков</div>';
+                specialInfo = `
+                    <div style="color: var(--warning); margin: 10px 0; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Буст уже активен</strong>
+                        </div>
+                        <div style="font-size: 0.9rem;">
+                            Вы не можете купить новый буст, пока активен текущий.
+                            Дождитесь окончания текущего буста или исчерпания лимита.
+                        </div>
+                    </div>
+                `;
             } else {
                 buttonClass = canAfford ? 'btn-warning' : 'btn-disabled';
                 buttonText = canAfford ? 'Купить и активировать' : 'Недостаточно монет';
                 disabled = !canAfford;
-                specialInfo = '<div style="color: var(--warning); margin: 10px 0; padding: 10px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;"><i class="fas fa-rocket"></i> +5 слотов для уникальных игроков на 24 часа</div>';
+                specialInfo = `
+                    <div style="color: var(--success); margin: 10px 0; padding: 12px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #4caf50;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                            <i class="fas fa-rocket"></i>
+                            <strong>Буст уникальных игроков</strong>
+                        </div>
+                        <div style="font-size: 0.9rem;">
+                            +5 слотов для уникальных игроков на 24 часа
+                            <br><small>Буст автоматически деактивируется при полном исчерпании лимита</small>
+                        </div>
+                    </div>
+                `;
             }
         } else {
             buttonClass = isAvailable && canAfford ? 'btn-success' : 'btn-disabled';
@@ -366,6 +494,12 @@ function renderProducts(products) {
             const productType = this.dataset.productType;
             
             if (productType === 'unique_players_boost') {
+                // Дополнительная проверка на случай, если статус изменился
+                if (state.hasActiveUniquePlayersBoost) {
+                    alert('У вас уже есть активный буст. Дождитесь его окончания.');
+                    return;
+                }
+                
                 const confirmed = confirm(`Активировать буст "${productName}" за ${productPrice} монет? Вы получите +5 слотов для уникальных игроков на 24 часа.`);
                 if (confirmed) {
                     purchaseAndActivateBoost(productId, productPrice);
@@ -377,7 +511,7 @@ function renderProducts(products) {
     });
 }
 
-// Функция для покупки и активации буста
+// Функция для покупки и активации буста - ИСПРАВЛЕННАЯ ВЕРСИЯ
 async function purchaseAndActivateBoost(productId, price) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -389,6 +523,11 @@ async function purchaseAndActivateBoost(productId, price) {
             price,
             userId: state.currentUserProfile.id
         });
+
+        // Дополнительная проверка: нельзя купить буст если уже есть активный
+        if (state.hasActiveUniquePlayersBoost) {
+            throw new Error('У вас уже есть активный буст. Дождитесь его окончания.');
+        }
 
         // 1. Сначала создаем заказ
         const { data: order, error: orderError } = await state.supabase
@@ -439,23 +578,27 @@ async function purchaseAndActivateBoost(productId, price) {
 
         if (boostError) {
             console.error('❌ Ошибка создания буста:', boostError);
-            
-            // Если ошибка RLS - пробуем альтернативный метод
-            if (boostError.code === '42501') {
-                await createBoostViaRPC();
-            } else {
-                throw new Error('Ошибка активации буста: ' + boostError.message);
-            }
+            throw new Error('Ошибка активации буста: ' + boostError.message);
         } else {
             console.log('✅ Буст создан:', boost);
         }
 
         alert('🎯 Буст уникальных игроков активирован! +5 слотов на 24 часа!');
         
-        // Обновляем интерфейс
+        // Обновляем баланс пользователя
         await updateUserBalance();
+        
+        // Обновляем статус буста
+        state.hasActiveUniquePlayersBoost = true;
+        
+        // Перезагружаем магазин для обновления кнопок
         await loadShop();
-        await forceCheckBoostStatus();
+        
+        // Обновляем UI буста
+        updateBoostUI(true, boost);
+        
+        // Показываем уведомление
+        showBoostNotification('Буст активирован! +5 слотов для уникальных игроков', 'success');
 
     } catch (error) {
         console.error('❌ Ошибка покупки буста:', error);
@@ -463,25 +606,7 @@ async function purchaseAndActivateBoost(productId, price) {
     }
 }
 
-// Альтернативный метод через RPC
-async function createBoostViaRPC() {
-    console.log('🔄 Пробуем создать буст через RPC...');
-    
-    const { data, error } = await state.supabase.rpc('create_user_boost', {
-        p_user_id: state.currentUserProfile.id,
-        p_boost_type: 'unique_players',
-        p_boost_value: 5,
-        p_duration_hours: 24
-    });
-
-    if (error) {
-        throw new Error('RPC метод также не сработал: ' + error.message);
-    }
-    
-    return data;
-}
-
-// Функция для ручной активации буста (для админов)
+// Функция для ручной активации буста (для админов) - ОКОНЧАТЕЛЬНАЯ ВЕРСИЯ
 async function manuallyActivateBoost(userId) {
     try {
         if (!state.supabase || !state.isAdmin) {
@@ -490,7 +615,7 @@ async function manuallyActivateBoost(userId) {
 
         console.log('🛠️ Ручная активация буста для пользователя:', userId);
 
-        // Прямая вставка буста (теперь должна работать без RLS)
+        // Прямая вставка буста
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24);
 
@@ -518,31 +643,6 @@ async function manuallyActivateBoost(userId) {
         console.error('❌ Ошибка ручной активации буста:', error);
         throw new Error('Ошибка активации: ' + error.message);
     }
-}
-
-async function createBoostDirectly(userId) {
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24);
-
-    const { data: boost, error } = await state.supabase
-        .from('user_boosts')
-        .insert({
-            user_id: userId,
-            boost_type: 'unique_players',
-            boost_value: 5,
-            expires_at: expiresAt.toISOString(),
-            is_active: true
-        })
-        .select()
-        .single();
-
-    if (error) {
-        console.error('❌ Ошибка прямой вставки:', error);
-        throw error;
-    }
-
-    console.log('✅ Буст создан напрямую:', boost);
-    return boost;
 }
 
 function showBuyConfirmation(productId, productName, productPrice) {
@@ -998,3 +1098,15 @@ async function updateOrderStatus(orderId, status) {
         alert('❌ Ошибка: ' + error.message);
     }
 }
+
+// Экспортируем новые функции для использования в других модулях
+export { 
+    deactivateExhaustedBoosts, 
+    showBoostNotification,
+    updateBoostStatus,
+    loadShop,
+    loadOrderHistory,
+    loadAdminOrders,
+    startBoostStatusPolling,
+    stopBoostStatusPolling
+};
