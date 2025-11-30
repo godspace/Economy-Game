@@ -5,7 +5,8 @@ import { state, dom, cache, shouldUpdate, markUpdated, DEAL_STATUS, DEAL_CHOICES
 let pendingOperations = new Set();
 
 // Функция для проверки лимита уникальных игроков
-async function checkUniquePlayersLimit(targetUserId) {
+// Функция для проверки лимитов уникальных игроков
+export async function checkUniquePlayersLimit(targetUserId = null) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
             return { 
@@ -19,7 +20,7 @@ async function checkUniquePlayersLimit(targetUserId) {
             };
         }
 
-        console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
+        console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id, 'targetUserId:', targetUserId);
 
         const { data: result, error } = await state.supabase.rpc('check_daily_unique_players_limit', {
             p_user_id: state.currentUserProfile.id
@@ -38,7 +39,7 @@ async function checkUniquePlayersLimit(targetUserId) {
             };
         }
 
-        console.log('📊 Лимиты уникальных игроков:', result);
+        console.log('📊 Лимиты уникальных игроков (RPC результат):', result);
 
         // ИСПРАВЛЕНИЕ: RPC функция возвращает массив, берем первый элемент
         const limitData = Array.isArray(result) ? result[0] : result;
@@ -63,14 +64,21 @@ async function checkUniquePlayersLimit(targetUserId) {
         const availableSlots = Number(limitData.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
         const hasActiveBoost = Boolean(limitData.has_active_boost);
 
-        return {
-            canMakeDeal: availableSlots > 0,
+        // ВАЖНО: canMakeDeal должно быть true если availableSlots > 0 ИЛИ если это знакомый игрок
+        // Но эта проверка делается на уровне вызывающего кода
+        const canMakeDeal = availableSlots > 0;
+
+        const finalResult = {
+            canMakeDeal: canMakeDeal,
             baseLimit: baseLimit,
             boostLimit: boostLimit,
             usedSlots: usedSlots,
             availableSlots: availableSlots,
             hasActiveBoost: hasActiveBoost
         };
+
+        console.log('📊 Финальные данные лимита:', finalResult);
+        return finalResult;
 
     } catch (error) {
         console.error('❌ Ошибка при проверке лимита:', error);
@@ -85,7 +93,6 @@ async function checkUniquePlayersLimit(targetUserId) {
         };
     }
 }
-
 // Функция для записи уникального игрока
 async function recordUniquePlayer(targetUserId) {
     try {
