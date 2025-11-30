@@ -511,7 +511,7 @@ function renderProducts(products) {
     });
 }
 
-// Функция для покупки и активации буста - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// Функция для покупки и активации буста - ДОБАВЛЕНА ЗАЩИТА ОТ ДУБЛИРОВАНИЯ
 async function purchaseAndActivateBoost(productId, price) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -529,6 +529,24 @@ async function purchaseAndActivateBoost(productId, price) {
             throw new Error('У вас уже есть активный буст. Дождитесь его окончания.');
         }
 
+        // Проверяем на сервере, нет ли уже активного буста
+        const { data: existingBoosts, error: checkError } = await state.supabase
+            .from('user_boosts')
+            .select('id')
+            .eq('user_id', state.currentUserProfile.id)
+            .eq('boost_type', 'unique_players')
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString());
+
+        if (checkError) {
+            console.error('❌ Ошибка проверки существующих бустов:', checkError);
+            throw new Error('Ошибка проверки существующих бустов');
+        }
+
+        if (existingBoosts && existingBoosts.length > 0) {
+            throw new Error('У вас уже есть активный буст. Дождитесь его окончания.');
+        }
+
         // 1. Сначала создаем заказ
         const { data: order, error: orderError } = await state.supabase
             .from('orders')
@@ -537,7 +555,7 @@ async function purchaseAndActivateBoost(productId, price) {
                 product_id: productId,
                 quantity: 1,
                 total_amount: price,
-                status: 'completed' // Сразу завершаем для бустов
+                status: 'completed'
             })
             .select()
             .single();
@@ -569,7 +587,7 @@ async function purchaseAndActivateBoost(productId, price) {
             .insert({
                 user_id: state.currentUserProfile.id,
                 boost_type: 'unique_players',
-                boost_value: 5,
+                boost_value: 5, // Убедимся, что значение 5
                 expires_at: expiresAt.toISOString(),
                 is_active: true
             })
@@ -605,7 +623,6 @@ async function purchaseAndActivateBoost(productId, price) {
         alert('Ошибка: ' + error.message);
     }
 }
-
 // Функция для ручной активации буста (для админов) - ОКОНЧАТЕЛЬНАЯ ВЕРСИЯ
 async function manuallyActivateBoost(userId) {
     try {
