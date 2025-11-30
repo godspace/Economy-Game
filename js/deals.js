@@ -140,6 +140,10 @@ export async function showDealModal(userId) {
         
         // Проверяем лимит уникальных игроков и сделок с этим игроком
         const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
+        const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
+        
+        // Проверяем, является ли игрок уже знакомым (уже были сделки сегодня)
+        const isFamiliarPlayer = todayDealsCount > 0;
         
         if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
         if (dom.dealAvatar) dom.dealAvatar.textContent = user.username.charAt(0).toUpperCase();
@@ -149,42 +153,64 @@ export async function showDealModal(userId) {
         
         // Обновляем информацию о лимите
         if (dom.dealLimitInfo && dom.dealLimitText) {
-            const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
+            let dealLimitText = '';
+            let shouldBlockDeal = false;
             
-            // ПРОВЕРЯЕМ ТОЛЬКО ЛИМИТ СДЕЛОК С КОНКРЕТНЫМ ИГРОКОМ (5 сделок)
+            // ПРОВЕРКА 1: Лимит сделок с конкретным игроком (5 сделок)
             if (todayDealsCount >= 5) {
-                dom.dealLimitText.innerHTML = `
+                dealLimitText = `
                     <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
                     <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
-                    Вы уже совершили максимальное количество сделок с этим игроком сегодня.
+                    ❌ Вы уже совершили максимальное количество сделок с этим игроком сегодня.
                 `;
-                dom.dealLimitInfo.style.display = 'block';
-                
-                // Блокируем кнопки
-                if (dom.cooperateBtn) {
-                    dom.cooperateBtn.disabled = true;
+                shouldBlockDeal = true;
+            }
+            // ПРОВЕРКА 2: Лимит уникальных игроков (только для НОВЫХ игроков)
+            else if (!isFamiliarPlayer && !limitCheck.canMakeDeal) {
+                dealLimitText = `
+                    <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
+                    <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                    ❌ Лимит уникальных игроков исчерпан!<br>
+                    💡 Вы не можете начать сделку с новым игроком, но можете продолжить сделки с уже знакомыми.
+                `;
+                shouldBlockDeal = true;
+            }
+            // ВСЕ ПРОВЕРКИ ПРОЙДЕНЫ - можно совершать сделку
+            else {
+                if (isFamiliarPlayer) {
+                    dealLimitText = `
+                        <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
+                        <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                        ✅ Это знакомый игрок - сделка разрешена<br>
+                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'}
+                    `;
+                } else {
+                    dealLimitText = `
+                        <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
+                        <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                        ✅ Можно начать сделку с новым игроком<br>
+                        ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'}
+                    `;
+                }
+            }
+            
+            dom.dealLimitText.innerHTML = dealLimitText;
+            dom.dealLimitInfo.style.display = 'block';
+            
+            // Блокируем или разблокируем кнопки в зависимости от проверок
+            if (dom.cooperateBtn) {
+                dom.cooperateBtn.disabled = shouldBlockDeal;
+                if (shouldBlockDeal) {
                     dom.cooperateBtn.classList.add('btn-disabled');
-                }
-                if (dom.cheatBtn) {
-                    dom.cheatBtn.disabled = true;
-                    dom.cheatBtn.classList.add('btn-disabled');
-                }
-            } else {
-                // УБИРАЕМ ПРОВЕРКУ НА УНИКАЛЬНЫХ ИГРОКОВ - можно делать сделки с уже знакомыми игроками
-                dom.dealLimitText.innerHTML = `
-                    <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
-                    <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
-                    ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'}
-                `;
-                dom.dealLimitInfo.style.display = 'block';
-                
-                // Разблокируем кнопки
-                if (dom.cooperateBtn) {
-                    dom.cooperateBtn.disabled = false;
+                } else {
                     dom.cooperateBtn.classList.remove('btn-disabled');
                 }
-                if (dom.cheatBtn) {
-                    dom.cheatBtn.disabled = false;
+            }
+            if (dom.cheatBtn) {
+                dom.cheatBtn.disabled = shouldBlockDeal;
+                if (shouldBlockDeal) {
+                    dom.cheatBtn.classList.add('btn-disabled');
+                } else {
                     dom.cheatBtn.classList.remove('btn-disabled');
                 }
             }
@@ -278,14 +304,26 @@ export async function proposeDeal(choice) {
             return;
         }
         
-        // ПРОВЕРЯЕМ ТОЛЬКО ЛИМИТ СДЕЛОК С ЭТИМ ИГРОКОМ (5 сделок в день)
+        // Проверяем количество сделок с этим игроком сегодня
         const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
+        
+        // ПРОВЕРКА 1: Лимит сделок с конкретным игроком (5 сделок)
         if (todayDealsCount >= 5) {
             alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${state.selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
             return;
         }
         
-        // УБИРАЕМ ПРОВЕРКУ НА УНИКАЛЬНЫХ ИГРОКОВ - можно делать сделки с уже знакомыми
+        // Проверяем, является ли игрок уже знакомым (уже были сделки сегодня)
+        const isFamiliarPlayer = todayDealsCount > 0;
+        
+        // ПРОВЕРКА 2: Лимит уникальных игроков (только для НОВЫХ игроков)
+        if (!isFamiliarPlayer) {
+            const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
+            if (!limitCheck.canMakeDeal) {
+                alert(`Лимит уникальных игроков исчерпан! Вы не можете начать сделку с новым игроком ${state.selectedUser.username}.\n\nЛимит уникальных игроков: ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}\n\n💡 Вы можете продолжить сделки с уже знакомыми игроками.`);
+                return;
+            }
+        }
         
         // Используем RPC функцию для атомарного создания сделки
         const { data: result, error } = await state.supabase.rpc('create_deal_with_reservation', {
@@ -344,7 +382,6 @@ export async function proposeDeal(choice) {
         alert('Ошибка: ' + error.message);
     }
 }
-
 export async function showResponseModal(dealId) {
     try {
         if (!state.supabase) {
@@ -1038,6 +1075,21 @@ async function updateUserProfile() {
         }
     } catch (error) {
         console.error('❌ Ошибка при обновлении профиля:', error);
+    }
+}
+
+// Функция для проверки, является ли игрок знакомым (уже были сделки сегодня)
+async function isFamiliarPlayer(targetUserId) {
+    try {
+        if (!state.supabase || !state.currentUserProfile) {
+            return false;
+        }
+        
+        const todayDealsCount = await getTodayDealsCount(targetUserId);
+        return todayDealsCount > 0;
+    } catch (error) {
+        console.error('Ошибка проверки знакомого игрока:', error);
+        return false;
     }
 }
 
