@@ -703,5 +703,3 @@ window.loadUsers = loadUsers;
 // Экспортируем только refreshBoostStatus для совместимости
 export { refreshBoostStatus };
 
-// Экспортируем функцию обновления индикатора лимита
-export { updateLimitIndicator };
