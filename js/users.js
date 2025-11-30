@@ -721,7 +721,6 @@ window.loadUsers = loadUsers;
 
 // Экспортируем только refreshBoostStatus для совместимости
 export { 
-    refreshBoostStatus,
-    getTodayDealsCount
+    refreshBoostStatus
 };
 
