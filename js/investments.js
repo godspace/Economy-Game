@@ -164,9 +164,6 @@ function renderEmptyActiveDeposits() {
         <div class="empty-state">
             <i class="fas fa-clock"></i>
             <p>Нет активных вкладов</p>
-            <button class="btn-outline" onclick="showAvailableDeposits()" style="margin-top: 10px;">
-                <i class="fas fa-plus"></i> Открыть вклад
-            </button>
         </div>
     `;
 }
