@@ -367,8 +367,10 @@ export async function proposeDeal(choice) {
         
         // ДОБАВЛЯЕМ: ПРОВЕРЯЕМ СТАТУС БУСТА ПОСЛЕ ПРЕДЛОЖЕНИЯ СДЕЛКИ
         try {
-            const { updateBoostStatus } = await import('./shop.js');
+            const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
             await updateBoostStatus();
+            // Дополнительная проверка исчерпанных бустов
+            await deactivateExhaustedBoosts(state.currentUserProfile.id);
         } catch (error) {
             console.error('Error updating boost status after deal:', error);
         }
@@ -537,6 +539,16 @@ export async function respondToDeal(choice) {
         
         // СРАЗУ ОБНОВЛЯЕМ БАЛАНС ПОЛЬЗОВАТЕЛЯ
         await updateUserProfile();
+        
+        // ДОБАВЛЯЕМ: ПРОВЕРЯЕМ СТАТУС БУСТА ПОСЛЕ ОТВЕТА НА СДЕЛКУ
+        try {
+            const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
+            await updateBoostStatus();
+            // Дополнительная проверка исчерпанных бустов
+            await deactivateExhaustedBoosts(state.currentUserProfile.id);
+        } catch (error) {
+            console.error('Error updating boost status after deal response:', error);
+        }
         
         await showDealResult(state.selectedDeal, choice, result);
         
