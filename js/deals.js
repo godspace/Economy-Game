@@ -278,7 +278,7 @@ function openShopFromDealModal() {
 // Добавляем функцию в глобальную область видимости
 window.openShopFromDealModal = openShopFromDealModal;
 
-async function getTodayDealsCount(targetUserId) {
+export async function getTodayDealsCount(targetUserId) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
             return 0;
