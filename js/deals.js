@@ -316,13 +316,24 @@ export async function proposeDeal(choice) {
         // Проверяем, является ли игрок уже знакомым (уже были сделки сегодня)
         const isFamiliarPlayer = todayDealsCount > 0;
         
+        console.log('🔍 Проверка сделки:', {
+            player: state.selectedUser.username,
+            isFamiliarPlayer: isFamiliarPlayer,
+            todayDealsCount: todayDealsCount
+        });
+        
         // ПРОВЕРКА 2: Лимит уникальных игроков (только для НОВЫХ игроков)
+        // Если игрок знакомый - пропускаем проверку лимита уникальных игроков
         if (!isFamiliarPlayer) {
             const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
+            console.log('📊 Лимит для нового игрока:', limitCheck);
+            
             if (!limitCheck.canMakeDeal) {
                 alert(`Лимит уникальных игроков исчерпан! Вы не можете начать сделку с новым игроком ${state.selectedUser.username}.\n\nЛимит уникальных игроков: ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}\n\n💡 Вы можете продолжить сделки с уже знакомыми игроками.`);
                 return;
             }
+        } else {
+            console.log('✅ Игрок знакомый - пропускаем проверку лимита уникальных игроков');
         }
         
         // Используем RPC функцию для атомарного создания сделки
@@ -353,7 +364,10 @@ export async function proposeDeal(choice) {
         
         if (recordError && recordError.code === 'PGRST116') { // Not found
             // Это первая сделка с этим игроком сегодня - записываем
+            console.log('📝 Записываем нового уникального игрока:', state.selectedUser.username);
             await recordUniquePlayer(state.selectedUser.id);
+        } else {
+            console.log('✅ Игрок уже записан как уникальный');
         }
         
         alert('Сделка предложена успешно! 1 монета зарезервирована и будет возвращена после завершения сделки.');
@@ -382,6 +396,7 @@ export async function proposeDeal(choice) {
         alert('Ошибка: ' + error.message);
     }
 }
+
 export async function showResponseModal(dealId) {
     try {
         if (!state.supabase) {
