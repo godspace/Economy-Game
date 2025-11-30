@@ -490,8 +490,8 @@ async function manuallyActivateBoost(userId) {
 
         console.log('🛠️ Ручная активация буста для пользователя:', userId);
 
-        // Используем RPC функцию для создания буста
-        const { data: result, error } = await state.supabase.rpc('admin_create_boost', {
+        // Пробуем использовать RPC функцию
+        const { data: result, error } = await state.supabase.rpc('create_boost_simple', {
             p_user_id: userId,
             p_boost_type: 'unique_players',
             p_boost_value: 5,
@@ -500,21 +500,47 @@ async function manuallyActivateBoost(userId) {
 
         if (error) {
             console.error('❌ RPC ошибка:', error);
-            throw new Error('Ошибка RPC: ' + error.message);
-        }
-
-        if (!result.success) {
-            console.error('❌ Ошибка создания буста:', result.error);
+            
+            // Если RPC не работает, пробуем прямую вставку
+            console.log('🔄 Пробуем прямую вставку...');
+            await createBoostDirectly(userId);
+        } else if (!result.success) {
             throw new Error(result.error || 'Неизвестная ошибка создания буста');
+        } else {
+            console.log('✅ Буст успешно создан через RPC:', result);
         }
 
-        console.log('✅ Буст успешно создан через RPC:', result);
         return true;
 
     } catch (error) {
         console.error('❌ Ошибка ручной активации буста:', error);
         throw new Error('Ошибка активации: ' + error.message);
     }
+}
+
+async function createBoostDirectly(userId) {
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    const { data: boost, error } = await state.supabase
+        .from('user_boosts')
+        .insert({
+            user_id: userId,
+            boost_type: 'unique_players',
+            boost_value: 5,
+            expires_at: expiresAt.toISOString(),
+            is_active: true
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error('❌ Ошибка прямой вставки:', error);
+        throw error;
+    }
+
+    console.log('✅ Буст создан напрямую:', boost);
+    return boost;
 }
 
 function showBuyConfirmation(productId, productName, productPrice) {
