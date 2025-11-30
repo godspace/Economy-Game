@@ -1032,11 +1032,10 @@ function renderRanking(users) {
     if (users.length === 0) {
         dom.rankingTable.innerHTML = `
             <tr>
-                <td colspan="5" style="text-align: center; padding: 40px 20px;">
+                <td colspan="5" style="text-align: center; padding: 20px;">
                     <div class="empty-state">
-                        <i class="fas fa-trophy" style="font-size: 3rem; color: #ccc; margin-bottom: 15px;"></i>
-                        <h3 style="margin: 0 0 10px 0; color: #666;">Рейтинг пуст</h3>
-                        <p style="margin: 0; color: #888;">Еще нет данных для отображения рейтинга</p>
+                        <i class="fas fa-trophy"></i>
+                        <p>Нет данных для рейтинга</p>
                     </div>
                 </td>
             </tr>
@@ -1051,18 +1050,18 @@ function renderRanking(users) {
                 row.classList.add('current-user');
             }
             
-            // Добавляем эмодзи для первых трех мест как в стартовой странице
+            // ТОЧНО ТАК ЖЕ КАК В СТАРТОВОЙ ТАБЛИЦЕ
             row.innerHTML = `
                 <td>
                     ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                 </td>
                 <td>
-                    ${user.username} 
-                    ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '<span style="color: var(--primary); font-weight: bold;">(Вы)</span>' : ''}
+                    ${user.username}
+                    ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '<span class="you-badge">(Вы)</span>' : ''}
                 </td>
-                <td>${user.class}</td>
-                <td class="coins-cell">${user.coins} <i class="fas fa-coins" style="color: #ffd700;"></i></td>
-                <td class="reputation-cell">${user.reputation} <i class="fas fa-star" style="color: #ff6b00;"></i></td>
+                <td>${user.class || 'Не указан'}</td>
+                <td class="coins-cell">${user.coins} <i class="fas fa-coins"></i></td>
+                <td class="reputation-cell">${user.reputation} <i class="fas fa-star"></i></td>
             `;
             
             fragment.appendChild(row);
@@ -1071,7 +1070,6 @@ function renderRanking(users) {
         dom.rankingTable.appendChild(fragment);
     }
 }
-
 // Функция для обновления профиля пользователя (монеты и репутация)
 async function updateUserProfile() {
     try {
