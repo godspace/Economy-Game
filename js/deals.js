@@ -365,11 +365,18 @@ export async function proposeDeal(choice) {
         // Обновляем баланс пользователя (так как 1 монета была зарезервирована)
         await updateUserProfile();
         
-        // ДОБАВЛЯЕМ: ПРОВЕРЯЕМ СТАТУС БУСТА ПОСЛЕ ПРЕДЛОЖЕНИЯ СДЕЛКИ
+        // ОБНОВЛЯЕМ ЛИМИТ ИНДИКАТОР СРАЗУ ПОСЛЕ ПРЕДЛОЖЕНИЯ СДЕЛКИ
+        try {
+            const { updateLimitIndicator } = await import('./users.js');
+            await updateLimitIndicator();
+        } catch (error) {
+            console.error('Error updating limit indicator after deal proposal:', error);
+        }
+        
+        // Проверяем статус буста
         try {
             const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
             await updateBoostStatus();
-            // Дополнительная проверка исчерпанных бустов
             await deactivateExhaustedBoosts(state.currentUserProfile.id);
         } catch (error) {
             console.error('Error updating boost status after deal:', error);
@@ -540,11 +547,18 @@ export async function respondToDeal(choice) {
         // СРАЗУ ОБНОВЛЯЕМ БАЛАНС ПОЛЬЗОВАТЕЛЯ
         await updateUserProfile();
         
-        // ДОБАВЛЯЕМ: ПРОВЕРЯЕМ СТАТУС БУСТА ПОСЛЕ ОТВЕТА НА СДЕЛКУ
+        // ОБНОВЛЯЕМ ЛИМИТ ИНДИКАТОР ПОСЛЕ ОТВЕТА НА СДЕЛКУ
+        try {
+            const { updateLimitIndicator } = await import('./users.js');
+            await updateLimitIndicator();
+        } catch (error) {
+            console.error('Error updating limit indicator after deal response:', error);
+        }
+        
+        // Проверяем статус буста
         try {
             const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
             await updateBoostStatus();
-            // Дополнительная проверка исчерпанных бустов
             await deactivateExhaustedBoosts(state.currentUserProfile.id);
         } catch (error) {
             console.error('Error updating boost status after deal response:', error);
