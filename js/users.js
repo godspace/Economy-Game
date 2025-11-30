@@ -456,12 +456,26 @@ export async function checkUniquePlayersLimit(targetUserId) {
 
         console.log('📊 Лимиты уникальных игроков:', result);
 
+        // ИСПРАВЛЕНИЕ: Теперь result - это объект, а не массив
+        if (!result) {
+            console.error('❌ Данные лимита не получены');
+            return { 
+                canMakeDeal: false, 
+                error: 'Данные не получены',
+                baseLimit: 5,
+                boostLimit: 0,
+                usedSlots: 0,
+                availableSlots: 5,
+                hasActiveBoost: false
+            };
+        }
+
         // Гарантируем, что все значения являются числами
-        const baseLimit = Number(result?.base_limit) || 5;
-        const boostLimit = Number(result?.boost_limit) || 0;
-        const usedSlots = Number(result?.used_slots) || 0;
-        const availableSlots = Number(result?.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
-        const hasActiveBoost = Boolean(result?.has_active_boost);
+        const baseLimit = Number(result.base_limit) || 5;
+        const boostLimit = Number(result.boost_limit) || 0;
+        const usedSlots = Number(result.used_slots) || 0;
+        const availableSlots = Number(result.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
+        const hasActiveBoost = Boolean(result.has_active_boost);
 
         return {
             canMakeDeal: availableSlots > 0,
