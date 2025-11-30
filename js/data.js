@@ -47,6 +47,53 @@ export async function loadTopRanking(forceRefresh = false) {
     }
 }
 
+function renderTopRanking(users) {
+    if (!dom.topRankingTable) {
+        console.warn('Top ranking table element not found');
+        return;
+    }
+    
+    try {
+        dom.topRankingTable.innerHTML = '';
+        
+        if (!users || users.length === 0) {
+            renderEmptyTopRanking();
+            return;
+        }
+        
+        const fragment = document.createDocumentFragment();
+        
+        users.forEach((user, index) => {
+            const row = document.createElement('tr');
+            
+            // Добавляем класс для текущего пользователя
+            if (state.currentUserProfile && user.id === state.currentUserProfile.id) {
+                row.classList.add('current-user');
+            }
+            
+            row.innerHTML = `
+                <td>
+                    ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                </td>
+                <td>
+                    ${user.username}
+                    ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '<span class="you-badge">(Вы)</span>' : ''}
+                </td>
+                <td>${user.class || 'Не указан'}</td>
+                <td>${user.coins} <i class="fas fa-coins"></i></td>
+                <td>${user.reputation} <i class="fas fa-star"></i></td>
+            `;
+            
+            fragment.appendChild(row);
+        });
+        
+        dom.topRankingTable.appendChild(fragment);
+    } catch (error) {
+        console.error('Ошибка рендеринга топа рейтинга:', error);
+        renderTopRankingError('Ошибка отображения данных');
+    }
+}
+
 function renderRanking(users) {
     if (!dom.rankingTable) return;
     
