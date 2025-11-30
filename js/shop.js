@@ -1,4 +1,4 @@
-// shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ С АВТОДЕАКТИВАЦИЕЙ БУСТОВ И ЗАПРЕТОМ ПОКУПКИ
+// shop.js - ИСПРАВЛЕННЫЙ ФАЙЛ БЕЗ ДУБЛИРУЮЩИХ ЭКСПОРТОВ
 import { state, dom } from './config.js';
 
 // Глобальная переменная для таймера обновления статуса буста
@@ -1099,14 +1099,5 @@ async function updateOrderStatus(orderId, status) {
     }
 }
 
-// Экспортируем новые функции для использования в других модулях
-export { 
-    deactivateExhaustedBoosts, 
-    showBoostNotification,
-    updateBoostStatus,
-    loadShop,
-    loadOrderHistory,
-    loadAdminOrders,
-    startBoostStatusPolling,
-    stopBoostStatusPolling
-};
+// УДАЛЕН ДУБЛИРУЮЩИЙ ЭКСПОРТ В КОНЦЕ ФАЙЛА
+// Все функции уже экспортированы индивидуально в месте их объявления
