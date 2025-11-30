@@ -337,6 +337,7 @@ function attachUserCardEventListeners() {
 }
 
 // Функция для выполнения перевода администратором
+// Функция для выполнения перевода администратором
 async function makeAdminTransfer(targetUserId, targetUserName) {
     try {
         if (!state.supabase || !state.isAdmin) {
@@ -345,8 +346,9 @@ async function makeAdminTransfer(targetUserId, targetUserName) {
         
         console.log(`🔄 Админ выполняет перевод пользователю: ${targetUserName}`);
         
-        // Вызываем RPC функцию в Supabase
+        // Вызываем RPC функцию в Supabase с передачей ID администратора
         const { data, error } = await state.supabase.rpc('admin_transfer_coins', {
+            admin_user_id: state.currentUserProfile.id, // передаем ID текущего пользователя
             target_user_id: targetUserId,
             amount: 5
         });
