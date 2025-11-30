@@ -451,15 +451,11 @@ button:active {
 }
 
 /* Универсальные стили для столбцов монет и репутации */
-.ranking-table td:nth-child(4), /* Столбец монет */
-.ranking-table td:nth-child(5) { /* Столбец репутации */
+.ranking-table td:nth-child(4) { /* Столбец монет */
     display: flex;
     align-items: center;
     gap: 5px;
     font-weight: bold;
-}
-
-.ranking-table td:nth-child(4) { /* Монеты */
     color: #d4af37;
 }
 
@@ -467,7 +463,11 @@ button:active {
     color: #ffd700;
 }
 
-.ranking-table td:nth-child(5) { /* Репутация */
+.ranking-table td:nth-child(5) { /* Столбец репутации */
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
     color: #ff6b00;
 }
 
@@ -484,33 +484,6 @@ button:active {
     background-color: #e6f7ff !important;
     color: var(--dark);
     font-weight: bold;
-}
-
-/* Адаптивность для таблиц */
-@media (max-width: 768px) {
-    .ranking-table {
-        display: block;
-        overflow-x: auto;
-    }
-    
-    .ranking-table td:nth-child(4),
-    .ranking-table td:nth-child(5) {
-        flex-direction: row;
-        gap: 5px;
-        justify-content: flex-start;
-    }
-}
-
-/* Темная тема для таблиц */
-@media (prefers-color-scheme: dark) {
-    .ranking-table tr:hover {
-        background-color: #2a2a2a;
-    }
-    
-    .ranking-table tr.current-user {
-        background-color: #2a4d6e !important;
-        color: white;
-    }
 }
 
 .badge {
@@ -677,12 +650,6 @@ button:active {
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
-}
-
-.ranking-table tr.current-user {
-    background-color: #e6f7ff !important;
-    color: var(--dark);
-    font-weight: bold;
 }
 
 .deal-limit-info {
@@ -1265,6 +1232,13 @@ button:active {
     .ranking-table {
         display: block;
         overflow-x: auto;
+    }
+    
+    .ranking-table td:nth-child(4),
+    .ranking-table td:nth-child(5) {
+        flex-direction: row;
+        gap: 5px;
+        justify-content: flex-start;
     }
     
     .search-container {
