@@ -1595,3 +1595,56 @@ button:active {
     border-left: 3px solid #ffc107;
     margin-top: 10px;
 }
+
+/* Стили для улучшенной таблицы рейтинга */
+.ranking-table .coins-cell, 
+.ranking-table .reputation-cell {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ranking-table .coins-cell {
+    color: #d4af37; /* золотой цвет для монет */
+}
+
+.ranking-table .reputation-cell {
+    color: #ff6b00; /* оранжевый цвет для репутации */
+}
+
+/* Специальные стили для первых трех мест */
+.ranking-table tr:first-child {
+    background: linear-gradient(135deg, #fff9e6, #fff3cd) !important;
+    font-weight: bold;
+}
+
+.ranking-table tr:nth-child(2) {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
+}
+
+.ranking-table tr:nth-child(3) {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2) !important;
+}
+
+/* Улучшенные стили для текущего пользователя */
+.ranking-table tr.current-user {
+    background: linear-gradient(135deg, #e6f7ff, #b3e0ff) !important;
+    border-left: 4px solid var(--primary);
+    font-weight: bold;
+}
+
+/* Адаптивность для новой таблицы */
+@media (max-width: 768px) {
+    .ranking-table .coins-cell,
+    .ranking-table .reputation-cell {
+        flex-direction: column;
+        gap: 2px;
+        text-align: center;
+    }
+    
+    .ranking-table .coins-cell i,
+    .ranking-table .reputation-cell i {
+        font-size: 0.8rem;
+    }
+}
