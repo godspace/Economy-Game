@@ -490,26 +490,28 @@ async function manuallyActivateBoost(userId) {
 
         console.log('🛠️ Ручная активация буста для пользователя:', userId);
 
-        // Пробуем использовать RPC функцию
-        const { data: result, error } = await state.supabase.rpc('create_boost_simple', {
-            p_user_id: userId,
-            p_boost_type: 'unique_players',
-            p_boost_value: 5,
-            p_duration_hours: 24
-        });
+        // Прямая вставка буста (теперь должна работать без RLS)
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        const { data: boost, error } = await state.supabase
+            .from('user_boosts')
+            .insert({
+                user_id: userId,
+                boost_type: 'unique_players',
+                boost_value: 5,
+                expires_at: expiresAt.toISOString(),
+                is_active: true
+            })
+            .select()
+            .single();
 
         if (error) {
-            console.error('❌ RPC ошибка:', error);
-            
-            // Если RPC не работает, пробуем прямую вставку
-            console.log('🔄 Пробуем прямую вставку...');
-            await createBoostDirectly(userId);
-        } else if (!result.success) {
-            throw new Error(result.error || 'Неизвестная ошибка создания буста');
-        } else {
-            console.log('✅ Буст успешно создан через RPC:', result);
+            console.error('❌ Ошибка вставки буста:', error);
+            throw new Error('Ошибка вставки: ' + error.message);
         }
 
+        console.log('✅ Буст успешно создан:', boost);
         return true;
 
     } catch (error) {
