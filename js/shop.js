@@ -390,41 +390,95 @@ async function purchaseAndActivateBoost(productId, price) {
             userId: state.currentUserProfile.id
         });
 
-        // Используем RPC функцию для покупки и активации буста
-        const { data: result, error } = await state.supabase.rpc('purchase_and_activate_boost', {
-            p_user_id: state.currentUserProfile.id,
-            p_product_id: productId
-        });
+        // 1. Сначала создаем заказ
+        const { data: order, error: orderError } = await state.supabase
+            .from('orders')
+            .insert({
+                user_id: state.currentUserProfile.id,
+                product_id: productId,
+                quantity: 1,
+                total_amount: price,
+                status: 'completed' // Сразу завершаем для бустов
+            })
+            .select()
+            .single();
 
-        if (error) {
-            console.error('RPC Error:', error);
-            throw new Error('Ошибка покупки буста: ' + error.message);
+        if (orderError) {
+            console.error('❌ Ошибка создания заказа:', orderError);
+            throw new Error('Ошибка создания заказа: ' + orderError.message);
         }
 
-        if (result && result.success) {
-            console.log('✅ RPC функция успешно выполнена:', result);
-            alert('🎯 Буст уникальных игроков активирован! +5 слотов на 24 часа!');
+        console.log('✅ Заказ создан:', order);
+
+        // 2. Вычитаем монеты
+        const { error: updateError } = await state.supabase
+            .from('profiles')
+            .update({ coins: state.supabase.raw('coins - ?', price) })
+            .eq('id', state.currentUserProfile.id);
+
+        if (updateError) {
+            console.error('❌ Ошибка списания монет:', updateError);
+            throw new Error('Ошибка списания монет: ' + updateError.message);
+        }
+
+        // 3. Создаем запись буста НАПРЯМУЮ
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24 часа
+
+        const { data: boost, error: boostError } = await state.supabase
+            .from('user_boosts')
+            .insert({
+                user_id: state.currentUserProfile.id,
+                boost_type: 'unique_players',
+                boost_value: 5,
+                expires_at: expiresAt.toISOString(),
+                is_active: true
+            })
+            .select()
+            .single();
+
+        if (boostError) {
+            console.error('❌ Ошибка создания буста:', boostError);
             
-            // Обновляем баланс пользователя
-            await updateUserBalance();
-            
-            // Перезагружаем магазин для обновления кнопок
-            await loadShop();
-            
-            // Ждем немного и принудительно проверяем статус буста
-            console.log('🔄 Принудительная проверка статуса буста через 2 секунды...');
-            setTimeout(async () => {
-                await forceCheckBoostStatus();
-            }, 2000);
-            
+            // Если ошибка RLS - пробуем альтернативный метод
+            if (boostError.code === '42501') {
+                await createBoostViaRPC();
+            } else {
+                throw new Error('Ошибка активации буста: ' + boostError.message);
+            }
         } else {
-            throw new Error(result?.error || 'Неизвестная ошибка при покупке буста');
+            console.log('✅ Буст создан:', boost);
         }
+
+        alert('🎯 Буст уникальных игроков активирован! +5 слотов на 24 часа!');
+        
+        // Обновляем интерфейс
+        await updateUserBalance();
+        await loadShop();
+        await forceCheckBoostStatus();
 
     } catch (error) {
-        console.error('Ошибка покупки буста:', error);
+        console.error('❌ Ошибка покупки буста:', error);
         alert('Ошибка: ' + error.message);
     }
+}
+
+// Альтернативный метод через RPC
+async function createBoostViaRPC() {
+    console.log('🔄 Пробуем создать буст через RPC...');
+    
+    const { data, error } = await state.supabase.rpc('create_user_boost', {
+        p_user_id: state.currentUserProfile.id,
+        p_boost_type: 'unique_players',
+        p_boost_value: 5,
+        p_duration_hours: 24
+    });
+
+    if (error) {
+        throw new Error('RPC метод также не сработал: ' + error.message);
+    }
+    
+    return data;
 }
 
 // Функция для ручной активации буста (для админов)
