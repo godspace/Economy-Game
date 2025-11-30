@@ -317,6 +317,8 @@ async function renderLimitInfo() {
         // Проверяем текущие лимиты
         const limitCheck = await checkUniquePlayersLimit(null);
         
+        console.log('🔍 LimitCheck data in renderLimitInfo:', limitCheck);
+
         // Создаем или обновляем индикатор лимитов
         let limitIndicator = document.getElementById('limitIndicator');
         
@@ -342,7 +344,7 @@ async function renderLimitInfo() {
         const progressColor = usedPercentage >= 100 ? 'var(--danger)' : 
                             usedPercentage >= 80 ? 'var(--warning)' : 'var(--success)';
         
-        // УБИРАЕМ КНОПКУ "ОБНОВИТЬ"
+        // ОБНОВЛЕННЫЙ ШАБЛОН - правильное отображение лимита
         limitIndicator.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                 <i class="fas fa-users" style="color: var(--primary);"></i>
@@ -382,7 +384,7 @@ async function renderLimitInfo() {
             ` : ''}
         `;
 
-        // ОСТАВЛЯЕМ ТОЛЬКО ОБРАБОТЧИК ДЛЯ КНОПКИ МАГАЗИНА
+        // Обработчик для кнопки магазина
         const openShopBtn = document.getElementById('openShopBtn');
         if (openShopBtn) {
             openShopBtn.addEventListener('click', openShopTab);
@@ -424,6 +426,7 @@ async function refreshBoostStatus() {
 }
 
 // Функция для проверки лимитов уникальных игроков
+// Функция для проверки лимитов уникальных игроков
 export async function checkUniquePlayersLimit(targetUserId) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -457,16 +460,32 @@ export async function checkUniquePlayersLimit(targetUserId) {
             };
         }
 
-        console.log('📊 Лимиты уникальных игроков:', result);
+        console.log('📊 Лимиты уникальных игроков (RPC результат):', result);
+
+        // ИСПРАВЛЕНИЕ: RPC функция возвращает массив, берем первый элемент
+        const limitData = Array.isArray(result) ? result[0] : result;
+        
+        if (!limitData) {
+            console.error('❌ Данные лимита не получены');
+            return { 
+                canMakeDeal: false, 
+                error: 'Данные не получены',
+                baseLimit: 5,
+                boostLimit: 0,
+                usedSlots: 0,
+                availableSlots: 5,
+                hasActiveBoost: false
+            };
+        }
 
         // Гарантируем, что все значения являются числами
-        const baseLimit = Number(result?.base_limit) || 5;
-        const boostLimit = Number(result?.boost_limit) || 0;
-        const usedSlots = Number(result?.used_slots) || 0;
-        const availableSlots = Number(result?.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
-        const hasActiveBoost = Boolean(result?.has_active_boost);
+        const baseLimit = Number(limitData.base_limit) || 5;
+        const boostLimit = Number(limitData.boost_limit) || 0;
+        const usedSlots = Number(limitData.used_slots) || 0;
+        const availableSlots = Number(limitData.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
+        const hasActiveBoost = Boolean(limitData.has_active_boost);
 
-        return {
+        const finalResult = {
             canMakeDeal: availableSlots > 0,
             baseLimit: baseLimit,
             boostLimit: boostLimit,
@@ -474,6 +493,9 @@ export async function checkUniquePlayersLimit(targetUserId) {
             availableSlots: availableSlots,
             hasActiveBoost: hasActiveBoost
         };
+
+        console.log('📊 Финальные данные лимита:', finalResult);
+        return finalResult;
 
     } catch (error) {
         console.error('❌ Ошибка при проверке лимита:', error);
