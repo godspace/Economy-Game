@@ -178,6 +178,17 @@ button:active {
     font-size: 0.9rem;
 }
 
+.btn-disabled {
+    background-color: var(--gray) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.btn-disabled:hover {
+    transform: none !important;
+    background-color: var(--gray) !important;
+}
+
 .stats {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -356,7 +367,7 @@ button:active {
 }
 
 .modal-content {
-    background: darkslategrey;
+    background: white;
     border-radius: 16px;
     padding: 25px;
     width: 100%;
@@ -436,6 +447,26 @@ button:active {
 
 .ranking-table tr:hover {
     background-color: #f8f9fa;
+}
+
+.ranking-table .coins-cell, 
+.ranking-table .reputation-cell {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ranking-table .coins-cell i {
+    color: #ffd700;
+}
+
+.ranking-table .reputation-cell i {
+    color: #ff6b00;
+}
+
+.you-badge {
+    color: var(--primary);
+    font-weight: bold;
 }
 
 .badge {
@@ -604,23 +635,10 @@ button:active {
     font-size: 1.5rem;
 }
 
-/* Исправление для выделения текущего пользователя в рейтинге */
 .ranking-table tr.current-user {
     background-color: #e6f7ff !important;
     color: var(--dark);
     font-weight: bold;
-}
-
-/* Стиль для заблокированной кнопки сделки */
-.btn-disabled {
-    background-color: var(--gray) !important;
-    cursor: not-allowed !important;
-    opacity: 0.6;
-}
-
-.btn-disabled:hover {
-    transform: none !important;
-    background-color: var(--gray) !important;
 }
 
 .deal-limit-info {
@@ -806,185 +824,6 @@ button:active {
     color: var(--primary);
 }
 
-/* Мобильные стили */
-@media (max-width: 768px) {
-    .container {
-        padding: 10px;
-    }
-    
-    header {
-        border-radius: 0;
-        margin-bottom: 15px;
-        position: static;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-    }
-    
-    .subtitle {
-        font-size: 0.8rem;
-    }
-    
-    .stats {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-    
-    .stat-card {
-        padding: 15px 10px;
-    }
-    
-    .stat-value {
-        font-size: 1.8rem;
-    }
-    
-    .user-list {
-        grid-template-columns: 1fr;
-    }
-    
-    .user-card {
-        padding: 15px;
-    }
-    
-    .tab {
-        padding: 12px 15px;
-        font-size: 0.9rem;
-    }
-    
-    .ranking-table {
-        display: block;
-        overflow-x: auto;
-    }
-    
-    .search-container {
-        flex-direction: column;
-    }
-    
-    .choice-buttons {
-        flex-direction: column;
-    }
-    
-    .modal-content {
-        padding: 20px;
-        border-radius: 12px;
-    }
-    
-    .deal-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-    
-    .deal-actions {
-        width: 100%;
-        justify-content: stretch;
-    }
-    
-    .deal-actions button {
-        flex: 1;
-    }
-    
-    .user-info {
-        flex-direction: column;
-        text-align: center;
-        gap: 10px;
-    }
-    
-    .deposit-options {
-        grid-template-columns: 1fr;
-    }
-    
-    .deposit-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
-    }
-    
-    .deposit-timer {
-        text-align: left;
-        width: 100%;
-    }
-    
-    .completed-deals-container {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 480px) {
-    .header-content {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .card {
-        padding: 15px;
-    }
-    
-    input, select, button {
-        padding: 12px 14px;
-    }
-}
-
-/* Улучшения для очень маленьких экранов */
-@media (max-width: 360px) {
-    .container {
-        padding: 8px;
-    }
-    
-    .card {
-        padding: 12px;
-    }
-    
-    .tab {
-        padding: 10px 12px;
-        font-size: 0.85rem;
-    }
-}
-
-/* Поддержка темной темы */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --light: #1a1d23;
-        --dark: #f8f9fa;
-    }
-    
-    body {
-        background-color: #121212;
-        color: var(--dark);
-    }
-    
-    .card, .stat-card, .user-card, .deal-item, .deposit-option, .deposit-item {
-        background: #1e1e1e;
-        color: var(--dark);
-    }
-    
-    input, select {
-        background: #2d2d2d;
-        border-color: #444;
-        color: var(--dark);
-    }
-    
-    .deal-info, .user-info, .deposit-example {
-        background: #2a2a2a;
-    }
-    
-    .ranking-table tr:hover {
-        background-color: #2a2a2a;
-    }
-    
-    /* Исправление для выделения текущего пользователя в темной теме */
-    .ranking-table tr.current-user {
-        background-color: #2a4d6e !important;
-        color: white;
-    }
-    
-    .deal-limit-info {
-        background-color: #332701;
-        color: #ffd54f;
-        border-left-color: #ffc107;
-    }
-}
 /* Стили для магазина */
 .products-list {
     display: grid;
@@ -1148,37 +987,6 @@ button:active {
     font-size: 0.9rem;
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-    .products-list {
-        grid-template-columns: 1fr;
-    }
-    
-    .order-header {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .order-details {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-    }
-    
-    .admin-order-actions {
-        flex-direction: column;
-    }
-}
-.btn-disabled {
-    background-color: var(--gray) !important;
-    cursor: not-allowed !important;
-    opacity: 0.6;
-}
-
-.btn-disabled:hover {
-    transform: none !important;
-    background-color: var(--gray) !important;
-}
 /* Стили для баннера техработ */
 .maintenance-warning {
     background: linear-gradient(135deg, #fff3cd, #ffeaa7);
@@ -1220,33 +1028,6 @@ button:active {
 
 .maintenance-warning {
     animation: slideDown 0.5s ease-out;
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-    .maintenance-warning {
-        padding: 10px 15px;
-    }
-    
-    .maintenance-warning > div {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-    
-    .maintenance-warning .btn-small {
-        align-self: flex-end;
-    }
-}
-
-@media (max-width: 480px) {
-    .maintenance-warning {
-        font-size: 0.9rem;
-    }
-    
-    .maintenance-warning i.fa-tools {
-        font-size: 1.2rem;
-    }
 }
 
 /* Стили для функционала отклонения сделок */
@@ -1309,93 +1090,7 @@ button:active {
     transform: translateY(0);
 }
 
-/* Адаптивность для кнопок отклонения */
-@media (max-width: 768px) {
-    .reject-deal-btn {
-        padding: 10px 14px;
-        font-size: 0.9rem;
-    }
-    
-    .reject-deal-list {
-        padding: 6px 10px;
-        font-size: 0.85rem;
-    }
-    
-    .deal-actions {
-        width: 100%;
-    }
-    
-    .deal-actions button {
-        width: 100%;
-    }
-}
-
-/* Дополнительные стили для модального окна с кнопкой отклонения */
-.modal-content .reject-section p {
-    font-size: 0.85rem;
-    color: var(--gray);
-    margin-top: 8px;
-    text-align: center;
-    line-height: 1.4;
-}
-
-/* style.css - ДОБАВЛЯЕМ В КОНЕЦ ФАЙЛА */
-
-/* style.css - ДОБАВЛЯЕМ СТИЛИ ДЛЯ СИСТЕМЫ БУСТОВ В КОНЕЦ ФАЙЛА */
-
-/* Стили для индикатора буста */
-#boostIndicator {
-    position: fixed;
-    top: 80px;
-    right: 20px;
-    background: linear-gradient(135deg, #ffd700, #ff6b00);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 20px;
-    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-    font-size: 0.9rem;
-    animation: pulse 2s infinite;
-    border: 2px solid #ffa500;
-}
-
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-}
-
-/* style.css - ДОБАВЛЯЕМ СТИЛИ ДЛЯ ЗАКРЫТИЯ */
-
-#boostIndicator:hover::after {
-    content: 'Нажмите, чтобы скрыть';
-    position: absolute;
-    bottom: -25px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    white-space: nowrap;
-    z-index: 1001;
-}
-
-#boostIndicator .fa-times {
-    transition: all 0.2s ease;
-}
-
-#boostIndicator:hover .fa-times {
-    opacity: 1 !important;
-    transform: scale(1.2);
-}
-
-/* Стили для индикатора лимитов */
+/* Стили для системы бустов */
 .limit-info {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
@@ -1420,7 +1115,6 @@ button:active {
     transition: width 0.3s ease;
 }
 
-/* Стили для карточки буста в магазине */
 .boost-product {
     border: 2px solid #ffd700 !important;
     background: linear-gradient(135deg, #fff9e6, #fff3cd) !important;
@@ -1458,7 +1152,7 @@ button:active {
     font-size: 1.2em;
 }
 
-/* Анимация для подсветки буста при переходе из сделки */
+/* Анимация для подсветки буста */
 @keyframes highlightBoost {
     0% { 
         box-shadow: 0 0 0 0 rgba(255, 107, 0, 0.7);
@@ -1478,60 +1172,178 @@ button:active {
     animation: highlightBoost 2s ease-in-out;
 }
 
-/* Стили для уведомлений */
-.boost-notification {
-    position: fixed;
-    top: 120px;
-    right: 20px;
-    background: var(--success);
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    z-index: 1001;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-/* Адаптивность для индикатора буста */
+/* Мобильные стили */
 @media (max-width: 768px) {
-    #boostIndicator {
-        top: 70px;
-        right: 10px;
-        left: 10px;
-        font-size: 0.8rem;
-        padding: 8px 12px;
-        justify-content: center;
+    .container {
+        padding: 10px;
     }
     
-    .limit-info {
-        padding: 12px;
+    header {
+        border-radius: 0;
+        margin-bottom: 15px;
+        position: static;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .subtitle {
+        font-size: 0.8rem;
+    }
+    
+    .stats {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 15px 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+    }
+    
+    .user-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-card {
+        padding: 15px;
+    }
+    
+    .tab {
+        padding: 12px 15px;
+        font-size: 0.9rem;
+    }
+    
+    .ranking-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .search-container {
+        flex-direction: column;
+    }
+    
+    .choice-buttons {
+        flex-direction: column;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .deal-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .deal-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .deal-actions button {
+        flex: 1;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .deposit-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .deposit-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .deposit-timer {
+        text-align: left;
+        width: 100%;
+    }
+    
+    .completed-deals-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .products-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .order-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .order-details {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .admin-order-actions {
+        flex-direction: column;
+    }
+    
+    .maintenance-warning {
+        padding: 10px 15px;
+    }
+    
+    .maintenance-warning > div {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .maintenance-warning .btn-small {
+        align-self: flex-end;
+    }
+    
+    .reject-deal-btn {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
+    
+    .reject-deal-list {
+        padding: 6px 10px;
+        font-size: 0.85rem;
     }
     
     .limit-progress {
         max-width: 150px;
     }
-    
-    .boost-notification {
-        top: 100px;
-        right: 10px;
-        left: 10px;
-    }
 }
 
 @media (max-width: 480px) {
-    #boostIndicator {
-        position: relative;
-        top: auto;
-        right: auto;
-        left: auto;
-        margin: 10px 0;
-        border-radius: 10px;
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
     }
     
-    .limit-info {
-        margin-bottom: 15px;
+    .card {
+        padding: 15px;
+    }
+    
+    input, select, button {
+        padding: 12px 14px;
+    }
+    
+    .maintenance-warning {
+        font-size: 0.9rem;
+    }
+    
+    .maintenance-warning i.fa-tools {
+        font-size: 1.2rem;
     }
     
     .limit-progress {
@@ -1539,8 +1351,64 @@ button:active {
     }
 }
 
-/* Темная тема для новых элементов */
+/* Улучшения для очень маленьких экранов */
+@media (max-width: 360px) {
+    .container {
+        padding: 8px;
+    }
+    
+    .card {
+        padding: 12px;
+    }
+    
+    .tab {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+}
+
+/* Поддержка темной темы */
 @media (prefers-color-scheme: dark) {
+    :root {
+        --light: #1a1d23;
+        --dark: #f8f9fa;
+    }
+    
+    body {
+        background-color: #121212;
+        color: var(--dark);
+    }
+    
+    .card, .stat-card, .user-card, .deal-item, .deposit-option, .deposit-item {
+        background: #1e1e1e;
+        color: var(--dark);
+    }
+    
+    input, select {
+        background: #2d2d2d;
+        border-color: #444;
+        color: var(--dark);
+    }
+    
+    .deal-info, .user-info, .deposit-example {
+        background: #2a2a2a;
+    }
+    
+    .ranking-table tr:hover {
+        background-color: #2a2a2a;
+    }
+    
+    .ranking-table tr.current-user {
+        background-color: #2a4d6e !important;
+        color: white;
+    }
+    
+    .deal-limit-info {
+        background-color: #332701;
+        color: #ffd54f;
+        border-left-color: #ffc107;
+    }
+    
     .limit-info {
         background: #2a2a2a;
         border-color: #444;
@@ -1562,89 +1430,5 @@ button:active {
     
     .boost-product .product-price {
         color: #ffd700;
-    }
-}
-
-/* Стили для кнопки обновления в лимитах */
-.limit-info .btn-outline {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: transparent;
-}
-
-.limit-info .btn-outline:hover {
-    background: var(--primary);
-    color: white;
-}
-
-/* Дополнительные стили для информации о бусте */
-.boost-info {
-    background: #e8f5e8;
-    color: #2e7d32;
-    padding: 8px;
-    border-radius: 5px;
-    border-left: 3px solid #4caf50;
-    margin-top: 10px;
-}
-
-.boost-warning {
-    background: #fff3cd;
-    color: #856404;
-    padding: 8px;
-    border-radius: 5px;
-    border-left: 3px solid #ffc107;
-    margin-top: 10px;
-}
-
-/* Стили для улучшенной таблицы рейтинга */
-.ranking-table .coins-cell, 
-.ranking-table .reputation-cell {
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.ranking-table .coins-cell {
-    color: #d4af37; /* золотой цвет для монет */
-}
-
-.ranking-table .reputation-cell {
-    color: #ff6b00; /* оранжевый цвет для репутации */
-}
-
-/* Специальные стили для первых трех мест */
-.ranking-table tr:first-child {
-    background: linear-gradient(135deg, #fff9e6, #fff3cd) !important;
-    font-weight: bold;
-}
-
-.ranking-table tr:nth-child(2) {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef) !important;
-}
-
-.ranking-table tr:nth-child(3) {
-    background: linear-gradient(135deg, #fff3e0, #ffe0b2) !important;
-}
-
-/* Улучшенные стили для текущего пользователя */
-.ranking-table tr.current-user {
-    background: linear-gradient(135deg, #e6f7ff, #b3e0ff) !important;
-    border-left: 4px solid var(--primary);
-    font-weight: bold;
-}
-
-/* Адаптивность для новой таблицы */
-@media (max-width: 768px) {
-    .ranking-table .coins-cell,
-    .ranking-table .reputation-cell {
-        flex-direction: column;
-        gap: 2px;
-        text-align: center;
-    }
-    
-    .ranking-table .coins-cell i,
-    .ranking-table .reputation-cell i {
-        font-size: 0.8rem;
     }
 }
