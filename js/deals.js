@@ -139,7 +139,7 @@ export async function showDealModal(userId) {
         state.selectedUser = user;
         
         // Проверяем лимит уникальных игроков и сделок с этим игроком
-        const limitCheck = await checkUniquePlayersLimit(userId);
+        const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
         
         if (dom.dealPlayerName) dom.dealPlayerName.textContent = user.username;
         if (dom.dealAvatar) dom.dealAvatar.textContent = user.username.charAt(0).toUpperCase();
@@ -147,25 +147,16 @@ export async function showDealModal(userId) {
         if (dom.dealPlayerCoins) dom.dealPlayerCoins.textContent = user.coins;
         if (dom.dealPlayerReputation) dom.dealPlayerReputation.textContent = user.reputation;
         
-        // ИСПРАВЛЕНИЕ: Гарантируем, что используем числа
-        const baseLimit = Number(limitCheck.baseLimit) || 5;
-        const boostLimit = Number(limitCheck.boostLimit) || 0;
-        const usedSlots = Number(limitCheck.usedSlots) || 0;
-        const totalLimit = baseLimit + boostLimit;
-        
-        // Обновляем информацию о лимите с учетом буста и сделок с игроком
+        // Обновляем информацию о лимите
         if (dom.dealLimitInfo && dom.dealLimitText) {
-            if (!limitCheck.canMakeDeal) {
+            const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
+            
+            // ПРОВЕРЯЕМ ТОЛЬКО ЛИМИТ СДЕЛОК С КОНКРЕТНЫМ ИГРОКОМ (5 сделок)
+            if (todayDealsCount >= 5) {
                 dom.dealLimitText.innerHTML = `
-                    ${limitCheck.error || 'Лимит исчерпан'}<br>
-                    <strong>Лимит уникальных игроков:</strong> ${usedSlots}/${totalLimit}<br>
-                    ${limitCheck.todayDealsWithTarget !== undefined ? 
-                        `<strong>Сделок с ${user.username}:</strong> ${limitCheck.todayDealsWithTarget}/5<br>` : 
-                        ''}
-                    ${limitCheck.hasActiveBoost ? 
-                        '🎯 Активен буст!' : 
-                        '💡 <button class="btn-outline btn-small" onclick="openShopFromDealModal()" style="margin-top: 5px; padding: 5px 10px; font-size: 0.8rem;">Купить буст</button>'
-                    }
+                    <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
+                    <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                    Вы уже совершили максимальное количество сделок с этим игроком сегодня.
                 `;
                 dom.dealLimitInfo.style.display = 'block';
                 
@@ -179,44 +170,23 @@ export async function showDealModal(userId) {
                     dom.cheatBtn.classList.add('btn-disabled');
                 }
             } else {
-                const todayDealsCount = await getTodayDealsCount(userId);
-                let dealLimitText = '';
-                
-                if (todayDealsCount >= 5) {
-                    dealLimitText = `Вы уже совершили максимальное количество сделок (5) с игроком ${user.username} сегодня. Попробуйте завтра или выберите другого игрока.`;
-                    
-                    // Блокируем кнопки
-                    if (dom.cooperateBtn) {
-                        dom.cooperateBtn.disabled = true;
-                        dom.cooperateBtn.classList.add('btn-disabled');
-                    }
-                    if (dom.cheatBtn) {
-                        dom.cheatBtn.disabled = true;
-                        dom.cheatBtn.classList.add('btn-disabled');
-                    }
-                } else {
-                    dealLimitText = `
-                        <strong>Лимит уникальных игроков:</strong> ${usedSlots}/${totalLimit}<br>
-                        <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
-                        ${limitCheck.hasActiveBoost ? 
-                            '🎯 Активен буст!' : 
-                            '💡 Можете купить буст в магазине!'
-                        }
-                    `;
-                    
-                    // Разблокируем кнопки
-                    if (dom.cooperateBtn) {
-                        dom.cooperateBtn.disabled = false;
-                        dom.cooperateBtn.classList.remove('btn-disabled');
-                    }
-                    if (dom.cheatBtn) {
-                        dom.cheatBtn.disabled = false;
-                        dom.cheatBtn.classList.remove('btn-disabled');
-                    }
-                }
-                
-                dom.dealLimitText.innerHTML = dealLimitText;
+                // УБИРАЕМ ПРОВЕРКУ НА УНИКАЛЬНЫХ ИГРОКОВ - можно делать сделки с уже знакомыми игроками
+                dom.dealLimitText.innerHTML = `
+                    <strong>Лимит уникальных игроков:</strong> ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}<br>
+                    <strong>Сделок с ${user.username}:</strong> ${todayDealsCount}/5<br>
+                    ${limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'}
+                `;
                 dom.dealLimitInfo.style.display = 'block';
+                
+                // Разблокируем кнопки
+                if (dom.cooperateBtn) {
+                    dom.cooperateBtn.disabled = false;
+                    dom.cooperateBtn.classList.remove('btn-disabled');
+                }
+                if (dom.cheatBtn) {
+                    dom.cheatBtn.disabled = false;
+                    dom.cheatBtn.classList.remove('btn-disabled');
+                }
             }
         }
         
@@ -308,25 +278,16 @@ export async function proposeDeal(choice) {
             return;
         }
         
-        // Проверяем лимит уникальных игроков и сделок с этим игроком
-        const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
-        if (!limitCheck.canMakeDeal) {
-            alert(limitCheck.error + '\n\nЛимит уникальных игроков: ' + 
-                  limitCheck.usedSlots + '/' + (limitCheck.baseLimit + limitCheck.boostLimit) +
-                  (limitCheck.todayDealsWithTarget !== undefined ? 
-                   '\nСделок с игроком: ' + limitCheck.todayDealsWithTarget + '/5' : '') +
-                  '\n' + (limitCheck.hasActiveBoost ? '🎯 Активен буст!' : '💡 Можете купить буст в магазине!'));
-            return;
-        }
-        
-        // Дополнительная проверка на случай, если что-то изменилось
+        // ПРОВЕРЯЕМ ТОЛЬКО ЛИМИТ СДЕЛОК С ЭТИМ ИГРОКОМ (5 сделок в день)
         const todayDealsCount = await getTodayDealsCount(state.selectedUser.id);
         if (todayDealsCount >= 5) {
             alert(`Вы уже совершили максимальное количество сделок (5) с игроком ${state.selectedUser.username} сегодня. Попробуйте завтра или выберите другого игрока.`);
             return;
         }
         
-        // Используем RPC функцию для атомарного создания сделки с резервированием 1 монеты
+        // УБИРАЕМ ПРОВЕРКУ НА УНИКАЛЬНЫХ ИГРОКОВ - можно делать сделки с уже знакомыми
+        
+        // Используем RPC функцию для атомарного создания сделки
         const { data: result, error } = await state.supabase.rpc('create_deal_with_reservation', {
             p_from_user: state.currentUserProfile.id,
             p_to_user: state.selectedUser.id,
@@ -362,10 +323,10 @@ export async function proposeDeal(choice) {
             dom.dealModal.classList.remove('active');
         }
         
-        // Обновляем баланс пользователя (так как 1 монета была зарезервирована)
+        // Обновляем баланс пользователя
         await updateUserProfile();
         
-        // ОБНОВЛЯЕМ ЛИМИТ ИНДИКАТОР СРАЗУ ПОСЛЕ ПРЕДЛОЖЕНИЯ СДЕЛКИ
+        // Обновляем лимит индикатор
         try {
             const { updateLimitIndicator } = await import('./users.js');
             await updateLimitIndicator();
@@ -373,19 +334,10 @@ export async function proposeDeal(choice) {
             console.error('Error updating limit indicator after deal proposal:', error);
         }
         
-        // Проверяем статус буста
-        try {
-            const { updateBoostStatus, deactivateExhaustedBoosts } = await import('./shop.js');
-            await updateBoostStatus();
-            await deactivateExhaustedBoosts(state.currentUserProfile.id);
-        } catch (error) {
-            console.error('Error updating boost status after deal:', error);
-        }
-        
         // Инвалидируем кэш сделок
         cache.deals.data = null;
         cache.deals.timestamp = 0;
-        loadDeals(true); // force refresh
+        loadDeals(true);
         
     } catch (error) {
         console.error('Ошибка предложения сделки:', error);
