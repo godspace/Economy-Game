@@ -364,15 +364,17 @@ async function renderLimitInfo() {
                 ${availableSlots <= 2 ? `
                 <div style="text-align: right;">
                     <small style="color: ${availableSlots === 0 ? 'var(--danger)' : 'var(--warning)'}; display: block; margin-bottom: 5px;">
-                        ${availableSlots === 0 ? '❌ Лимит исчерпан' : `⚠️ Осталось ${availableSlots} слот${availableSlots === 1 ? '' : 'а'}`}
+                        ${availableSlots === 0 ? '❌ Лимит новых игроков исчерпан' : `⚠️ Осталось ${availableSlots} новый слот`}
                     </small>
-                    ${!limitCheck.hasActiveBoost ? `
                     <button class="btn-outline btn-small" id="openShopBtn">
                         <i class="fas fa-store"></i> Купить буст
                     </button>
-                    ` : ''}
                 </div>
                 ` : ''}
+            </div>
+            <div style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+                <i class="fas fa-info-circle"></i> 
+                С знакомыми игроками можно совершать до 5 сделок в день
             </div>
             ${limitCheck.hasActiveBoost ? `
             <div style="margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; border-left: 3px solid #4caf50;">
