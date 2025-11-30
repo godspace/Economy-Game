@@ -496,6 +496,14 @@ export async function rejectDeal(dealId) {
 
         alert('Сделка отклонена! Резервная монета возвращена инициатору.');
         
+        // ОБНОВЛЯЕМ ЛИМИТ ИНДИКАТОР ПРИ ОТКЛОНЕНИИ СДЕЛКИ
+        try {
+            const { updateLimitIndicator } = await import('./users.js');
+            await updateLimitIndicator();
+        } catch (error) {
+            console.error('Error updating limit indicator after deal rejection:', error);
+        }
+        
         // Закрываем модальное окно если оно открыто
         if (dom.responseModal) {
             dom.responseModal.classList.remove('active');
