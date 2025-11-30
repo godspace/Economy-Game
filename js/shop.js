@@ -1031,7 +1031,7 @@ async function updateOrderStatus(orderId, status) {
             if (adminNotes === null) return; // пользователь отменил
         }
 
-        // Получаем данные заказа перед обновлением (ИСПРАВЛЕННЫЙ ЗАПРОС)
+        // Получаем данные заказа перед обновлением
         const { data: order, error: orderError } = await state.supabase
             .from('orders')
             .select(`
@@ -1053,16 +1053,33 @@ async function updateOrderStatus(orderId, status) {
         // Определяем тип товара по названию
         const isBoostProduct = order.products.name && order.products.name.toLowerCase().includes('буст');
         
-        // Если это заказ на буст и статус меняется на confirmed/completed - активируем буст
-        if ((status === 'confirmed' || status === 'completed') && isBoostProduct) {
+        // ИСПРАВЛЕНИЕ: Активируем буст только при ПОДТВЕРЖДЕНИИ заказа (confirmed), а не при завершении (completed)
+        if (status === 'confirmed' && isBoostProduct && order.status !== 'confirmed') {
             console.log('🚀 Активируем буст для пользователя:', order.user_id);
             
-            try {
-                await manuallyActivateBoost(order.user_id);
-                adminNotes = (adminNotes || '') + ' Буст активирован автоматически.';
-            } catch (boostError) {
-                console.error('Ошибка активации буста:', boostError);
-                adminNotes = (adminNotes || '') + ' Ошибка активации буста: ' + boostError.message;
+            // Проверяем, нет ли уже активного буста
+            const { data: existingBoosts, error: checkError } = await state.supabase
+                .from('user_boosts')
+                .select('id')
+                .eq('user_id', order.user_id)
+                .eq('boost_type', 'unique_players')
+                .eq('is_active', true)
+                .gt('expires_at', new Date().toISOString());
+
+            if (checkError) {
+                console.error('Ошибка проверки существующих бустов:', checkError);
+                adminNotes = (adminNotes || '') + ' Ошибка проверки бустов. ';
+            } else if (existingBoosts && existingBoosts.length > 0) {
+                console.log('⚠️ У пользователя уже есть активный буст, пропускаем создание');
+                adminNotes = (adminNotes || '') + ' Буст не активирован: у пользователя уже есть активный буст. ';
+            } else {
+                try {
+                    await manuallyActivateBoost(order.user_id);
+                    adminNotes = (adminNotes || '') + ' Буст активирован автоматически.';
+                } catch (boostError) {
+                    console.error('Ошибка активации буста:', boostError);
+                    adminNotes = (adminNotes || '') + ' Ошибка активации буста: ' + boostError.message;
+                }
             }
         }
 
