@@ -47,26 +47,28 @@ export async function loadTopRanking(forceRefresh = false) {
     }
 }
 
-function renderTopRanking(users) {
-    if (!dom.topRankingTable) {
-        console.warn('Top ranking table element not found');
-        return;
-    }
+function renderRanking(users) {
+    if (!dom.rankingTable) return;
     
-    try {
-        dom.topRankingTable.innerHTML = '';
-        
-        if (!users || users.length === 0) {
-            renderEmptyTopRanking();
-            return;
-        }
-        
+    dom.rankingTable.innerHTML = '';
+    
+    if (users.length === 0) {
+        dom.rankingTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 20px;">
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <p>Нет данных для рейтинга</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    } else {
         const fragment = document.createDocumentFragment();
         
         users.forEach((user, index) => {
             const row = document.createElement('tr');
             
-            // Добавляем класс для текущего пользователя
             if (state.currentUserProfile && user.id === state.currentUserProfile.id) {
                 row.classList.add('current-user');
             }
@@ -79,7 +81,7 @@ function renderTopRanking(users) {
                     ${user.username}
                     ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '<span class="you-badge">(Вы)</span>' : ''}
                 </td>
-                <td>${user.class || 'Не указан'}</td>
+                <td>${user.class}</td>
                 <td>${user.coins} <i class="fas fa-coins"></i></td>
                 <td>${user.reputation} <i class="fas fa-star"></i></td>
             `;
@@ -87,10 +89,7 @@ function renderTopRanking(users) {
             fragment.appendChild(row);
         });
         
-        dom.topRankingTable.appendChild(fragment);
-    } catch (error) {
-        console.error('Ошибка рендеринга топа рейтинга:', error);
-        renderTopRankingError('Ошибка отображения данных');
+        dom.rankingTable.appendChild(fragment);
     }
 }
 
