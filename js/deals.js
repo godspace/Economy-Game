@@ -1,4 +1,4 @@
-// deals.js - ПОЛНЫЙ ИСПРАВЛЕННЫЙ ФАЙЛ
+// deals.js - ОБНОВЛЕННЫЙ ФАЙЛ С ПРОВЕРКОЙ БУСТА ПОСЛЕ СДЕЛКИ
 import { state, dom, cache, shouldUpdate, markUpdated, DEAL_STATUS, DEAL_CHOICES } from './config.js';
 
 // Глобальная переменная для защиты от повторных операций
@@ -364,6 +364,14 @@ export async function proposeDeal(choice) {
         
         // Обновляем баланс пользователя (так как 1 монета была зарезервирована)
         await updateUserProfile();
+        
+        // ДОБАВЛЯЕМ: ПРОВЕРЯЕМ СТАТУС БУСТА ПОСЛЕ ПРЕДЛОЖЕНИЯ СДЕЛКИ
+        try {
+            const { updateBoostStatus } = await import('./shop.js');
+            await updateBoostStatus();
+        } catch (error) {
+            console.error('Error updating boost status after deal:', error);
+        }
         
         // Инвалидируем кэш сделок
         cache.deals.data = null;

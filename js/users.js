@@ -1,4 +1,4 @@
-// users.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
+// users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ОПТИМИЗАЦИЕЙ ПРОВЕРОК
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
 export async function loadUserProfile(userId) {
@@ -63,12 +63,15 @@ export async function loadUsers(forceRefresh = false) {
             dom.usersList.classList.add('loading');
         }
         
-        // ПРИНУДИТЕЛЬНО ОБНОВЛЯЕМ СТАТУС БУСТА ПРИ ОТКРЫТИИ ВКЛАДКИ
-        try {
-            const { updateBoostStatus } = await import('./shop.js');
-            await updateBoostStatus();
-        } catch (error) {
-            console.error('Error updating boost status in users tab:', error);
+        // ОПТИМИЗАЦИЯ: Проверяем статус буста только при принудительном обновлении или если прошло больше 5 минут
+        if (forceRefresh || !state.lastBoostCheck || (Date.now() - state.lastBoostCheck > 5 * 60 * 1000)) {
+            try {
+                const { updateBoostStatus } = await import('./shop.js');
+                await updateBoostStatus();
+                state.lastBoostCheck = Date.now();
+            } catch (error) {
+                console.error('Error updating boost status in users tab:', error);
+            }
         }
         
         // Проверка кэша
@@ -337,13 +340,11 @@ async function renderLimitInfo() {
         const progressColor = usedPercentage >= 100 ? 'var(--danger)' : 
                             usedPercentage >= 80 ? 'var(--warning)' : 'var(--success)';
         
+        // УБИРАЕМ КНОПКУ "ОБНОВИТЬ"
         limitIndicator.innerHTML = `
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                 <i class="fas fa-users" style="color: var(--primary);"></i>
                 <strong>Лимит уникальных игроков сегодня:</strong>
-                <button class="btn-outline btn-small" id="refreshBoostBtn" style="margin-left: auto; padding: 2px 8px; font-size: 0.7rem;">
-                    <i class="fas fa-sync-alt"></i> Обновить
-                </button>
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
                 <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
@@ -379,12 +380,7 @@ async function renderLimitInfo() {
             ` : ''}
         `;
 
-        // Добавляем обработчики для новых кнопок
-        const refreshBtn = document.getElementById('refreshBoostBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', refreshBoostStatus);
-        }
-        
+        // ОСТАВЛЯЕМ ТОЛЬКО ОБРАБОТЧИК ДЛЯ КНОПКИ МАГАЗИНА
         const openShopBtn = document.getElementById('openShopBtn');
         if (openShopBtn) {
             openShopBtn.addEventListener('click', openShopTab);
@@ -406,17 +402,9 @@ async function renderLimitInfo() {
     }
 }
 
-// Функция для принудительного обновления статуса буста
+// Функция для принудительного обновления статуса буста (оставляем для совместимости)
 async function refreshBoostStatus() {
     try {
-        const button = document.getElementById('refreshBoostBtn');
-        const originalHtml = button?.innerHTML;
-        
-        if (button) {
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            button.disabled = true;
-        }
-        
         const { updateBoostStatus } = await import('./shop.js');
         await updateBoostStatus();
         
@@ -429,16 +417,9 @@ async function refreshBoostStatus() {
     } catch (error) {
         console.error('Ошибка обновления статуса буста:', error);
         showNotification('Ошибка обновления статуса', 'error');
-    } finally {
-        const button = document.getElementById('refreshBoostBtn');
-        if (button) {
-            button.innerHTML = '<i class="fas fa-sync-alt"></i> Обновить';
-            button.disabled = false;
-        }
     }
 }
 
-// Функция для проверки лимитов уникальных игроков
 // Функция для проверки лимитов уникальных игроков
 export async function checkUniquePlayersLimit(targetUserId) {
     try {
@@ -475,15 +456,12 @@ export async function checkUniquePlayersLimit(targetUserId) {
 
         console.log('📊 Лимиты уникальных игроков:', result);
 
-        // ИСПРАВЛЕНИЕ: RPC функция возвращает массив, берем первый элемент
-        const limitData = result && result[0] ? result[0] : {};
-
         // Гарантируем, что все значения являются числами
-        const baseLimit = Number(limitData.base_limit) || 5;
-        const boostLimit = Number(limitData.boost_limit) || 0;
-        const usedSlots = Number(limitData.used_slots) || 0;
-        const availableSlots = Number(limitData.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
-        const hasActiveBoost = Boolean(limitData.has_active_boost);
+        const baseLimit = Number(result?.base_limit) || 5;
+        const boostLimit = Number(result?.boost_limit) || 0;
+        const usedSlots = Number(result?.used_slots) || 0;
+        const availableSlots = Number(result?.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
+        const hasActiveBoost = Boolean(result?.has_active_boost);
 
         return {
             canMakeDeal: availableSlots > 0,
@@ -613,10 +591,9 @@ export function setupSearchDebounce() {
 }
 
 // Добавляем функции в глобальную область видимости
-window.refreshBoostStatus = refreshBoostStatus;
 window.openShopTab = openShopTab;
 window.clearSearchFilters = clearSearchFilters;
 window.loadUsers = loadUsers;
 
-// Экспортируем только refreshBoostStatus, так как checkUniquePlayersLimit уже экспортирован выше
+// Экспортируем только refreshBoostStatus для совместимости
 export { refreshBoostStatus };

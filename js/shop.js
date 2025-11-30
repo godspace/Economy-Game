@@ -1,4 +1,4 @@
-// shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ
+// shop.js - ПОЛНЫЙ ОБНОВЛЕННЫЙ ФАЙЛ С ПРОГРЕСС-БАРОМ
 import { state, dom } from './config.js';
 
 // Глобальная переменная для таймера обновления статуса буста
@@ -46,18 +46,10 @@ export async function loadShop() {
     }
 }
 
-// Функция для периодической проверки статуса буста
+// Функция для периодической проверки статуса буста - УПРОЩЕННАЯ ВЕРСИЯ
 export function startBoostStatusPolling() {
-    if (boostStatusTimer) {
-        clearInterval(boostStatusTimer);
-    }
-    
-    // Проверяем статус буста каждые 30 секунд
-    boostStatusTimer = setInterval(async () => {
-        if (state.isAuthenticated && state.currentUserProfile) {
-            await updateBoostStatus();
-        }
-    }, 30000);
+    // Убираем частый polling - проверяем только при событиях
+    console.log('Boost status polling configured for event-based updates');
 }
 
 // Останавливаем polling при выходе
@@ -190,7 +182,7 @@ export async function updateBoostStatus() {
     }
 }
 
-// Функция для обновления UI буста
+// Функция для обновления UI буста С ПРОГРЕСС-БАРОМ ИЗ 6 СЕКЦИЙ
 function updateBoostUI(hasActiveBoost, boostData) {
     // Создаем или обновляем индикатор буста в хедере
     let boostIndicator = document.getElementById('boostIndicator');
@@ -202,20 +194,14 @@ function updateBoostUI(hasActiveBoost, boostData) {
             position: fixed;
             top: 80px;
             right: 20px;
-            background: linear-gradient(135deg, #ffd700, #ff6b00);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+            background: white;
+            color: #333;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid #ffa500;
+            border: 2px solid #ffd700;
+            min-width: 200px;
         `;
         
         // Добавляем обработчик клика для закрытия
@@ -223,17 +209,6 @@ function updateBoostUI(hasActiveBoost, boostData) {
             this.style.display = 'none';
             // Сохраняем состояние закрытия в localStorage
             localStorage.setItem('boostIndicatorClosed', 'true');
-        });
-        
-        // Добавляем hover эффект
-        boostIndicator.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.05)';
-            this.style.boxShadow = '0 6px 15px rgba(255, 107, 0, 0.4)';
-        });
-        
-        boostIndicator.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-            this.style.boxShadow = '0 4px 12px rgba(255, 107, 0, 0.3)';
         });
         
         document.body.appendChild(boostIndicator);
@@ -244,20 +219,58 @@ function updateBoostUI(hasActiveBoost, boostData) {
     
     if (hasActiveBoost && boostData && !isManuallyClosed) {
         const expiresAt = new Date(boostData.expires_at);
-        const timeLeft = expiresAt - new Date();
+        const now = new Date();
+        const totalDuration = 6 * 60 * 60 * 1000; // 6 часов в миллисекундах
+        const timeLeft = expiresAt - now;
         const hoursLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60 * 60)));
         const minutesLeft = Math.max(0, Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60)));
         
-        boostIndicator.innerHTML = `
-            <i class="fas fa-rocket"></i>
-            <span>Буст +5 игроков</span>
-            <small>(${hoursLeft}ч ${minutesLeft}м)</small>
-            <i class="fas fa-times" style="margin-left: 5px; font-size: 0.8rem; opacity: 0.8;"></i>
-        `;
-        boostIndicator.style.display = 'flex';
+        // Рассчитываем прогресс (6 секций = 6 часов)
+        const progress = Math.min(6, Math.max(0, 6 - hoursLeft));
+        const progressPercent = (timeLeft / totalDuration) * 100;
         
-        // Обновляем таймер каждую минуту
-        setTimeout(() => updateBoostStatus(), 60000);
+        // Создаем прогресс-бар из 6 секций
+        const progressBarHTML = `
+            <div style="display: flex; gap: 4px; margin: 10px 0; height: 20px;">
+                ${Array.from({length: 6}, (_, i) => `
+                    <div style="
+                        flex: 1;
+                        background: ${i < progress ? '#e9ecef' : '#ffd700'};
+                        border-radius: 4px;
+                        transition: all 0.3s ease;
+                        ${i < progress ? 'opacity: 0.5;' : 'box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);'}
+                    "></div>
+                `).join('')}
+            </div>
+        `;
+        
+        boostIndicator.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                <strong style="color: #ff6b00; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-rocket"></i> Буст +5 игроков
+                </strong>
+                <small style="color: #666; font-size: 0.8rem;">
+                    ${hoursLeft}ч ${minutesLeft}м
+                </small>
+            </div>
+            ${progressBarHTML}
+            <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #666;">
+                <span>${6 - progress}/6 ч</span>
+                <span>Осталось: ${hoursLeft}ч ${minutesLeft}м</span>
+            </div>
+            <div style="text-align: center; margin-top: 5px;">
+                <small style="color: #999; cursor: pointer;">Нажмите, чтобы скрыть</small>
+            </div>
+        `;
+        boostIndicator.style.display = 'block';
+        
+        // Обновляем каждые 60 минут (1 час) вместо 1 минуты
+        setTimeout(() => {
+            if (state.isAuthenticated && state.currentUserProfile) {
+                updateBoostStatus();
+            }
+        }, 60 * 60 * 1000); // 60 минут
+        
     } else {
         boostIndicator.style.display = 'none';
     }

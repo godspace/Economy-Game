@@ -1,4 +1,4 @@
-// main.js - ИСПРАВЛЕННЫЙ ФАЙЛ (убраны дублирующиеся экспорты)
+// main.js - ОБНОВЛЕННЫЙ ФАЙЛ БЕЗ ЧАСТОГО POLLING
 import { state, addRealtimeSubscription, cleanupRealtimeSubscriptions } from './config.js';
 import { initDOMElements, setupEventListeners, showLoading, hideLoading, showError } from './ui.js';
 import { initSupabase, checkAuth, isSupabaseInitialized } from './auth.js';
@@ -43,7 +43,7 @@ function initErrorHandling() {
         event.preventDefault(); // Предотвращаем вывод в консоль браузера
     });
 
-    // Обработка глобальных ошибок
+    // Обработка глобальных ошибки
     window.addEventListener('error', (event) => {
         console.error('Global error:', event.error);
         // Можно отправить ошибку на сервер для мониторинга
@@ -163,11 +163,11 @@ async function initializeApplication() {
                 // Инициализация realtime подписки
                 initRealtimeSubscriptions();
                 
-                // Загружаем статус буста
+                // Загружаем статус буста (ТОЛЬКО НАЧАЛЬНАЯ ЗАГРУЗКА, БЕЗ POLLING)
                 const { updateBoostStatus, startBoostStatusPolling } = await import('./shop.js');
                 await updateBoostStatus();
-                startBoostStatusPolling();
-                console.log('Boost status loaded and polling started successfully');
+                startBoostStatusPolling(); // Эта функция теперь не запускает частый polling
+                console.log('Boost status loaded successfully');
             } catch (error) {
                 console.error('Error loading boost status:', error);
             }
@@ -245,7 +245,7 @@ function initCleanup() {
         // Останавливаем все подписки и таймеры
         cleanupRealtimeSubscriptions();
         
-        // Останавливаем polling бустов
+        // Останавливаем polling бустов (если он все еще есть)
         if (state.isAuthenticated) {
             try {
                 import('./shop.js').then(module => {
@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(initializeApplication, 100);
 });
 
-// Экспортируем для тестирования - УБРАН ДУБЛИРУЮЩИЙСЯ ЭКСПОРТ loadTabModule
+// Экспортируем для тестирования
 export { 
     initializeApplication, 
     initPerformanceMonitoring, 
