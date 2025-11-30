@@ -615,6 +615,86 @@ export function setupSearchDebounce() {
     }
 }
 
+// Функция для обновления индикатора лимита без полной перезагрузки пользователей
+export async function updateLimitIndicator() {
+    try {
+        if (!state.supabase || !state.currentUserProfile) return;
+
+        console.log('🔄 Обновление индикатора лимита...');
+
+        // Проверяем текущие лимиты
+        const limitCheck = await checkUniquePlayersLimit(null);
+        
+        const limitIndicator = document.getElementById('limitIndicator');
+        if (!limitIndicator) {
+            console.log('❌ Индикатор лимита не найден, создаем новый');
+            await renderLimitInfo();
+            return;
+        }
+
+        // Безопасное извлечение значений
+        const baseLimit = Number(limitCheck.baseLimit) || 5;
+        const boostLimit = Number(limitCheck.boostLimit) || 0;
+        const usedSlots = Number(limitCheck.usedSlots) || 0;
+        const totalLimit = baseLimit + boostLimit;
+        const availableSlots = Math.max(0, totalLimit - usedSlots);
+        const usedPercentage = totalLimit > 0 ? Math.min(100, (usedSlots / totalLimit) * 100) : 0;
+        const progressColor = usedPercentage >= 100 ? 'var(--danger)' : 
+                            usedPercentage >= 80 ? 'var(--warning)' : 'var(--success)';
+        
+        // Обновляем содержимое индикатора
+        limitIndicator.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <i class="fas fa-users" style="color: var(--primary);"></i>
+                <strong>Лимит уникальных игроков сегодня:</strong>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <span style="font-weight: bold;">${usedSlots}/${totalLimit} игроков</span>
+                    <div class="limit-progress">
+                        <div class="limit-progress-bar" style="width: ${usedPercentage}%; background: ${progressColor};"></div>
+                    </div>
+                    ${limitCheck.hasActiveBoost ? 
+                        '<span style="color: var(--success); display: flex; align-items: center; gap: 5px;"><i class="fas fa-rocket"></i> Буст активен!</span>' : 
+                        ''
+                    }
+                </div>
+                ${availableSlots <= 2 ? `
+                <div style="text-align: right;">
+                    <small style="color: ${availableSlots === 0 ? 'var(--danger)' : 'var(--warning)'}; display: block; margin-bottom: 5px;">
+                        ${availableSlots === 0 ? '❌ Лимит исчерпан' : `⚠️ Осталось ${availableSlots} слот${availableSlots === 1 ? '' : 'а'}`}
+                    </small>
+                    ${!limitCheck.hasActiveBoost ? `
+                    <button class="btn-outline btn-small" id="openShopBtn">
+                        <i class="fas fa-store"></i> Купить буст
+                    </button>
+                    ` : ''}
+                </div>
+                ` : ''}
+            </div>
+            ${limitCheck.hasActiveBoost ? `
+            <div style="margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 5px; border-left: 3px solid #4caf50;">
+                <small style="color: #2e7d32;">
+                    <i class="fas fa-info-circle"></i> 
+                    Активен буст +${boostLimit} игроков. Общий лимит: ${totalLimit} игроков
+                </small>
+            </div>
+            ` : ''}
+        `;
+
+        // Обновляем обработчик для кнопки магазина
+        const openShopBtn = document.getElementById('openShopBtn');
+        if (openShopBtn) {
+            openShopBtn.addEventListener('click', openShopTab);
+        }
+
+        console.log('✅ Индикатор лимита обновлен:', { usedSlots, totalLimit, availableSlots });
+
+    } catch (error) {
+        console.error('❌ Ошибка обновления индикатора лимита:', error);
+    }
+}
+
 // Добавляем функции в глобальную область видимости
 window.openShopTab = openShopTab;
 window.clearSearchFilters = clearSearchFilters;
