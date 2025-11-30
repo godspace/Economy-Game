@@ -1,6 +1,9 @@
 // users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ИНТЕГРАЦИЕЙ СИСТЕМЫ БУСТОВ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
+// Импортируем функцию из deals.js
+import { getTodayDealsCount } from './deals.js';
+
 export async function loadUserProfile(userId) {
     try {
         if (!state.supabase) {
