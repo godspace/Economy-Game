@@ -488,27 +488,32 @@ async function manuallyActivateBoost(userId) {
             throw new Error('Недостаточно прав');
         }
 
-        const { data: result, error } = await state.supabase.rpc('manually_activate_boost', {
+        console.log('🛠️ Ручная активация буста для пользователя:', userId);
+
+        // Используем RPC функцию для создания буста
+        const { data: result, error } = await state.supabase.rpc('admin_create_boost', {
             p_user_id: userId,
             p_boost_type: 'unique_players',
+            p_boost_value: 5,
             p_duration_hours: 24
         });
 
         if (error) {
-            console.error('Ошибка ручной активации буста:', error);
-            throw new Error('Ошибка активации: ' + error.message);
+            console.error('❌ RPC ошибка:', error);
+            throw new Error('Ошибка RPC: ' + error.message);
         }
 
-        if (result && result.success) {
-            console.log('✅ Буст успешно активирован вручную');
-            return true;
-        } else {
-            throw new Error(result?.error || 'Неизвестная ошибка');
+        if (!result.success) {
+            console.error('❌ Ошибка создания буста:', result.error);
+            throw new Error(result.error || 'Неизвестная ошибка создания буста');
         }
+
+        console.log('✅ Буст успешно создан через RPC:', result);
+        return true;
 
     } catch (error) {
-        console.error('Ошибка ручной активации буста:', error);
-        throw error;
+        console.error('❌ Ошибка ручной активации буста:', error);
+        throw new Error('Ошибка активации: ' + error.message);
     }
 }
 
