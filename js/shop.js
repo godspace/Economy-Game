@@ -624,6 +624,7 @@ async function purchaseAndActivateBoost(productId, price) {
     }
 }
 // Функция для ручной активации буста (для админов) - ОКОНЧАТЕЛЬНАЯ ВЕРСИЯ
+// Функция для ручной активации буста (для админов) - С ДОПОЛНИТЕЛЬНОЙ ПРОВЕРКОЙ
 async function manuallyActivateBoost(userId) {
     try {
         if (!state.supabase || !state.isAdmin) {
@@ -631,6 +632,25 @@ async function manuallyActivateBoost(userId) {
         }
 
         console.log('🛠️ Ручная активация буста для пользователя:', userId);
+
+        // Проверяем, нет ли уже активного буста
+        const { data: existingBoosts, error: checkError } = await state.supabase
+            .from('user_boosts')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('boost_type', 'unique_players')
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString());
+
+        if (checkError) {
+            console.error('❌ Ошибка проверки существующих бустов:', checkError);
+            throw new Error('Ошибка проверки существующих бустов');
+        }
+
+        if (existingBoosts && existingBoosts.length > 0) {
+            console.log('⚠️ У пользователя уже есть активный буст:', existingBoosts);
+            throw new Error('У пользователя уже есть активный буст');
+        }
 
         // Прямая вставка буста
         const expiresAt = new Date();
