@@ -338,6 +338,7 @@ function attachUserCardEventListeners() {
 
 // Функция для выполнения перевода администратором
 // Функция для выполнения перевода администратором
+// Функция для выполнения перевода администратором
 async function makeAdminTransfer(targetUserId, targetUserName) {
     try {
         if (!state.supabase || !state.isAdmin) {
@@ -362,8 +363,12 @@ async function makeAdminTransfer(targetUserId, targetUserName) {
             throw new Error(data?.error || 'Неизвестная ошибка при переводе');
         }
         
-        // Показываем успешное сообщение
-        alert(`✅ ${data.message}`);
+        // Показываем успешное сообщение с информацией о количестве переводов
+        let successMessage = `✅ ${data.message}`;
+        if (data.transfers_today) {
+            successMessage += `\n\n📊 Переводов сегодня: ${data.transfers_today}/5`;
+        }
+        alert(successMessage);
         
         // Обновляем список пользователей для отображения нового баланса
         await loadUsers(true);
@@ -372,6 +377,14 @@ async function makeAdminTransfer(targetUserId, targetUserName) {
         
     } catch (error) {
         console.error('❌ Ошибка при выполнении перевода:', error);
+        
+        // Показываем более информативное сообщение об ошибке
+        if (error.message.includes('Превышен лимит переводов')) {
+            alert(`❌ ${error.message}`);
+        } else {
+            alert(`❌ Не удалось выполнить перевод пользователю ${targetUserName}: ${error.message}`);
+        }
+        
         throw error;
     }
 }
