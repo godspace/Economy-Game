@@ -71,11 +71,6 @@ function renderTopRanking(users) {
                 row.classList.add('current-user');
             }
             
-            // Добавляем классы для первых трех мест
-            if (index === 0) row.classList.add('first-place');
-            if (index === 1) row.classList.add('second-place');
-            if (index === 2) row.classList.add('third-place');
-            
             row.innerHTML = `
                 <td>
                     ${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
@@ -85,8 +80,8 @@ function renderTopRanking(users) {
                     ${state.currentUserProfile && user.id === state.currentUserProfile.id ? '<span class="you-badge">(Вы)</span>' : ''}
                 </td>
                 <td>${user.class || 'Не указан'}</td>
-                <td class="coins-cell">${user.coins} <i class="fas fa-coins"></i></td>
-                <td class="reputation-cell">${user.reputation} <i class="fas fa-star"></i></td>
+                <td>${user.coins} <i class="fas fa-coins"></i></td>
+                <td>${user.reputation} <i class="fas fa-star"></i></td>
             `;
             
             fragment.appendChild(row);
