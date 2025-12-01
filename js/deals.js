@@ -1,11 +1,12 @@
-// deals.js - ОБНОВЛЕННЫЙ ФАЙЛ С ПРОВЕРКОЙ БУСТА ПОСЛЕ СДЕЛКИ
+[file name]: deals.js
+[file content begin]
+// deals.js - ОБНОВЛЕННЫЙ ФАЙЛ С ПРОВЕРКОЙ КЛАССОВ
 import { state, dom, cache, shouldUpdate, markUpdated, DEAL_STATUS, DEAL_CHOICES } from './config.js';
 
 // Глобальная переменная для защиты от повторных операций
 let pendingOperations = new Set();
 
 // Функция для проверки лимита уникальных игроков
-// Функция для проверки лимитов уникальных игроков
 export async function checkUniquePlayersLimit(targetUserId = null) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
@@ -92,6 +93,7 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
         };
     }
 }
+
 // Функция для записи уникального игрока
 async function recordUniquePlayer(targetUserId) {
     try {
@@ -142,6 +144,14 @@ export async function showDealModal(userId) {
             return;
         }
         
+        // НОВАЯ ПРОВЕРКА: Запрет сделок внутри класса
+        if (state.currentUserProfile.class && 
+            user.class && 
+            state.currentUserProfile.class === user.class) {
+            alert(`❌ Сделки внутри класса "${user.class}" запрещены.\n\nВыберите игрока из другого класса.`);
+            return;
+        }
+        
         state.selectedUser = user;
         
         // Проверяем количество сделок с этим игроком сегодня
@@ -153,7 +163,9 @@ export async function showDealModal(userId) {
         console.log('🔍 Проверка сделки в модальном окне:', {
             player: state.selectedUser.username,
             isFamiliarPlayer: isFamiliarPlayer,
-            todayDealsCount: todayDealsCount
+            todayDealsCount: todayDealsCount,
+            currentUserClass: state.currentUserProfile.class,
+            targetUserClass: user.class
         });
         
         // Получаем информацию о лимите только для отображения
@@ -208,6 +220,22 @@ export async function showDealModal(userId) {
                 }
             }
             
+            // ДОБАВЛЯЕМ ИНФОРМАЦИЮ О КЛАССЕ
+            if (state.currentUserProfile.class && user.class) {
+                if (state.currentUserProfile.class === user.class) {
+                    dealLimitText += `<br><br><strong>❌ Один класс:</strong> ${user.class}<br>Сделки внутри одного класса запрещены.`;
+                    shouldBlockDeal = true;
+                } else {
+                    dealLimitText += `<br><br><strong>✅ Разные классы:</strong> ${state.currentUserProfile.class} ↔ ${user.class}`;
+                }
+            } else if (!state.currentUserProfile.class || !user.class) {
+                dealLimitText += `<br><br><strong>ℹ️ Класс:</strong> ${
+                    !state.currentUserProfile.class && !user.class ? 'Оба без класса' :
+                    !state.currentUserProfile.class ? `У вас не указан класс, у игрока: ${user.class}` :
+                    `Ваш класс: ${state.currentUserProfile.class}, у игрока не указан`
+                }<br>Сделки разрешены.`;
+            }
+            
             dom.dealLimitText.innerHTML = dealLimitText;
             dom.dealLimitInfo.style.display = 'block';
             
@@ -233,7 +261,8 @@ export async function showDealModal(userId) {
                 shouldBlockDeal: shouldBlockDeal,
                 isFamiliarPlayer: isFamiliarPlayer,
                 todayDealsCount: todayDealsCount,
-                availableSlots: limitCheck.availableSlots
+                availableSlots: limitCheck.availableSlots,
+                sameClass: state.currentUserProfile.class && user.class && state.currentUserProfile.class === user.class
             });
         }
         
@@ -370,7 +399,13 @@ export async function proposeDeal(choice) {
         }
         
         if (!result || !result.success) {
-            throw new Error(result?.error || 'Неизвестная ошибка при создании сделки');
+            // Проверяем, является ли ошибка о запрете сделок внутри класса
+            if (result.error && result.error.includes('Сделки внутри одного класса')) {
+                alert(result.error);
+            } else {
+                throw new Error(result?.error || 'Неизвестная ошибка при создании сделки');
+            }
+            return;
         }
         
         // Записываем уникального игрока (только если это первая сделка с ним сегодня)
@@ -1136,3 +1171,4 @@ async function isFamiliarPlayer(targetUserId) {
 
 // Экспортируем для тестирования
 //export { checkUniquePlayersLimit, getTodayDealsCount, updateUserProfile };
+[file content end]
