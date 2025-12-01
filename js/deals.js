@@ -1,5 +1,3 @@
-[file name]: deals.js
-[file content begin]
 // deals.js - ОБНОВЛЕННЫЙ ФАЙЛ С ПРОВЕРКОЙ КЛАССОВ
 import { state, dom, cache, shouldUpdate, markUpdated, DEAL_STATUS, DEAL_CHOICES } from './config.js';
 
@@ -1171,4 +1169,3 @@ async function isFamiliarPlayer(targetUserId) {
 
 // Экспортируем для тестирования
 //export { checkUniquePlayersLimit, getTodayDealsCount, updateUserProfile };
-[file content end]
