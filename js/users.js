@@ -1,5 +1,3 @@
-[file name]: users.js
-[file content begin]
 // users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ФУНКЦИОНАЛОМ ПЕРЕВОДА ДЛЯ АДМИНОВ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
@@ -856,4 +854,3 @@ window.loadUsers = loadUsers;
 export { 
     refreshBoostStatus
 };
-[file content end]
