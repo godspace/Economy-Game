@@ -1,3 +1,5 @@
+[file name]: users.js
+[file content begin]
 // users.js - ОБНОВЛЕННЫЙ ФАЙЛ С ФУНКЦИОНАЛОМ ПЕРЕВОДА ДЛЯ АДМИНОВ
 import { state, dom, cache, shouldUpdate, markUpdated } from './config.js';
 
@@ -202,7 +204,13 @@ function createUserCard(user) {
         // ЛОГИКА ДЛЯ ОБЫЧНОГО ПОЛЬЗОВАТЕЛЯ - кнопка "Сделка"
         const currentUserHasCoins = state.currentUserProfile.coins > 0;
         const targetUserHasCoins = user.coins > 0;
-        const canMakeDeal = currentUserHasCoins && targetUserHasCoins;
+        
+        // НОВАЯ ПРОВЕРКА: Запрет сделок внутри класса (только если оба указали класс и он одинаковый)
+        const currentUserClass = state.currentUserProfile.class;
+        const targetUserClass = user.class;
+        const sameClass = currentUserClass && 
+                          targetUserClass && 
+                          currentUserClass === targetUserClass;
         
         let buttonClass = 'btn-secondary';
         let buttonText = 'Сделка';
@@ -219,6 +227,12 @@ function createUserCard(user) {
             buttonText = 'У игрока нет монет';
             disabled = true;
             tooltip = 'title="Игрок должен иметь монеты для сделки"';
+        } else if (sameClass) {
+            // ЕСЛИ ОДИН КЛАСС И ОБА УКАЗАНЫ - ЗАПРЕЩАЕМ
+            buttonClass = 'btn-secondary btn-disabled';
+            buttonText = 'Один класс';
+            disabled = true;
+            tooltip = 'title="Сделки внутри одного класса запрещены"';
         }
         
         userCard.innerHTML = `
@@ -265,6 +279,14 @@ function attachUserCardEventListeners() {
             
             try {
                 console.log('🔄 Начало обработки клика на сделку с игроком:', userName);
+                
+                // Дополнительная проверка на одинаковый класс (на всякий случай)
+                if (state.currentUserProfile.class && 
+                    state.currentUserProfile.class === this.dataset.userClass) {
+                    console.log('❌ Попытка сделки внутри класса');
+                    alert(`❌ Сделки внутри класса "${state.currentUserProfile.class}" запрещены.`);
+                    return;
+                }
                 
                 // Проверяем лимит уникальных игроков перед открытием сделки
                 const limitCheck = await checkUniquePlayersLimit(userId);
@@ -336,8 +358,6 @@ function attachUserCardEventListeners() {
     });
 }
 
-// Функция для выполнения перевода администратором
-// Функция для выполнения перевода администратором
 // Функция для выполнения перевода администратором
 async function makeAdminTransfer(targetUserId, targetUserName) {
     try {
@@ -508,6 +528,12 @@ async function renderLimitInfo() {
                 </small>
             </div>
             ` : ''}
+            <div style="margin-top: 10px; padding: 8px; background: #fff3cd; border-radius: 5px; border-left: 3px solid #ffc107;">
+                <small style="color: #856404;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Сделки внутри одного класса запрещены. Вы можете совершать сделки только с игроками из других классов.
+                </small>
+            </div>
         `;
 
         // Обработчик для кнопки магазина
@@ -746,7 +772,7 @@ export async function updateLimitIndicator() {
     try {
         if (!state.supabase || !state.currentUserProfile) return;
 
-        console.log('🔄 Обновление индикатора лимита...');
+        console.log('🔄 Обновление индикатор лимита...');
 
         // Проверяем текущие лимиты
         const limitCheck = await checkUniquePlayersLimit(null);
@@ -830,3 +856,4 @@ window.loadUsers = loadUsers;
 export { 
     refreshBoostStatus
 };
+[file content end]
