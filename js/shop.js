@@ -1083,15 +1083,36 @@ async function updateOrderStatus(orderId, status) {
         if (status === 'cancelled' && order.status !== 'cancelled') {
             console.log(`💰 Returning ${order.total_amount} coins to user ${order.user_id}`);
             
+            // ИСПРАВЛЕНИЕ: Вместо state.supabase.raw() используем отдельные запросы
+            
+            // 1. Получаем текущий баланс пользователя
+            const { data: userProfile, error: profileError } = await state.supabase
+                .from('profiles')
+                .select('coins')
+                .eq('id', order.user_id)
+                .single();
+
+            if (profileError) {
+                console.error('❌ Profile error:', profileError);
+                throw profileError;
+            }
+
+            // 2. Обновляем баланс
+            const newBalance = (userProfile.coins || 0) + order.total_amount;
             const { error: refundError } = await state.supabase
                 .from('profiles')
-                .update({ coins: state.supabase.raw('coins + ?', order.total_amount) })
+                .update({ 
+                    coins: newBalance,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', order.user_id);
 
             if (refundError) {
                 console.error('❌ Refund error:', refundError);
                 throw refundError;
             }
+            
+            console.log('✅ Balance updated:', newBalance);
         }
 
         // Обновляем статус заказа
