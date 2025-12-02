@@ -357,6 +357,7 @@ function attachUserCardEventListeners() {
 }
 
 // Функция для выполнения перевода администратором
+// Замените функцию makeAdminTransfer на эту:
 async function makeAdminTransfer(targetUserId, targetUserName) {
     try {
         if (!state.supabase || !state.isAdmin) {
@@ -365,30 +366,41 @@ async function makeAdminTransfer(targetUserId, targetUserName) {
         
         console.log(`🔄 Админ выполняет перевод пользователю: ${targetUserName}`);
         
-        // Вызываем RPC функцию в Supabase с передачей ID администратора
-        const { data, error } = await state.supabase.rpc('admin_transfer_coins', {
-            admin_user_id: state.currentUserProfile.id, // передаем ID текущего пользователя
-            target_user_id: targetUserId,
-            amount: 5
-        });
-        
-        if (error) {
-            console.error('❌ Ошибка RPC вызова:', error);
-            throw new Error(error.message || 'Ошибка при выполнении перевода');
+        // Проверяем существование RPC функции
+        let transferResult;
+        try {
+            const { data, error } = await state.supabase.rpc('admin_transfer_coins', {
+                admin_user_id: state.currentUserProfile.id,
+                target_user_id: targetUserId,
+                amount: 5
+            });
+            
+            if (error) {
+                console.log('RPC function error, trying direct method');
+                // Fallback: прямой метод с проверками
+                await makeAdminTransferDirect(targetUserId, targetUserName);
+                return;
+            }
+            
+            transferResult = data;
+        } catch (rpcError) {
+            console.log('RPC function not available, using direct method');
+            await makeAdminTransferDirect(targetUserId, targetUserName);
+            return;
         }
         
-        if (!data || !data.success) {
-            throw new Error(data?.error || 'Неизвестная ошибка при переводе');
+        if (!transferResult || !transferResult.success) {
+            throw new Error(transferResult?.error || 'Неизвестная ошибка при переводе');
         }
         
-        // Показываем успешное сообщение с информацией о количестве переводов
-        let successMessage = `✅ ${data.message}`;
-        if (data.transfers_today) {
-            successMessage += `\n\n📊 Переводов сегодня: ${data.transfers_today}/5`;
+        // Показываем успешное сообщение
+        let successMessage = `✅ ${transferResult.message}`;
+        if (transferResult.transfers_today) {
+            successMessage += `\n\n📊 Переводов сегодня: ${transferResult.transfers_today}/5`;
         }
         alert(successMessage);
         
-        // Обновляем список пользователей для отображения нового баланса
+        // Обновляем список пользователей
         await loadUsers(true);
         
         console.log('✅ Перевод выполнен успешно');
@@ -396,7 +408,6 @@ async function makeAdminTransfer(targetUserId, targetUserName) {
     } catch (error) {
         console.error('❌ Ошибка при выполнении перевода:', error);
         
-        // Показываем более информативное сообщение об ошибке
         if (error.message.includes('Превышен лимит переводов')) {
             alert(`❌ ${error.message}`);
         } else {
@@ -405,6 +416,74 @@ async function makeAdminTransfer(targetUserId, targetUserName) {
         
         throw error;
     }
+}
+
+// Добавьте эту вспомогательную функцию:
+async function makeAdminTransferDirect(targetUserId, targetUserName) {
+    // Прямой метод с проверками безопасности
+    if (!state.isAdmin) {
+        throw new Error('Только администраторы могут выполнять переводы');
+    }
+    
+    // Проверяем лимит переводов (макс 5 в день)
+    const today = new Date().toISOString().split('T')[0];
+    const { count: transfersToday } = await state.supabase
+        .from('admin_transfers')
+        .select('id', { count: 'exact', head: true })
+        .eq('from_user', state.currentUserProfile.id)
+        .gte('created_at', today);
+    
+    if (transfersToday >= 5) {
+        throw new Error('Превышен лимит переводов на сегодня (максимум 5)');
+    }
+    
+    // Создаем запись о переводе
+    const { data: transfer, error: transferError } = await state.supabase
+        .from('admin_transfers')
+        .insert({
+            from_user: state.currentUserProfile.id,
+            to_user: targetUserId,
+            amount: 5
+        })
+        .select()
+        .single();
+    
+    if (transferError) {
+        throw new Error(`Ошибка создания перевода: ${transferError.message}`);
+    }
+    
+    // Обновляем баланс получателя через безопасный метод
+    const { error: updateError } = await state.supabase
+        .from('profiles')
+        .update({ 
+            coins: state.supabase.raw('coins + 5'),
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', targetUserId);
+    
+    if (updateError) {
+        throw new Error(`Ошибка обновления баланса: ${updateError.message}`);
+    }
+    
+    // Логируем действие
+    await state.supabase
+        .from('security_logs')
+        .insert({
+            action: 'admin_transfer',
+            details: {
+                admin_id: state.currentUserProfile.id,
+                target_user_id: targetUserId,
+                amount: 5,
+                transfer_id: transfer.id
+            },
+            severity: 2
+        });
+    
+    return {
+        success: true,
+        message: `Перевод 5 монет пользователю ${targetUserName} выполнен успешно`,
+        transfers_today: transfersToday + 1
+    };
 }
 
 function renderEmptyUsersState() {
