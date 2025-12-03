@@ -14,8 +14,8 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
 
         console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
 
-        // Используем исправленную RPC функцию
-        const { data: result, error } = await state.supabase.rpc(
+        // Используем RPC функцию, которая возвращает TABLE (массив строк)
+        const { data: results, error } = await state.supabase.rpc(
             'check_daily_unique_players_limit', 
             { p_user_id: state.currentUserProfile.id }
         );
@@ -26,43 +26,34 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
             return getSimpleLimits();
         }
 
-        console.log('📊 Лимиты уникальных игроков (сырой результат):', result);
-        console.log('📊 Тип результата:', typeof result);
-        console.log('📊 Является ли массивом?', Array.isArray(result));
+        console.log('📊 Результат RPC (полный):', results);
+        console.log('📊 Тип результата:', typeof results);
+        console.log('📊 Является ли массивом?', Array.isArray(results));
 
-        // Обрабатываем разные форматы ответа
+        // Обрабатываем результат TABLE (массив строк)
         let limitData;
         
-        if (result === null || result === undefined) {
+        if (!results) {
             console.log('❌ Результат null или undefined');
             return getDefaultLimits();
         }
         
-        if (Array.isArray(result)) {
+        if (Array.isArray(results)) {
             // Если результат - массив, берем первый элемент
-            limitData = result[0];
-            console.log('📊 Обработан как массив, первый элемент:', limitData);
-        } else if (typeof result === 'object') {
-            // Если результат - объект, используем как есть
-            limitData = result;
-            console.log('📊 Обработан как объект:', limitData);
+            limitData = results[0];
+            console.log('📊 Первый элемент массива:', limitData);
         } else {
-            console.log('❌ Неизвестный формат результата:', result);
+            console.log('❌ Неизвестный формат результата:', results);
             return getDefaultLimits();
         }
 
-        // Извлекаем данные с разными вариантами имен полей
-        const baseLimit = limitData.base_limit || limitData.baseLimit || 5;
-        const boostLimit = limitData.boost_limit || limitData.boostLimit || 0;
-        const usedSlots = limitData.used_slots || limitData.usedSlots || 0;
-        
-        // Вычисляем availableSlots если его нет
-        let availableSlots = limitData.available_slots || limitData.availableSlots;
-        if (availableSlots === undefined || availableSlots === null) {
-            availableSlots = Math.max(0, baseLimit + boostLimit - usedSlots);
-        }
-        
-        const hasActiveBoost = Boolean(limitData.has_active_boost || limitData.hasActiveBoost);
+        // Извлекаем данные из записи
+        // Важно: используем snake_case, так как PostgreSQL возвращает имена полей в нижнем регистре
+        const baseLimit = limitData?.base_limit || 5;
+        const boostLimit = limitData?.boost_limit || 0;
+        const usedSlots = limitData?.used_slots || 0;
+        const availableSlots = limitData?.available_slots || Math.max(0, baseLimit + boostLimit - usedSlots);
+        const hasActiveBoost = Boolean(limitData?.has_active_boost);
 
         const finalResult = {
             canMakeDeal: availableSlots > 0,
@@ -81,6 +72,7 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
         return getDefaultLimits();
     }
 }
+
 function getDefaultLimits() {
     return { 
         canMakeDeal: true,
