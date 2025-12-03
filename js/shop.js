@@ -132,50 +132,34 @@ async function forceCheckBoostStatus() {
 export async function deactivateExhaustedBoosts(userId) {
     try {
         if (!state.supabase) return;
-
-        console.log('🔍 Проверка исчерпанных бустов для пользователя:', userId);
-
-        // Проверяем текущий лимит
-        const { checkUniquePlayersLimit } = await import('./users.js');
-        const limitCheck = await checkUniquePlayersLimit(userId);
         
-        const totalLimit = limitCheck.baseLimit + limitCheck.boostLimit;
-        const isLimitExhausted = limitCheck.usedSlots >= totalLimit;
+        console.log('🔍 Проверка бустов для пользователя:', userId);
         
-        console.log('📊 Статус лимита:', {
-            usedSlots: limitCheck.usedSlots,
-            totalLimit: totalLimit,
-            isExhausted: isLimitExhausted,
-            totalLimit: limitCheck.baseLimit + limitCheck.boostLimit,
-            isExhausted: limitCheck.availableSlots <= 0
-        });
-
-        // ОТКЛЮЧАЕМ АВТОДЕАКТИВАЦИЮ - бусты остаются активными до истечения времени
-        // if (isLimitExhausted && limitCheck.hasActiveBoost) {
-        //     console.log('🔚 Лимит исчерпан, деактивируем бусты');
-        //     
-        //     const { error } = await state.supabase
-        //         .from('user_boosts')
-        //         .update({ is_active: false })
-        //         .eq('user_id', userId)
-        //         .eq('boost_type', 'unique_players')
-        //         .eq('is_active', true);
-        //
-        //     if (error) {
-        //         console.error('❌ Ошибка деактивации бустов:', error);
-        //     } else {
-        //         console.log('✅ Бусты деактивированы');
-        //         state.hasActiveUniquePlayersBoost = false;
-        //         updateBoostUI(false, null);
-        //         showBoostNotification('Буст деактивирован: лимит уникальных игроков исчерпан');
-        //     }
-        // }
-
+        // Простая проверка без сложных запросов
+        const { data: activeBoosts, error } = await state.supabase
+            .from('user_boosts')
+            .select('id, boost_type, expires_at, boost_value')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString());
+        
+        if (error) {
+            console.error('Ошибка проверки бустов:', error);
+            return;
+        }
+        
+        console.log('📊 Активные бусты:', activeBoosts?.length || 0);
+        
+        // Если нет активных бустов, ничего не делаем
+        if (!activeBoosts || activeBoosts.length === 0) {
+            console.log('✅ Нет активных бустов для деактивации');
+            return;
+        }
+        
     } catch (error) {
-        console.error('❌ Ошибка проверки исчерпанных бустов:', error);
+        console.error('Ошибка в deactivateExhaustedBoosts:', error);
     }
 }
-
 // Функция для показа уведомлений о бустах
 export function showBoostNotification(message, type = 'info') {
     const notification = document.createElement('div');
