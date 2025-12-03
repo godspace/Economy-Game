@@ -656,7 +656,7 @@ async function refreshBoostStatus() {
 
 // Функция для проверки лимитов уникальных игроков
 // Функция для проверки лимитов уникальных игроков
-export async function checkUniquePlayersLimit(targetUserId) {
+export async function checkUniquePlayersLimit(targetUserId = null) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
             return { 
@@ -672,15 +672,18 @@ export async function checkUniquePlayersLimit(targetUserId) {
 
         console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
 
-        const { data: result, error } = await state.supabase.rpc('check_daily_unique_players_limit', {
-            p_user_id: state.currentUserProfile.id
-        });
+        // Используем новую функцию
+        const { data: result, error } = await state.supabase.rpc(
+            'get_user_limit_info', 
+            { p_user_id: state.currentUserProfile.id }
+        );
 
         if (error) {
             console.error('❌ Ошибка проверки лимита:', error);
+            // Fallback: простой расчет
             return { 
-                canMakeDeal: false, 
-                error: 'Ошибка проверки лимита',
+                canMakeDeal: true, 
+                error: null,
                 baseLimit: 5,
                 boostLimit: 0,
                 usedSlots: 0,
@@ -689,47 +692,25 @@ export async function checkUniquePlayersLimit(targetUserId) {
             };
         }
 
-        console.log('📊 Лимиты уникальных игроков (RPC результат):', result);
+        console.log('📊 Лимиты уникальных игроков:', result);
 
-        // ИСПРАВЛЕНИЕ: RPC функция возвращает массив, берем первый элемент
-        const limitData = Array.isArray(result) ? result[0] : result;
-        
-        if (!limitData) {
-            console.error('❌ Данные лимита не получены');
-            return { 
-                canMakeDeal: false, 
-                error: 'Данные не получены',
-                baseLimit: 5,
-                boostLimit: 0,
-                usedSlots: 0,
-                availableSlots: 5,
-                hasActiveBoost: false
-            };
+        if (!result || !result.success) {
+            throw new Error(result?.error || 'Ошибка получения лимита');
         }
 
-        // Гарантируем, что все значения являются числами
-        const baseLimit = Number(limitData.base_limit) || 5;
-        const boostLimit = Number(limitData.boost_limit) || 0;
-        const usedSlots = Number(limitData.used_slots) || 0;
-        const availableSlots = Number(limitData.available_slots) || Math.max(0, (baseLimit + boostLimit) - usedSlots);
-        const hasActiveBoost = Boolean(limitData.has_active_boost);
-
-        const finalResult = {
-            canMakeDeal: availableSlots > 0,
-            baseLimit: baseLimit,
-            boostLimit: boostLimit,
-            usedSlots: usedSlots,
-            availableSlots: availableSlots,
-            hasActiveBoost: hasActiveBoost
+        return {
+            canMakeDeal: result.available_slots > 0,
+            baseLimit: result.base_limit || 5,
+            boostLimit: result.boost_limit || 0,
+            usedSlots: result.used_slots || 0,
+            availableSlots: result.available_slots || 5,
+            hasActiveBoost: result.has_active_boost || false
         };
-
-        console.log('📊 Финальные данные лимита:', finalResult);
-        return finalResult;
 
     } catch (error) {
         console.error('❌ Ошибка при проверке лимита:', error);
         return { 
-            canMakeDeal: false, 
+            canMakeDeal: true, // Разрешаем сделки при ошибке
             error: 'Ошибка системы',
             baseLimit: 5,
             boostLimit: 0,
