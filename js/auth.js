@@ -255,11 +255,11 @@ export async function checkAdminStatus() {
 
         console.log('🔧 Checking admin status for profile ID:', state.currentUserProfile.id);
         
-        // Пробуем RPC функцию
+        // Используем простую RPC функцию без рекурсии
         try {
             const { data: isAdminResult, error: rpcError } = await state.supabase.rpc(
-                'check_admin_status_simple',
-                { p_user_id: state.currentUserProfile.id }
+                'check_admin_simple',
+                { p_profile_id: state.currentUserProfile.id }
             );
             
             if (!rpcError && typeof isAdminResult === 'boolean') {
@@ -272,7 +272,7 @@ export async function checkAdminStatus() {
             console.log('RPC function failed, using direct query:', rpcError);
         }
         
-        // Способ 2: Простой прямой запрос
+        // Прямой запрос (теперь работает с простой политикой)
         const { data: admin, error } = await state.supabase
             .from('admins')
             .select('user_id')
