@@ -220,96 +220,40 @@ export async function checkAdminStatus() {
 
         console.log('🔧 Checking admin status for profile ID:', state.currentUserProfile.id);
         
-        // Используем простой прямой запрос (без RPC для избежания рекурсии)
+        // Способ 1: Используем простую RPC функцию
+        try {
+            const { data: isAdminResult, error: rpcError } = await state.supabase.rpc(
+                'check_admin_status_simple',
+                { p_user_id: state.currentUserProfile.id }
+            );
+            
+            if (!rpcError && typeof isAdminResult === 'boolean') {
+                state.isAdmin = isAdminResult;
+                console.log('🔧 User is admin (via RPC):', state.isAdmin);
+                updateAdminTabVisibility();
+                return state.isAdmin;
+            }
+        } catch (rpcError) {
+            console.log('RPC function failed, using direct query:', rpcError);
+        }
+        
+        // Способ 2: Простой прямой запрос (теперь работает с simple_admin_select политикой)
         const { data: admin, error } = await state.supabase
             .from('admins')
             .select('user_id')
             .eq('user_id', state.currentUserProfile.id)
             .maybeSingle();
 
-        if (error) {
-            console.error('Error checking admin status:', error);
-            state.isAdmin = false;
-        } else {
-            state.isAdmin = !!admin;
-        }
+        state.isAdmin = !error && !!admin;
+        console.log('🔧 User is admin (via direct query):', state.isAdmin);
         
-        console.log('🔧 User is admin:', state.isAdmin);
-        
-        // Обновляем видимость вкладки администратора
         updateAdminTabVisibility();
-
         return state.isAdmin;
+        
     } catch (error) {
         console.error('Error checking admin status:', error);
         state.isAdmin = false;
         updateAdminTabVisibility();
         return false;
     }
-}
-// Функция для обновления видимости вкладки администратора
-function updateAdminTabVisibility() {
-    const adminTab = document.querySelector('.tab[data-tab="admin"]');
-    if (adminTab) {
-        adminTab.style.display = state.isAdmin ? 'flex' : 'none';
-        console.log('Admin tab visibility updated:', state.isAdmin ? 'visible' : 'hidden');
-    } else {
-        console.log('Admin tab not found in HTML');
-    }
-}
-
-async function loadBoostStatus() {
-    try {
-        const { updateBoostStatus, startBoostStatusPolling } = await import('./shop.js');
-        await updateBoostStatus();
-        startBoostStatusPolling();
-    } catch (error) {
-        console.error('Error loading boost status:', error);
-    }
-}
-
-function updateUI() {
-    if (!state.currentUserProfile) return;
-    
-    const displayName = state.currentUserProfile.username;
-    
-    if (dom.userGreeting) dom.userGreeting.textContent = `Привет, ${displayName}!`;
-    if (dom.userAvatar) dom.userAvatar.textContent = displayName.charAt(0).toUpperCase();
-    updateUserBalanceDisplay();
-}
-
-export async function handleLogout() {
-    try {
-        Object.values(state.depositTimers).forEach(timer => {
-            if (timer) clearInterval(timer);
-        });
-        state.depositTimers = {};
-
-        try {
-            const { stopBoostStatusPolling } = await import('./shop.js');
-            stopBoostStatusPolling();
-        } catch (error) {
-            console.error('Error stopping boost polling:', error);
-        }
-
-        // Очищаем сохраненный код
-        localStorage.removeItem('student_code');
-
-        state.currentUser = null;
-        state.currentUserProfile = null;
-        state.isAuthenticated = false;
-        state.isAdmin = false;
-
-        const { clearCache } = await import('./config.js');
-        clearCache();
-
-        showAuthSection();
-    } catch (error) {
-        console.error('Logout error:', error);
-        showAuthSection();
-    }
-}
-
-export function isSupabaseInitialized() {
-    return supabaseInitialized && state.supabase !== null;
 }
