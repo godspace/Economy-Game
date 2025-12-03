@@ -659,44 +659,24 @@ async function refreshBoostStatus() {
 export async function checkUniquePlayersLimit(targetUserId = null) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
-            return { 
-                canMakeDeal: false, 
-                error: 'Не инициализирован',
-                baseLimit: 5,
-                boostLimit: 0,
-                usedSlots: 0,
-                availableSlots: 5,
-                hasActiveBoost: false
-            };
+            return getDefaultLimits();
         }
 
         console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
 
-        // Используем новую функцию
+        // Пробуем исправленную функцию
         const { data: result, error } = await state.supabase.rpc(
-            'get_user_limit_info', 
+            'check_daily_unique_players_limit', 
             { p_user_id: state.currentUserProfile.id }
         );
 
         if (error) {
-            console.error('❌ Ошибка проверки лимита:', error);
-            // Fallback: простой расчет
-            return { 
-                canMakeDeal: true, 
-                error: null,
-                baseLimit: 5,
-                boostLimit: 0,
-                usedSlots: 0,
-                availableSlots: 5,
-                hasActiveBoost: false
-            };
+            console.log('⚠️ RPC error, using simple calculation:', error);
+            // Fallback на простые значения
+            return getSimpleLimits();
         }
 
         console.log('📊 Лимиты уникальных игроков:', result);
-
-        if (!result || !result.success) {
-            throw new Error(result?.error || 'Ошибка получения лимита');
-        }
 
         return {
             canMakeDeal: result.available_slots > 0,
@@ -709,18 +689,32 @@ export async function checkUniquePlayersLimit(targetUserId = null) {
 
     } catch (error) {
         console.error('❌ Ошибка при проверке лимита:', error);
-        return { 
-            canMakeDeal: true, // Разрешаем сделки при ошибке
-            error: 'Ошибка системы',
-            baseLimit: 5,
-            boostLimit: 0,
-            usedSlots: 0,
-            availableSlots: 5,
-            hasActiveBoost: false
-        };
+        return getDefaultLimits();
     }
 }
 
+function getDefaultLimits() {
+    return { 
+        canMakeDeal: true,
+        error: null,
+        baseLimit: 5,
+        boostLimit: 0,
+        usedSlots: 0,
+        availableSlots: 5,
+        hasActiveBoost: false
+    };
+}
+
+function getSimpleLimits() {
+    return {
+        canMakeDeal: true,
+        baseLimit: 5,
+        boostLimit: 0,
+        usedSlots: 0,
+        availableSlots: 5,
+        hasActiveBoost: false
+    };
+}
 // Функция для открытия вкладки магазина
 function openShopTab() {
     const shopTab = document.querySelector('.tab[data-tab="shop"]');
