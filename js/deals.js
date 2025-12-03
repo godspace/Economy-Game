@@ -8,40 +8,79 @@ let pendingOperations = new Set();
 export async function checkUniquePlayersLimit(targetUserId = null) {
     try {
         if (!state.supabase || !state.currentUserProfile) {
+            console.log('⚠️ Не инициализирован, возвращаем лимиты по умолчанию');
             return getDefaultLimits();
         }
 
         console.log('🔍 Checking unique players limit for user:', state.currentUserProfile.id);
 
-        // Пробуем исправленную функцию
+        // Используем исправленную RPC функцию
         const { data: result, error } = await state.supabase.rpc(
             'check_daily_unique_players_limit', 
             { p_user_id: state.currentUserProfile.id }
         );
 
         if (error) {
-            console.log('⚠️ RPC error, using simple calculation:', error);
-            // Fallback на простые значения
+            console.error('❌ Ошибка проверки лимита через RPC:', error);
+            console.log('⚠️ Используем простой расчет');
             return getSimpleLimits();
         }
 
-        console.log('📊 Лимиты уникальных игроков:', result);
+        console.log('📊 Лимиты уникальных игроков (сырой результат):', result);
+        console.log('📊 Тип результата:', typeof result);
+        console.log('📊 Является ли массивом?', Array.isArray(result));
 
-        return {
-            canMakeDeal: result.available_slots > 0,
-            baseLimit: result.base_limit || 5,
-            boostLimit: result.boost_limit || 0,
-            usedSlots: result.used_slots || 0,
-            availableSlots: result.available_slots || 5,
-            hasActiveBoost: result.has_active_boost || false
+        // Обрабатываем разные форматы ответа
+        let limitData;
+        
+        if (result === null || result === undefined) {
+            console.log('❌ Результат null или undefined');
+            return getDefaultLimits();
+        }
+        
+        if (Array.isArray(result)) {
+            // Если результат - массив, берем первый элемент
+            limitData = result[0];
+            console.log('📊 Обработан как массив, первый элемент:', limitData);
+        } else if (typeof result === 'object') {
+            // Если результат - объект, используем как есть
+            limitData = result;
+            console.log('📊 Обработан как объект:', limitData);
+        } else {
+            console.log('❌ Неизвестный формат результата:', result);
+            return getDefaultLimits();
+        }
+
+        // Извлекаем данные с разными вариантами имен полей
+        const baseLimit = limitData.base_limit || limitData.baseLimit || 5;
+        const boostLimit = limitData.boost_limit || limitData.boostLimit || 0;
+        const usedSlots = limitData.used_slots || limitData.usedSlots || 0;
+        
+        // Вычисляем availableSlots если его нет
+        let availableSlots = limitData.available_slots || limitData.availableSlots;
+        if (availableSlots === undefined || availableSlots === null) {
+            availableSlots = Math.max(0, baseLimit + boostLimit - usedSlots);
+        }
+        
+        const hasActiveBoost = Boolean(limitData.has_active_boost || limitData.hasActiveBoost);
+
+        const finalResult = {
+            canMakeDeal: availableSlots > 0,
+            baseLimit: baseLimit,
+            boostLimit: boostLimit,
+            usedSlots: usedSlots,
+            availableSlots: availableSlots,
+            hasActiveBoost: hasActiveBoost
         };
 
+        console.log('✅ Финальные данные лимита:', finalResult);
+        return finalResult;
+
     } catch (error) {
-        console.error('❌ Ошибка при проверке лимита:', error);
+        console.error('❌ Критическая ошибка при проверке лимита:', error);
         return getDefaultLimits();
     }
 }
-
 function getDefaultLimits() {
     return { 
         canMakeDeal: true,
