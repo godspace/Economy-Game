@@ -386,9 +386,31 @@ export async function proposeDeal(choice) {
         // Если игрок знакомый - пропускаем проверку лимита уникальных игроков
         if (!isFamiliarPlayer) {
             const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
-            console.log('📊 Лимит для нового игрока:', limitCheck);
+            console.log('📊 Лимит для нового игрока (полный объект):', limitCheck);
+            console.log('📊 Ключи в limitCheck:', Object.keys(limitCheck || {}));
             
-            if (!limitCheck.canMakeDeal) {
+            // Дополнительная проверка: если limitCheck не содержит expected полей
+            if (!limitCheck || typeof limitCheck.availableSlots === 'undefined') {
+                console.warn('⚠️ limitCheck не содержит availableSlots, используем значения по умолчанию');
+                // Создаем исправленный объект
+                const fixedLimitCheck = {
+                    canMakeDeal: true,
+                    availableSlots: 5,
+                    usedSlots: 0,
+                    baseLimit: 5,
+                    boostLimit: 0,
+                    hasActiveBoost: false
+                };
+                
+                // Проверяем лимит с исправленными данными
+                if (fixedLimitCheck.availableSlots <= 0) {
+                    alert(`Лимит уникальных игроков исчерпан! Вы не можете начать сделку с новым игроком ${state.selectedUser.username}.\n\nЛимит уникальных игроков: ${fixedLimitCheck.usedSlots}/${fixedLimitCheck.baseLimit + fixedLimitCheck.boostLimit}`);
+                    return;
+                }
+                
+                console.log('✅ Используем исправленные лимиты:', fixedLimitCheck);
+            } else if (!limitCheck.canMakeDeal) {
+                console.log('❌ Лимит исчерпан по данным limitCheck');
                 alert(`Лимит уникальных игроков исчерпан! Вы не можете начать сделку с новым игроком ${state.selectedUser.username}.\n\nЛимит уникальных игроков: ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}\n\n💡 Вы можете продолжить сделки с уже знакомыми игроками.`);
                 return;
             }
