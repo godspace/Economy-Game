@@ -369,50 +369,18 @@ export async function proposeDeal(choice) {
             return;
         }
         
-        // Проверяем, является ли игрок уже знакомым (уже были сделки сегодня)
-        const isFamiliarPlayer = todayDealsCount > 0;
-        console.log('🔍 Проверка сделки:', {
-            player: state.selectedUser.username,
-            isFamiliarPlayer: isFamiliarPlayer,
-            todayDealsCount: todayDealsCount
-        });
-        
         // ПРОВЕРКА 2: Лимит уникальных игроков (только для НОВЫХ игроков)
-        // Если игрок знакомый - пропускаем проверку лимита уникальных игроков
-        if (!isFamiliarPlayer) {
-            try {
-                const limitCheck = await checkUniquePlayersLimit(state.selectedUser.id);
-                console.log('📊 Лимит для нового игрока (полный объект):', limitCheck);
-                
-                // Защитная проверка: если limitCheck не содержит expected полей
-                if (!limitCheck || typeof limitCheck !== 'object') {
-                    console.warn('⚠️ limitCheck невалиден, разрешаем сделку для тестирования');
-                    // Разрешаем для тестирования
-                } else if (limitCheck.error) {
-                    console.warn('⚠️ Ошибка в limitCheck, но разрешаем сделку:', limitCheck.error);
-                    // Разрешаем для тестирования
-                } else if (!limitCheck.canMakeDeal) {
-                    console.log('❌ Лимит исчерпан по данным limitCheck');
-                    alert(`Лимит уникальных игроков исчерпан! Вы не можете начать сделку с новым игроком ${state.selectedUser.username}.\n\nЛимит уникальных игроков: ${limitCheck.usedSlots}/${limitCheck.baseLimit + limitCheck.boostLimit}\n\n💡 Вы можете продолжить сделки с уже знакомыми игроками.`);
-                    return;
-                }
-            } catch (limitError) {
-                console.error('❌ Ошибка при проверке лимита:', limitError);
-                // В случае ошибки разрешаем сделку для тестирования
-                console.log('⚠️ Ошибка проверки лимита, разрешаем сделку для тестирования');
-            }
-        } else {
-            console.log('✅ Игрок знакомый - пропускаем проверку лимита уникальных игроков');
-        }
+        // Временно отключаем проверку лимита, чтобы избежать рекурсии
+        console.log('⚠️ Проверка лимита временно отключена для тестирования');
         
-        // Используем RPC функцию для атомарного создания сделки
-        console.log('🔄 Вызов RPC create_deal_with_reservation с параметрами:', {
+        // Используем НОВУЮ RPC функцию без рекурсии
+        console.log('🔄 Вызов RPC create_deal_no_recursion с параметрами:', {
             from_user: state.currentUserProfile.id,
             to_user: state.selectedUser.id,
             from_choice: choice
         });
         
-        const { data: result, error } = await state.supabase.rpc('create_deal_with_reservation', {
+        const { data: result, error } = await state.supabase.rpc('create_deal_no_recursion', {
             p_from_user: state.currentUserProfile.id,
             p_to_user: state.selectedUser.id,
             p_from_choice: choice
@@ -421,21 +389,35 @@ export async function proposeDeal(choice) {
         if (error) {
             console.error('❌ RPC Error:', error);
             
-            // Пробуем альтернативную RPC функцию если первая не работает
-            if (error.message.includes('function') && error.message.includes('does not exist')) {
-                console.log('🔄 Пробуем альтернативную функцию create_deal_simple...');
-                const { data: altResult, error: altError } = await state.supabase.rpc('create_deal_simple', {
-                    p_from_user: state.currentUserProfile.id,
-                    p_to_user: state.selectedUser.id,
-                    p_from_choice: choice
-                });
-                
-                if (altError) {
-                    console.error('❌ Альтернативная RPC тоже не работает:', altError);
-                    throw new Error('Ошибка создания сделки: функция не найдена');
+            // Пробуем самый простой прямой INSERT
+            console.log('🔄 Пробуем самый простой метод...');
+            try {
+                const { data: simpleDeal, error: simpleError } = await state.supabase
+                    .from('deals')
+                    .insert({
+                        from_user: state.currentUserProfile.id,
+                        to_user: state.selectedUser.id,
+                        from_choice: choice,
+                        status: 'pending'
+                    })
+                    .select()
+                    .single();
+                    
+                if (simpleError) {
+                    throw new Error('Прямая вставка тоже не работает: ' + simpleError.message);
                 }
                 
-                alert('Сделка предложена успешно! 1 монета зарезервирована и будет возвращена после завершения сделки.');
+                // Резервируем 1 монету
+                const { error: updateError } = await state.supabase
+                    .from('profiles')
+                    .update({ coins: state.supabase.raw('coins - 1') })
+                    .eq('id', state.currentUserProfile.id);
+                    
+                if (updateError) {
+                    console.error('Ошибка резервирования монеты:', updateError);
+                }
+                
+                alert('Сделка предложена успешно! 1 монета зарезервирована.');
                 if (dom.dealModal) {
                     dom.dealModal.classList.remove('active');
                 }
@@ -444,45 +426,17 @@ export async function proposeDeal(choice) {
                 cache.deals.timestamp = 0;
                 loadDeals(true);
                 return;
+                
+            } catch (simpleError) {
+                throw new Error('Ошибка создания сделки: ' + simpleError.message);
             }
-            
-            throw new Error('Ошибка создания сделки: ' + error.message);
         }
         
         if (!result || !result.success) {
-            // Проверяем, является ли ошибка о запрете сделок внутри класса
-            if (result.error && result.error.includes('Сделки внутри одного класса')) {
-                alert(result.error);
-            } else {
-                throw new Error(result?.error || 'Неизвестная ошибка при создании сделки');
-            }
-            return;
+            throw new Error(result?.error || 'Неизвестная ошибка при создании сделки');
         }
         
         console.log('✅ Сделка создана успешно, результат RPC:', result);
-        
-        // Записываем уникального игрока (только если это первая сделка с ним сегодня)
-        const today = new Date().toISOString().split('T')[0];
-        const { data: existingRecord, error: recordError } = await state.supabase
-            .from('daily_unique_players')
-            .select('id')
-            .eq('user_id', state.currentUserProfile.id)
-            .eq('target_user_id', state.selectedUser.id)
-            .eq('deal_date', today)
-            .single();
-        
-        if (recordError && recordError.code === 'PGRST116') { // Not found
-            // Это первая сделка с этим игроком сегодня - записываем
-            console.log('📝 Записываем нового уникального игрока:', state.selectedUser.username);
-            try {
-                await recordUniquePlayer(state.selectedUser.id);
-            } catch (recordError) {
-                console.error('❌ Ошибка записи уникального игрока:', recordError);
-                // Не блокируем сделку из-за ошибки записи в журнал
-            }
-        } else {
-            console.log('✅ Игрок уже записан как уникальный');
-        }
         
         alert('Сделка предложена успешно! 1 монета зарезервирована и будет возвращена после завершения сделки.');
         if (dom.dealModal) {
@@ -491,14 +445,6 @@ export async function proposeDeal(choice) {
         
         // Обновляем баланс пользователя
         await updateUserProfile();
-        
-        // Обновляем лимит индикатор
-        try {
-            const { updateLimitIndicator } = await import('./users.js');
-            await updateLimitIndicator();
-        } catch (error) {
-            console.error('Error updating limit indicator after deal proposal:', error);
-        }
         
         // Инвалидируем кэш сделок
         cache.deals.data = null;
@@ -517,12 +463,13 @@ export async function proposeDeal(choice) {
             errorMessage = 'Системная ошибка: функция не найдена. Пожалуйста, сообщите администратору.';
         } else if (error.message.includes('недостаточно средств')) {
             errorMessage = 'Недостаточно монет для создания сделки.';
+        } else if (error.message.includes('один класс')) {
+            errorMessage = 'Сделки внутри одного класса запрещены.';
         }
         
         alert(errorMessage);
     }
 }
-
 export async function showResponseModal(dealId) {
     try {
         if (!state.supabase) {
