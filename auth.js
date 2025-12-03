@@ -1,3 +1,4 @@
+
 // auth.js - УПРОЩЕННАЯ АУТЕНТИФИКАЦИЯ ТОЛЬКО ПО КОДУ СТУДЕНТА (ИСПРАВЛЕННЫЙ)
 import { state, dom, SUPABASE_CONFIG } from './config.js';
 import { showAuthSection, showProfileSection, showAuthError, hideAuthError, updateUserBalanceDisplay } from './ui.js';
@@ -129,10 +130,9 @@ async function handleCodeAuth(code, isAutoLogin = false) {
             console.log('Profile found, logging in...');
             profile = existingProfile;
         } else {
-            // Создаем новый профиль через RPC функцию, которая возвращает JSON
+            // Используем безопасную RPC функцию для создания профиля
             console.log('Creating new profile via RPC...');
             
-            // Пробуем RPC функцию
             try {
                 const { data: rpcResult, error: rpcError } = await state.supabase.rpc(
                     'create_profile_safe_json', 
@@ -142,7 +142,7 @@ async function handleCodeAuth(code, isAutoLogin = false) {
                 );
                 
                 if (rpcError) {
-                    console.log('RPC function error, trying direct method:', rpcError);
+                    console.log('RPC function error, using direct method:', rpcError);
                     throw rpcError;
                 }
                 
@@ -258,39 +258,33 @@ export async function checkAdminStatus() {
         // Пробуем RPC функцию
         try {
             const { data: isAdminResult, error: rpcError } = await state.supabase.rpc(
-                'check_is_admin',
-                { p_profile_id: state.currentUserProfile.id }
+                'check_admin_status_simple',
+                { p_user_id: state.currentUserProfile.id }
             );
             
             if (!rpcError && typeof isAdminResult === 'boolean') {
                 state.isAdmin = isAdminResult;
-            } else {
-                // Fallback: прямой запрос
-                const { data: admin, error } = await state.supabase
-                    .from('admins')
-                    .select('user_id')
-                    .eq('user_id', state.currentUserProfile.id)
-                    .maybeSingle();
-
-                state.isAdmin = !error && !!admin;
+                console.log('🔧 User is admin (via RPC):', state.isAdmin);
+                updateAdminTabVisibility();
+                return state.isAdmin;
             }
         } catch (rpcError) {
-            console.log('RPC function not available, using direct query');
-            const { data: admin, error } = await state.supabase
-                .from('admins')
-                .select('user_id')
-                .eq('user_id', state.currentUserProfile.id)
-                .maybeSingle();
-
-            state.isAdmin = !error && !!admin;
+            console.log('RPC function failed, using direct query:', rpcError);
         }
         
-        console.log('🔧 User is admin:', state.isAdmin);
-        
-        // Обновляем видимость вкладки администратора
-        updateAdminTabVisibility();
+        // Способ 2: Простой прямой запрос
+        const { data: admin, error } = await state.supabase
+            .from('admins')
+            .select('user_id')
+            .eq('user_id', state.currentUserProfile.id)
+            .maybeSingle();
 
+        state.isAdmin = !error && !!admin;
+        console.log('🔧 User is admin (via direct query):', state.isAdmin);
+        
+        updateAdminTabVisibility();
         return state.isAdmin;
+        
     } catch (error) {
         console.error('Error checking admin status:', error);
         state.isAdmin = false;
@@ -330,6 +324,7 @@ function updateUI() {
     updateUserBalanceDisplay();
 }
 
+// Функция для выхода - ДОБАВЛЕНО: export
 export async function handleLogout() {
     try {
         Object.values(state.depositTimers).forEach(timer => {
