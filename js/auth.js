@@ -220,34 +220,18 @@ export async function checkAdminStatus() {
 
         console.log('🔧 Checking admin status for profile ID:', state.currentUserProfile.id);
         
-        // Используем безопасную функцию для проверки админ-статуса
-        try {
-            const { data: isAdminResult, error: rpcError } = await state.supabase.rpc(
-                'is_admin',
-                { p_profile_id: state.currentUserProfile.id }
-            );
-            
-            if (!rpcError && typeof isAdminResult === 'boolean') {
-                state.isAdmin = isAdminResult;
-            } else {
-                // Fallback: прямой запрос с обработкой ошибок
-                const { data: admin, error } = await state.supabase
-                    .from('admins')
-                    .select('user_id')
-                    .eq('user_id', state.currentUserProfile.id)
-                    .maybeSingle();
+        // Используем простой прямой запрос (без RPC для избежания рекурсии)
+        const { data: admin, error } = await state.supabase
+            .from('admins')
+            .select('user_id')
+            .eq('user_id', state.currentUserProfile.id)
+            .maybeSingle();
 
-                state.isAdmin = !error && !!admin;
-            }
-        } catch (rpcError) {
-            console.log('RPC function not available, using direct query');
-            const { data: admin, error } = await state.supabase
-                .from('admins')
-                .select('user_id')
-                .eq('user_id', state.currentUserProfile.id)
-                .maybeSingle();
-
-            state.isAdmin = !error && !!admin;
+        if (error) {
+            console.error('Error checking admin status:', error);
+            state.isAdmin = false;
+        } else {
+            state.isAdmin = !!admin;
         }
         
         console.log('🔧 User is admin:', state.isAdmin);
@@ -263,7 +247,6 @@ export async function checkAdminStatus() {
         return false;
     }
 }
-
 // Функция для обновления видимости вкладки администратора
 function updateAdminTabVisibility() {
     const adminTab = document.querySelector('.tab[data-tab="admin"]');
