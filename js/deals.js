@@ -763,15 +763,19 @@ async function showDealResult(deal, userChoice, result) {
 export async function loadDeals(forceRefresh = false) {
     try {
         if (!state.supabase || !state.isAuthenticated || !state.currentUserProfile) {
-            console.error('Supabase or authentication not initialized');
+            console.error('❌ Supabase or authentication not initialized');
             return;
         }
+        
+        console.log('🔄 Загрузка сделок для пользователя:', state.currentUserProfile.id);
+        console.log('🔄 Имя пользователя:', state.currentUserProfile.username);
         
         // Проверка кэша
         const now = Date.now();
         if (!forceRefresh && cache.deals.data && 
             (now - cache.deals.timestamp < cache.deals.ttl) &&
             shouldUpdate('deals')) {
+            console.log('📊 Используем кэшированные данные сделок');
             renderDeals(cache.deals.data);
             return;
         }
@@ -786,7 +790,7 @@ export async function loadDeals(forceRefresh = false) {
                     from_user:profiles!deals_from_user_fkey(username, class, coins, reputation)
                 `)
                 .eq('to_user', state.currentUserProfile.id)
-                .eq('status', DEAL_STATUS.PENDING),
+                .eq('status', 'pending'),
             
             // Ожидающие ответа сделки
             state.supabase
@@ -796,7 +800,7 @@ export async function loadDeals(forceRefresh = false) {
                     to_user:profiles!deals_to_user_fkey(username, class)
                 `)
                 .eq('from_user', state.currentUserProfile.id)
-                .eq('status', DEAL_STATUS.PENDING),
+                .eq('status', 'pending'),
             
             // Завершённые входящие сделки
             state.supabase
@@ -807,7 +811,7 @@ export async function loadDeals(forceRefresh = false) {
                     to_user:profiles!deals_to_user_fkey(username, class)
                 `)
                 .eq('to_user', state.currentUserProfile.id)
-                .eq('status', DEAL_STATUS.COMPLETED)
+                .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(20),
             
@@ -820,16 +824,32 @@ export async function loadDeals(forceRefresh = false) {
                     to_user:profiles!deals_to_user_fkey(username, class)
                 `)
                 .eq('from_user', state.currentUserProfile.id)
-                .eq('status', DEAL_STATUS.COMPLETED)
+                .eq('status', 'completed')
                 .order('created_at', { ascending: false })
                 .limit(20)
         ]);
         
+        console.log('📊 Результаты загрузки сделок:', {
+            incoming: incomingResult.data?.length || 0,
+            pending: pendingResult.data?.length || 0,
+            completedIncoming: completedIncomingResult.data?.length || 0,
+            completedOutgoing: completedOutgoingResult.data?.length || 0
+        });
+        
         // Обработка ошибок для каждого запроса
-        if (incomingResult.error) console.error('Error loading incoming deals:', incomingResult.error);
-        if (pendingResult.error) console.error('Error loading pending deals:', pendingResult.error);
-        if (completedIncomingResult.error) console.error('Error loading completed incoming deals:', completedIncomingResult.error);
-        if (completedOutgoingResult.error) console.error('Error loading completed outgoing deals:', completedOutgoingResult.error);
+        if (incomingResult.error) {
+            console.error('❌ Ошибка загрузки входящих сделок:', incomingResult.error);
+            console.error('❌ Детали ошибки:', incomingResult.error.message);
+        }
+        if (pendingResult.error) {
+            console.error('❌ Ошибка загрузки ожидающих сделок:', pendingResult.error);
+        }
+        if (completedIncomingResult.error) {
+            console.error('❌ Ошибка загрузки завершенных входящих сделок:', completedIncomingResult.error);
+        }
+        if (completedOutgoingResult.error) {
+            console.error('❌ Ошибка загрузки завершенных исходящих сделок:', completedOutgoingResult.error);
+        }
         
         const dealsData = {
             incoming: incomingResult.data || [],
@@ -843,9 +863,26 @@ export async function loadDeals(forceRefresh = false) {
         cache.deals.timestamp = now;
         markUpdated('deals');
         
+        console.log('📊 Данные сделок для рендеринга:', dealsData);
         renderDeals(dealsData);
+        
     } catch (error) {
-        console.error('Ошибка загрузки сделок:', error);
+        console.error('❌ Критическая ошибка загрузки сделок:', error);
+        
+        // Показываем сообщение об ошибке в интерфейсе
+        const dealsContainer = document.querySelector('.deals-tab-content');
+        if (dealsContainer) {
+            dealsContainer.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Ошибка загрузки сделок</h3>
+                    <p>Не удалось загрузить данные сделок. Попробуйте обновить страницу.</p>
+                    <button onclick="location.reload()" class="btn-primary">
+                        <i class="fas fa-redo"></i> Обновить страницу
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 
