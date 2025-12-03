@@ -145,7 +145,9 @@ export async function deactivateExhaustedBoosts(userId) {
         console.log('📊 Статус лимита:', {
             usedSlots: limitCheck.usedSlots,
             totalLimit: totalLimit,
-            isExhausted: isLimitExhausted
+            isExhausted: isLimitExhausted,
+            totalLimit: limitCheck.baseLimit + limitCheck.boostLimit,
+            isExhausted: limitCheck.availableSlots <= 0
         });
 
         // ОТКЛЮЧАЕМ АВТОДЕАКТИВАЦИЮ - бусты остаются активными до истечения времени
