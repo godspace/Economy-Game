@@ -29,6 +29,7 @@ class AuthManager {
     }
 
     // Основная функция входа
+    // Основная функция входа
     async login() {
         const codeInput = document.getElementById('code-input');
         const code = codeInput.value.trim();
@@ -41,8 +42,11 @@ class AuthManager {
         }
 
         this.showLoader(true);
+        errorEl.style.display = 'none';
 
         try {
+            console.log('Поиск студента с кодом:', code);
+            
             // Ищем студента по коду
             const { data: student, error } = await supabase
                 .from('students')
@@ -50,11 +54,24 @@ class AuthManager {
                 .eq('code', code)
                 .single();
 
-            if (error || !student) {
-                this.showError(errorEl, 'Код не найден. Проверьте правильность ввода.');
+            if (error) {
+                console.error('Ошибка поиска студента:', error);
+                
+                if (error.code === 'PGRST116') {
+                    this.showError(errorEl, 'Код не найден. Проверьте правильность ввода.');
+                } else {
+                    this.showError(errorEl, 'Ошибка подключения к базе данных');
+                }
                 return;
             }
 
+            if (!student) {
+                this.showError(errorEl, 'Код не найден');
+                return;
+            }
+
+            console.log('Студент найден:', student);
+            
             // Проверяем или создаем профиль
             await this.createOrGetProfile(student);
             
@@ -67,7 +84,7 @@ class AuthManager {
             
         } catch (error) {
             console.error('Login error:', error);
-            this.showError(errorEl, 'Ошибка подключения к серверу');
+            this.showError(errorEl, 'Ошибка входа. Попробуйте еще раз.');
         } finally {
             this.showLoader(false);
         }
@@ -75,14 +92,22 @@ class AuthManager {
 
     // Создание или получение профиля
     async createOrGetProfile(student) {
-        // Проверяем существующий профиль
-        const { data: existingProfile } = await supabase
+        console.log('Создание/получение профиля для студента:', student.id);
+
+        // Сначала проверяем существующий профиль
+        const { data: existingProfile, error: fetchError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', student.id)
-            .single();
+            .maybeSingle(); // Используем maybeSingle вместо single
+
+        if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = не найдено
+            console.error('Ошибка при проверке профиля:', fetchError);
+            throw fetchError;
+        }
 
         if (existingProfile) {
+            console.log('Профиль найден:', existingProfile);
             this.currentUser = {
                 ...student,
                 ...existingProfile,
@@ -92,31 +117,64 @@ class AuthManager {
             // Обновляем статус онлайн
             await supabase
                 .from('profiles')
-                .update({ online: true, last_action: new Date() })
+                .update({ 
+                    online: true, 
+                    last_action: new Date().toISOString() 
+                })
                 .eq('id', student.id);
                 
-        } else {
-            // Создаем новый профиль с детерминированным цветом
-            const colorIndex = this.calculateColorIndex(student.id);
-            
-            const newProfile = {
-                id: student.id,
-                coins: 100,
-                online: true,
-                deals_cache: {},
-                color_index: colorIndex
-            };
-
-            await supabase.from('profiles').insert(newProfile);
-            
-            this.currentUser = {
-                ...student,
-                ...newProfile,
-                fullName: `${student.last_name} ${student.first_name}`
-            };
+            return;
         }
+
+        // Создаем новый профиль
+        console.log('Создаем новый профиль для студента:', student.id);
+        const colorIndex = this.calculateColorIndex(student.id);
         
-        // Создаем начальную транзакцию при первом входе
+        const newProfile = {
+            id: student.id,
+            coins: 100,
+            online: true,
+            deals_cache: {},
+            color_index: colorIndex,
+            last_action: new Date().toISOString()
+        };
+
+        const { data: insertedProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert(newProfile)
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error('Ошибка при создании профиля:', insertError);
+            
+            // Если ошибка "дубликат ключа", пытаемся получить существующий профиль
+            if (insertError.code === '23505') {
+                const { data: retryProfile } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', student.id)
+                    .single();
+                    
+                if (retryProfile) {
+                    this.currentUser = {
+                        ...student,
+                        ...retryProfile,
+                        fullName: `${student.last_name} ${student.first_name}`
+                    };
+                    return;
+                }
+            }
+            throw insertError;
+        }
+
+        this.currentUser = {
+            ...student,
+            ...insertedProfile,
+            fullName: `${student.last_name} ${student.first_name}`
+        };
+        
+        // Создаем начальную транзакцию
         await this.createInitialTransaction();
     }
 
@@ -370,6 +428,43 @@ class AuthManager {
         }, 3000);
     }
 }
+
+// Проверка подключения к Supabase
+async function testSupabaseConnection() {
+    console.log('Проверка подключения к Supabase...');
+    
+    try {
+        // Простой тестовый запрос
+        const { data, error } = await supabase
+            .from('students')
+            .select('count')
+            .limit(1);
+        
+        if (error) {
+            console.error('Ошибка подключения к Supabase:', error);
+            return false;
+        }
+        
+        console.log('Подключение к Supabase успешно');
+        return true;
+    } catch (error) {
+        console.error('Ошибка при проверке подключения:', error);
+        return false;
+    }
+}
+
+// Проверяем подключение при загрузке
+document.addEventListener('DOMContentLoaded', async () => {
+    const isConnected = await testSupabaseConnection();
+    
+    if (!isConnected) {
+        const errorEl = document.getElementById('login-error');
+        if (errorEl) {
+            errorEl.textContent = 'Ошибка подключения к серверу. Пожалуйста, проверьте интернет-соединение.';
+            errorEl.style.display = 'block';
+        }
+    }
+});
 
 // Инициализация после загрузки DOM
 document.addEventListener('DOMContentLoaded', () => {
