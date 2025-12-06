@@ -4,15 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эволюция доверия</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤝</text></svg>">
     <style>
+        /* === Основные стили === */
         :root {
             --primary: #2196F3;
+            --primary-dark: #1976D2;
+            --primary-light: #E3F2FD;
             --success: #4CAF50;
+            --success-dark: #388E3C;
             --danger: #F44336;
+            --danger-dark: #D32F2F;
             --warning: #FF9800;
             --text: #212121;
+            --text-light: #666;
             --bg: #FFFFFF;
+            --bg-light: #F5F5F5;
             --border: #E0E0E0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 12px rgba(0,0,0,0.12);
+            --radius: 12px;
+            --radius-sm: 8px;
         }
         
         * {
@@ -20,26 +32,116 @@
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
             color: var(--text);
             max-width: 500px;
             margin: 0 auto;
             min-height: 100vh;
+            overflow-x: hidden;
         }
         
+        /* === Экран входа === */
         .screen {
             display: none;
-            padding: 20px;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-light) 0%, #FFFFFF 100%);
         }
         
         .screen.active {
             display: block;
         }
         
+        #login-screen {
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .login-title {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .login-title h1 {
+            color: var(--primary);
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .login-title p {
+            color: var(--text-light);
+            font-size: 16px;
+        }
+        
+        .login-form {
+            width: 100%;
+            max-width: 320px;
+        }
+        
+        .code-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 24px;
+            text-align: center;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            background: white;
+            margin-bottom: 16px;
+            letter-spacing: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .code-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 18px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+        
+        .error-message {
+            color: var(--danger);
+            text-align: center;
+            margin-top: 16px;
+            min-height: 24px;
+            font-size: 14px;
+        }
+        
+        /* === Основной игровой интерфейс === */
+        #game-screen {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: var(--bg);
+        }
+        
+        /* Навигация */
         .tabs {
             display: flex;
             background: white;
@@ -47,62 +149,139 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         
         .tab {
             flex: 1;
-            padding: 16px;
+            padding: 18px 12px;
             border: none;
             background: none;
             font-size: 14px;
-            color: #666;
+            color: var(--text-light);
             cursor: pointer;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        
+        .tab-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
         }
         
         .tab.active {
             color: var(--primary);
-            border-bottom: 2px solid var(--primary);
             font-weight: 600;
         }
         
-        .player-card {
-            background: white;
-            border-radius: 12px;
-            padding: 12px;
-            margin: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        .tab.active::after {
+            content: '';
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+            border-radius: 2px 2px 0 0;
+            margin-top: 4px;
+        }
+        
+        /* Контент вкладок */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 60px;
+        }
+        
+        .tab-pane {
+            display: none;
+            min-height: calc(100vh - 140px);
+        }
+        
+        .tab-pane.active {
+            display: block;
+        }
+        
+        .pane-header {
+            padding: 20px 16px 12px;
             display: flex;
+            justify-content: space-between;
             align-items: center;
         }
         
+        .pane-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .btn-refresh {
+            background: var(--bg-light);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: var(--text-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        
+        .btn-refresh:hover {
+            background: var(--border);
+        }
+        
+        /* Карточка игрока */
+        .player-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 16px;
+            margin: 8px 16px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .player-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
         .color-indicator {
-            width: 16px;
-            height: 16px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             margin-right: 12px;
             flex-shrink: 0;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--border);
         }
         
         .player-info {
             flex: 1;
+            min-width: 0;
         }
         
         .player-name {
             font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
         }
         
         .deal-counters {
+            display: flex;
+            gap: 8px;
             font-size: 13px;
-            color: #666;
-            margin-top: 4px;
+            color: var(--text-light);
         }
         
-        .deal-counters span {
-            background: #f5f5f5;
+        .counter {
+            background: var(--bg-light);
             padding: 2px 8px;
             border-radius: 10px;
-            margin-right: 6px;
         }
         
         .deal-btn {
@@ -110,16 +289,177 @@
             color: white;
             border: none;
             border-radius: 20px;
-            padding: 8px 20px;
+            padding: 10px 20px;
             font-weight: 500;
+            font-size: 14px;
             cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        
+        .deal-btn:hover {
+            background: var(--success-dark);
         }
         
         .deal-btn:disabled {
-            background: #CCCCCC;
+            background: var(--border);
+            color: var(--text-light);
             cursor: not-allowed;
         }
         
+        /* Пустые состояния */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        
+        /* Рейтинг */
+        .rating-item {
+            padding: 16px;
+            margin: 0 16px 8px;
+            background: white;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+        
+        .rank {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .rank-1 { background: #FFF3CD; color: #856404; }
+        .rank-2 { background: #E2E3E5; color: #383D41; }
+        .rank-3 { background: #D1ECF1; color: #0C5460; }
+        
+        .rating-info {
+            flex: 1;
+        }
+        
+        .rating-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .rating-class {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+        
+        .rating-stats {
+            text-align: right;
+        }
+        
+        .rating-coins {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .rating-deals {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+        
+        /* Магазин */
+        .shop-item {
+            background: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            margin: 16px;
+            box-shadow: var(--shadow);
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .shop-item:hover {
+            border-color: var(--primary-light);
+        }
+        
+        .shop-item-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .shop-icon {
+            font-size: 32px;
+            margin-right: 12px;
+        }
+        
+        .shop-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .shop-price {
+            color: var(--text-light);
+        }
+        
+        .shop-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .shop-btn:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* Нижняя панель с балансом */
+        .player-status {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 90;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .player-name-display {
+            font-weight: 600;
+        }
+        
+        .player-balance {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        /* Модальное окно */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -129,6 +469,12 @@
             background: rgba(0,0,0,0.5);
             z-index: 1000;
             display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .modal {
@@ -138,162 +484,465 @@
             transform: translate(-50%, -50%);
             background: white;
             border-radius: 16px;
-            padding: 24px;
-            z-index: 1001;
-            max-width: 90%;
-            width: 400px;
+            width: 90%;
+            max-width: 400px;
             max-height: 80vh;
             overflow-y: auto;
+            z-index: 1001;
             display: none;
+            animation: slideUp 0.3s ease;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+        
+        .modal-header {
+            padding: 24px 24px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-light);
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        .deal-partner {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: var(--radius-sm);
+        }
+        
+        .history-list {
+            margin: 16px 0;
+        }
+        
+        .history-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: var(--bg-light);
+            border-radius: var(--radius-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-time {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+        
+        .history-choice {
+            font-size: 20px;
+        }
+        
+        .history-result {
+            font-weight: 600;
+            color: var(--success);
+        }
+        
+        .history-result.negative {
+            color: var(--danger);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+        
+        .action-btn {
+            flex: 1;
+            padding: 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        
+        .action-btn:active {
+            transform: translateY(0);
         }
         
         .btn-cooperate {
             background: var(--success);
             color: white;
-            width: 100%;
-            padding: 16px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
+        }
+        
+        .btn-cooperate:hover {
+            background: var(--success-dark);
         }
         
         .btn-cheat {
             background: var(--danger);
             color: white;
-            width: 100%;
-            padding: 16px;
-            margin: 8px 0;
-            border: none;
-            border-radius: 12px;
+        }
+        
+        .btn-cheat:hover {
+            background: var(--danger-dark);
+        }
+        
+        /* Сделки */
+        .deal-type-title {
+            padding: 16px 16px 8px;
             font-size: 16px;
             font-weight: 600;
-            cursor: pointer;
+            color: var(--text-light);
+        }
+        
+        .deal-time {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .tab {
+                padding: 14px 8px;
+                font-size: 12px;
+            }
+            
+            .tab-icon {
+                font-size: 18px;
+            }
+            
+            .player-card {
+                margin: 8px 12px;
+                padding: 14px;
+            }
+            
+            .deal-btn {
+                padding: 8px 16px;
+                font-size: 13px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+        
+        /* Анимации */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
         }
     </style>
 </head>
 <body>
     <!-- Экран входа -->
     <div id="login-screen" class="screen active">
-        <div style="text-align: center; margin-top: 50px;">
-            <h1 style="color: var(--primary); margin-bottom: 30px;">🎮 Эволюция доверия</h1>
-            <input type="tel" id="login-code" placeholder="6-значный код" maxlength="6" pattern="[0-9]*" 
-                   style="width: 100%; padding: 16px; font-size: 18px; text-align: center; border: 2px solid var(--border); border-radius: 12px; margin-bottom: 16px;">
-            <button id="login-btn" 
-                    style="width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer;">
+        <div class="login-title">
+            <h1>🤝 Эволюция доверия</h1>
+            <p>Школьная онлайн-игра</p>
+        </div>
+        
+        <div class="login-form">
+            <input type="tel" 
+                   id="login-code" 
+                   class="code-input" 
+                   placeholder="000000" 
+                   maxlength="6" 
+                   pattern="[0-9]*"
+                   inputmode="numeric"
+                   autocomplete="off">
+            
+            <button id="login-btn" class="btn-primary">
                 Войти в игру
             </button>
-            <div id="login-error" style="color: var(--danger); margin-top: 16px;"></div>
+            
+            <div id="login-error" class="error-message"></div>
+        </div>
+        
+        <div style="margin-top: 40px; text-align: center; color: var(--text-light); font-size: 14px;">
+            <p>Введите 6-значный код, полученный от учителя</p>
         </div>
     </div>
     
-    <!-- Основной интерфейс -->
+    <!-- Основной игровой интерфейс -->
     <div id="game-screen" class="screen">
-        <!-- Навигация -->
+        <!-- Навигация по вкладкам -->
         <nav class="tabs">
-            <button class="tab active" data-tab="players">👥 ИГРОКИ</button>
-            <button class="tab" data-tab="deals">🤝 СДЕЛКИ</button>
-            <button class="tab" data-tab="rating">🏆 РЕЙТИНГ</button>
-            <button class="tab" data-tab="shop">🛒 МАГАЗИН</button>
+            <button class="tab active" data-tab="players">
+                <span class="tab-icon">👥</span>
+                <span>ИГРОКИ</span>
+            </button>
+            <button class="tab" data-tab="deals">
+                <span class="tab-icon">🤝</span>
+                <span>СДЕЛКИ</span>
+            </button>
+            <button class="tab" data-tab="rating">
+                <span class="tab-icon">🏆</span>
+                <span>РЕЙТИНГ</span>
+            </button>
+            <button class="tab" data-tab="shop">
+                <span class="tab-icon">🛒</span>
+                <span>МАГАЗИН</span>
+            </button>
         </nav>
         
         <!-- Контент вкладок -->
         <div class="tab-content">
+            <!-- Вкладка: Игроки -->
             <div id="players-tab" class="tab-pane active">
-                <div style="padding: 16px;">
-                    <h3 style="margin-bottom: 16px;">Игроки онлайн</h3>
-                    <div id="players-list"></div>
-                    <button id="refresh-players" 
-                            style="width: 100%; padding: 12px; background: #f5f5f5; border: none; border-radius: 12px; margin-top: 16px;">
-                        Обновить список
+                <div class="pane-header">
+                    <div class="pane-title">Игроки онлайн</div>
+                    <button id="refresh-players" class="btn-refresh">
+                        <span>🔄</span> Обновить
                     </button>
+                </div>
+                
+                <div id="players-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">👤</div>
+                        <p>Загрузка игроков...</p>
+                    </div>
                 </div>
             </div>
             
+            <!-- Вкладка: Сделки -->
             <div id="deals-tab" class="tab-pane">
-                <div style="padding: 16px;">
-                    <h3 style="margin-bottom: 16px;">Входящие сделки</h3>
-                    <div id="incoming-deals"></div>
-                    <h3 style="margin-top: 24px; margin-bottom: 16px;">Исходящие сделки</h3>
-                    <div id="outgoing-deals"></div>
-                </div>
-            </div>
-            
-            <div id="rating-tab" class="tab-pane">
-                <div style="padding: 16px;">
-                    <h3 style="margin-bottom: 16px;">Топ-50 игроков</h3>
-                    <div id="rating-list"></div>
-                    <button id="refresh-rating" 
-                            style="width: 100%; padding: 12px; background: #f5f5f5; border: none; border-radius: 12px; margin-top: 16px;">
-                        Обновить рейтинг
+                <div class="pane-header">
+                    <div class="pane-title">Мои сделки</div>
+                    <button id="refresh-deals" class="btn-refresh">
+                        <span>🔄</span> Обновить
                     </button>
                 </div>
+                
+                <div class="deal-type-title">Входящие сделки</div>
+                <div id="incoming-deals">
+                    <div class="empty-state">
+                        <div class="empty-icon">📥</div>
+                        <p>Нет входящих сделок</p>
+                    </div>
+                </div>
+                
+                <div class="deal-type-title">Исходящие сделки</div>
+                <div id="outgoing-deals">
+                    <div class="empty-state">
+                        <div class="empty-icon">📤</div>
+                        <p>Нет исходящих сделок</p>
+                    </div>
+                </div>
             </div>
             
+            <!-- Вкладка: Рейтинг -->
+            <div id="rating-tab" class="tab-pane">
+                <div class="pane-header">
+                    <div class="pane-title">Топ-50 игроков</div>
+                    <button id="refresh-rating" class="btn-refresh">
+                        <span>🔄</span> Обновить
+                    </button>
+                </div>
+                
+                <div id="rating-list">
+                    <div class="empty-state">
+                        <div class="empty-icon">🏆</div>
+                        <p>Загрузка рейтинга...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Вкладка: Магазин -->
             <div id="shop-tab" class="tab-pane">
-                <div style="padding: 16px;">
-                    <h3 style="margin-bottom: 16px;">Магазин</h3>
-                    <div id="shop-items">
-                        <div style="border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                            <h4>🍫 Шоколадка "Baunty"</h4>
-                            <p style="color: #666; margin: 8px 0;">Цена: <strong>50 монет</strong></p>
-                            <button id="buy-bounty" 
-                                    style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 12px;">
-                                Купить за 50 монет
-                            </button>
+                <div class="pane-header">
+                    <div class="pane-title">Магазин</div>
+                </div>
+                
+                <div id="shop-items">
+                    <div class="shop-item">
+                        <div class="shop-item-header">
+                            <div class="shop-icon">🍫</div>
+                            <div>
+                                <div class="shop-title">Шоколадка "Baunty"</div>
+                                <div class="shop-price">Цена: 50 монет</div>
+                            </div>
                         </div>
+                        <p style="margin-bottom: 16px; color: var(--text-light); font-size: 14px;">
+                            После покупки админ выдаст шоколадку в реальной жизни.
+                        </p>
+                        <button id="buy-bounty" class="shop-btn">
+                            Купить за 50 монет
+                        </button>
+                    </div>
+                    
+                    <div style="text-align: center; margin: 24px; color: var(--text-light); font-size: 14px;">
+                        <p>Больше товаров появится позже!</p>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Информация о игроке -->
-        <div style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 12px; display: flex; justify-content: space-between;">
-            <span id="player-name"></span>
-            <span id="player-coins">0 монет</span>
+        <!-- Нижняя панель с информацией об игроке -->
+        <div class="player-status">
+            <span id="player-name-display" class="player-name-display">Не авторизован</span>
+            <span id="player-balance" class="player-balance">0 монет</span>
         </div>
     </div>
     
     <!-- Модальное окно сделки -->
     <div id="modal-overlay" class="modal-overlay"></div>
     <div id="deal-modal" class="modal">
-        <div style="position: relative;">
-            <h3 id="modal-player-name">Сделка с Игрок</h3>
-            <div id="modal-player-color" class="color-indicator" style="margin: 16px 0;"></div>
-            
-            <div id="deal-history" style="margin: 16px 0; padding: 16px; background: #f9f9f9; border-radius: 8px;">
-                <p style="color: #666;">История сделок:</p>
-                <div id="history-list"></div>
+        <div class="modal-header">
+            <div class="modal-title">Сделка с Игрок</div>
+            <button id="close-modal" class="btn-close">×</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="deal-partner">
+                <div id="modal-player-color" class="color-indicator" style="background-color: #2196F3;"></div>
+                <div>
+                    <div style="font-weight: 600;">Игрок</div>
+                    <div id="modal-deal-count" style="font-size: 13px; color: var(--text-light);">
+                        Сделок: Вх 0/5, Исх 0/5
+                    </div>
+                </div>
             </div>
             
             <div style="margin: 24px 0;">
-                <p style="margin-bottom: 12px; font-weight: 600;">Выберите действие:</p>
-                <button class="btn-cooperate">👍 Сотрудничать</button>
-                <button class="btn-cheat">👎 Жульничать</button>
+                <div style="font-weight: 600; margin-bottom: 12px;">История сделок:</div>
+                <div id="history-list" class="history-list">
+                    <div class="empty-state" style="padding: 20px;">
+                        <div style="font-size: 24px; opacity: 0.3; margin-bottom: 8px;">📝</div>
+                        <p style="color: var(--text-light);">Нет истории сделок</p>
+                    </div>
+                </div>
             </div>
             
-            <button id="close-modal" 
-                    style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 24px; cursor: pointer;">
-                ✕
-            </button>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 12px; text-align: center;">Выберите действие:</div>
+                <div class="action-buttons">
+                    <button class="action-btn btn-cooperate">
+                        <span style="font-size: 24px;">👍</span>
+                        <span>Сотрудничать</span>
+                    </button>
+                    <button class="action-btn btn-cheat">
+                        <span style="font-size: 24px;">👎</span>
+                        <span>Жульничать</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-    
+
+    <!-- Модальное окно для входящих сделок -->
+    <div id="incoming-modal" class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Входящая сделка</div>
+            <button id="close-incoming-modal" class="btn-close">×</button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="deal-partner">
+                <div id="incoming-player-color" class="color-indicator" style="background-color: #2196F3;"></div>
+                <div>
+                    <div style="font-weight: 600;">Игрок</div>
+                    <div id="incoming-deal-time" style="font-size: 13px; color: var(--text-light);">
+                        Предложил 2 минуты назад
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin: 24px 0;">
+                <div style="font-weight: 600; margin-bottom: 12px;">История сделок:</div>
+                <div id="incoming-history-list" class="history-list">
+                    <!-- История будет загружена динамически -->
+                </div>
+            </div>
+            
+            <div>
+                <div style="font-weight: 600; margin-bottom: 12px; text-align: center;">Выберите действие:</div>
+                <div class="action-buttons">
+                    <button id="accept-cooperate" class="action-btn btn-cooperate">
+                        <span style="font-size: 24px;">👍</span>
+                        <span>Сотрудничать</span>
+                    </button>
+                    <button id="accept-cheat" class="action-btn btn-cheat">
+                        <span style="font-size: 24px;">👎</span>
+                        <span>Жульничать</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
     <script>
+        // Конфигурация
         const SUPABASE_URL = 'https://uceeqmeiaqzmvdghsgyi.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjZWVxbWVpYXF6bXZkZ2hzZ3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMjgxMDgsImV4cCI6MjA4MDYwNDEwOH0.vAwilbfGtEQLdEgk115JgNfSSXup-Zqjk0rwOrZgZWE';
         
-        // Основные переменные
+        // Цветовая палитра для игроков
+        const COLOR_PALETTE = {
+            blue: { main: '#2196F3', light: '#E3F2FD' },
+            green: { main: '#4CAF50', light: '#E8F5E9' },
+            red: { main: '#F44336', light: '#FFEBEE' },
+            purple: { main: '#9C27B0', light: '#F3E5F5' },
+            orange: { main: '#FF9800', light: '#FFF3E0' },
+            teal: { main: '#009688', light: '#E0F2F1' },
+            pink: { main: '#E91E63', light: '#FCE4EC' },
+            amber: { main: '#FFC107', light: '#FFF8E1' }
+        };
+        
+        // Глобальные переменные
         let currentUser = null;
         let currentToken = null;
+        let currentBalance = 0;
         let lastActionTime = 0;
+        let currentModalTarget = null;
+        let currentIncomingDeal = null;
         
-        // Инициализация при загрузке
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
             loadSavedSession();
             setupEventListeners();
+            setupInputMask();
         });
         
         // Загрузка сохранённой сессии
@@ -302,20 +951,40 @@
             const savedToken = localStorage.getItem('game_token');
             
             if (savedUser && savedToken) {
-                currentUser = JSON.parse(savedUser);
-                currentToken = savedToken;
-                showGameScreen();
-                loadPlayers();
-                loadRating();
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    currentToken = savedToken;
+                    showGameScreen();
+                    loadPlayers();
+                    loadDeals();
+                    loadRating();
+                    updateBalance();
+                } catch (e) {
+                    localStorage.clear();
+                }
             }
+        }
+        
+        // Настройка маски ввода для кода
+        function setupInputMask() {
+            const codeInput = document.getElementById('login-code');
+            codeInput.addEventListener('input', (e) => {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 6) value = value.slice(0, 6);
+                e.target.value = value;
+            });
+            
+            codeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') login();
+            });
         }
         
         // Настройка обработчиков событий
         function setupEventListeners() {
-            // Кнопка входа
+            // Вход
             document.getElementById('login-btn').addEventListener('click', login);
             
-            // Навигация по вкладкам
+            // Вкладки
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.addEventListener('click', () => {
                     const tabName = tab.dataset.tab;
@@ -324,23 +993,27 @@
             });
             
             // Кнопки обновления
-            document.getElementById('refresh-players')?.addEventListener('click', loadPlayers);
-            document.getElementById('refresh-rating')?.addEventListener('click', loadRating);
+            document.getElementById('refresh-players').addEventListener('click', loadPlayers);
+            document.getElementById('refresh-deals').addEventListener('click', loadDeals);
+            document.getElementById('refresh-rating').addEventListener('click', loadRating);
             
-            // Модальное окно
-            document.getElementById('close-modal')?.addEventListener('click', closeModal);
-            document.getElementById('modal-overlay')?.addEventListener('click', closeModal);
+            // Модальные окна
+            document.getElementById('close-modal').addEventListener('click', closeModal);
+            document.getElementById('close-incoming-modal').addEventListener('click', closeIncomingModal);
+            document.getElementById('modal-overlay').addEventListener('click', closeModal);
             
-            // Кнопки в модальном окне
-            document.querySelector('.btn-cooperate')?.addEventListener('click', () => makeDealChoice('cooperate'));
-            document.querySelector('.btn-cheat')?.addEventListener('click', () => makeDealChoice('cheat'));
+            // Кнопки в модальных окнах
+            document.querySelector('.btn-cooperate').addEventListener('click', () => makeDealChoice('cooperate'));
+            document.querySelector('.btn-cheat').addEventListener('click', () => makeDealChoice('cheat'));
+            document.getElementById('accept-cooperate').addEventListener('click', () => acceptIncomingDeal('cooperate'));
+            document.getElementById('accept-cheat').addEventListener('click', () => acceptIncomingDeal('cheat'));
             
-            // Покупка в магазине
-            document.getElementById('buy-bounty')?.addEventListener('click', buyBounty);
+            // Магазин
+            document.getElementById('buy-bounty').addEventListener('click', buyBounty);
             
-            // Ввод кода по Enter
-            document.getElementById('login-code').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') login();
+            // Предотвращение закрытия при нажатии на само модальное окно
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.addEventListener('click', (e) => e.stopPropagation());
             });
         }
         
@@ -351,12 +1024,13 @@
             const code = document.getElementById('login-code').value.trim();
             const errorDiv = document.getElementById('login-error');
             
+            // Валидация
             if (!/^\d{6}$/.test(code)) {
                 errorDiv.textContent = 'Введите 6-значный код';
                 return;
             }
             
-            errorDiv.textContent = '';
+            errorDiv.textContent = 'Вход...';
             updateLastActionTime();
             
             try {
@@ -376,17 +1050,26 @@
                     currentUser = data.user;
                     currentToken = data.token;
                     
+                    // Сохраняем в localStorage
                     localStorage.setItem('user_data', JSON.stringify(data.user));
                     localStorage.setItem('game_token', data.token);
                     
+                    // Показываем игровой интерфейс
                     showGameScreen();
+                    
+                    // Загружаем данные
                     loadPlayers();
+                    loadDeals();
                     loadRating();
+                    updateBalance();
+                    
+                    errorDiv.textContent = '';
                 } else {
-                    errorDiv.textContent = data.error || 'Ошибка входа';
+                    errorDiv.textContent = data.error || 'Неверный код';
                 }
             } catch (error) {
-                errorDiv.textContent = 'Ошибка сети';
+                errorDiv.textContent = 'Ошибка сети. Проверьте подключение.';
+                console.error('Login error:', error);
             }
         }
         
@@ -395,24 +1078,26 @@
             document.getElementById('login-screen').classList.remove('active');
             document.getElementById('game-screen').classList.add('active');
             
-            // Показать имя игрока
-            document.getElementById('player-name').textContent = 
+            // Обновляем информацию об игроке
+            document.getElementById('player-name-display').textContent = 
                 `${currentUser.first_name} ${currentUser.last_name[0]}.`;
         }
         
         // Переключение вкладок
         function switchTab(tabName) {
-            // Скрыть все вкладки
+            // Обновляем активные вкладки
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
             
-            // Показать выбранную вкладку
+            // Активируем выбранную вкладку
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
             
-            // Загрузить данные если нужно
+            // Загружаем данные если нужно
             if (tabName === 'players') {
                 loadPlayers();
+            } else if (tabName === 'deals') {
+                loadDeals();
             } else if (tabName === 'rating') {
                 loadRating();
             }
@@ -423,7 +1108,8 @@
             if (!currentUser || !canPerformAction()) return;
             
             const playersList = document.getElementById('players-list');
-            playersList.innerHTML = '<p style="text-align: center; color: #666;">Загрузка...</p>';
+            playersList.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>Загрузка игроков...</p></div>';
+            
             updateLastActionTime();
             
             try {
@@ -442,10 +1128,11 @@
                 if (data.players && data.players.length > 0) {
                     renderPlayersList(data.players);
                 } else {
-                    playersList.innerHTML = '<p style="text-align: center; color: #666;">Нет игроков онлайн</p>';
+                    playersList.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><p>Нет игроков онлайн</p></div>';
                 }
             } catch (error) {
-                playersList.innerHTML = '<p style="text-align: center; color: #666;">Ошибка загрузки</p>';
+                playersList.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Ошибка загрузки</p></div>';
+                console.error('Load players error:', error);
             }
         }
         
@@ -454,31 +1141,26 @@
             const playersList = document.getElementById('players-list');
             playersList.innerHTML = '';
             
-            const colorMap = {
-                'blue': '#2196F3',
-                'green': '#4CAF50',
-                'red': '#F44336',
-                'purple': '#9C27B0',
-                'orange': '#FF9800',
-                'teal': '#009688',
-                'pink': '#E91E63',
-                'amber': '#FFC107'
-            };
-            
             players.forEach(player => {
+                const color = COLOR_PALETTE[player.color?.name] || COLOR_PALETTE.blue;
+                const canTrade = player.deals?.can_trade !== false;
+                
                 const playerEl = document.createElement('div');
                 playerEl.className = 'player-card';
                 playerEl.innerHTML = `
-                    <div class="color-indicator" style="background-color: ${colorMap[player.color.name] || '#cccccc'};"></div>
+                    <div class="color-indicator" style="background-color: ${color.main};"></div>
                     <div class="player-info">
-                        <div class="player-name">${player.display_name}</div>
+                        <div class="player-name">Игрок</div>
                         <div class="deal-counters">
-                            <span>Вх: ${player.deals.incoming}/5</span>
-                            <span>Исх: ${player.deals.outgoing}/5</span>
+                            <span class="counter">Вх: ${player.deals?.incoming || 0}/5</span>
+                            <span class="counter">Исх: ${player.deals?.outgoing || 0}/5</span>
                         </div>
                     </div>
-                    <button class="deal-btn" ${player.deals.can_trade ? '' : 'disabled'} data-player-id="${player.id}">
-                        ${player.deals.can_trade ? 'Сделка' : 'Лимит'}
+                    <button class="deal-btn" ${canTrade ? '' : 'disabled'}
+                            data-player-id="${player.id}" 
+                            data-player-color="${player.color?.name || 'blue'}"
+                            data-player-deals='${JSON.stringify(player.deals || {})}'>
+                        ${canTrade ? 'Сделка' : 'Лимит'}
                     </button>
                 `;
                 
@@ -490,47 +1172,437 @@
                 btn.addEventListener('click', (e) => {
                     if (canPerformAction()) {
                         const playerId = e.target.dataset.playerId;
-                        openDealModal(playerId);
+                        const playerColor = e.target.dataset.playerColor;
+                        const playerDeals = JSON.parse(e.target.dataset.playerDeals || '{}');
+                        openDealModal(playerId, playerColor, playerDeals);
                         updateLastActionTime();
                     }
                 });
             });
+            
+            // Если игроков нет, показываем сообщение
+            if (players.length === 0) {
+                playersList.innerHTML = '<div class="empty-state"><div class="empty-icon">👤</div><p>Нет игроков онлайн</p></div>';
+            }
+        }
+        
+        // Открытие модального окна для создания сделки
+        async function openDealModal(targetPlayerId, targetPlayerColor, targetPlayerDeals) {
+            currentModalTarget = {
+                id: targetPlayerId,
+                color: targetPlayerColor,
+                deals: targetPlayerDeals
+            };
+            
+            // Показываем модальное окно
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('deal-modal').style.display = 'block';
+            
+            // Устанавливаем цвет игрока
+            const color = COLOR_PALETTE[targetPlayerColor] || COLOR_PALETTE.blue;
+            document.getElementById('modal-player-color').style.backgroundColor = color.main;
+            
+            // Обновляем информацию о сделках
+            document.getElementById('modal-deal-count').textContent = 
+                `Сделок: Вх ${targetPlayerDeals.incoming || 0}/5, Исх ${targetPlayerDeals.outgoing || 0}/5`;
+            
+            // Загружаем историю сделок
+            await loadDealHistory(targetPlayerId, 'history-list');
+        }
+        
+        // Загрузка истории сделок
+        async function loadDealHistory(targetPlayerId, listId) {
+            const historyList = document.getElementById(listId);
+            historyList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-light);">Загрузка истории...</div>';
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_deal_history`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        user_id: currentUser.id,
+                        partner_id: targetPlayerId
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.history && data.history.length > 0) {
+                    let html = '';
+                    data.history.forEach(deal => {
+                        const myChoice = deal.my_choice === 'cooperate' ? '👍' : '👎';
+                        const partnerChoice = deal.partner_choice === 'cooperate' ? '👍' : '👎';
+                        const coins = deal.my_coins || 0;
+                        const time = deal.formatted_time || '--:--';
+                        
+                        html += `
+                        <div class="history-item">
+                            <div class="history-time">${time}</div>
+                            <div class="history-choice">Вы ${myChoice} | Игрок ${partnerChoice}</div>
+                            <div class="history-result ${coins >= 0 ? '' : 'negative'}">
+                                ${coins >= 0 ? '+' : ''}${coins}
+                            </div>
+                        </div>
+                        `;
+                    });
+                    historyList.innerHTML = html;
+                } else {
+                    historyList.innerHTML = '<div class="empty-state" style="padding: 20px;"><div style="font-size: 24px; opacity: 0.3; margin-bottom: 8px;">📝</div><p style="color: var(--text-light);">Нет истории сделок</p></div>';
+                }
+            } catch (error) {
+                historyList.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--danger);">Ошибка загрузки истории</div>';
+            }
+        }
+        
+        // Создание сделки и выбор действия
+        async function makeDealChoice(choice) {
+            if (!currentModalTarget || !canPerformAction()) return;
+            
+            try {
+                // Создаём сделку
+                const createResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_deal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        current_user_id: currentUser.id,
+                        target_user_id: currentModalTarget.id
+                    })
+                });
+                
+                const createData = await createResponse.json();
+                
+                if (!createData.success) {
+                    alert(createData.error || 'Ошибка создания сделки');
+                    return;
+                }
+                
+                // Принимаем сделку с выбранным действием
+                const acceptResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/accept_deal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        deal_id: createData.deal_id,
+                        user_id: currentUser.id,
+                        choice: choice
+                    })
+                });
+                
+                const acceptData = await acceptResponse.json();
+                
+                if (acceptData.success) {
+                    closeModal();
+                    
+                    // Обновляем данные
+                    loadPlayers();
+                    loadDeals();
+                    updateBalance();
+                    
+                    if (acceptData.result) {
+                        // Сделка завершена
+                        const coins = acceptData.result.from_coins || acceptData.result.to_coins || 0;
+                        showMessage(`Сделка завершена! Вы получили ${coins} монет.`, 'success');
+                    } else {
+                        // Ожидаем второго игрока
+                        showMessage('Ваш выбор сохранён. Ожидаем ответа от другого игрока.', 'info');
+                    }
+                } else {
+                    alert(acceptData.error || 'Ошибка принятия сделки');
+                }
+            } catch (error) {
+                alert('Ошибка сети. Проверьте подключение.');
+            }
+            
+            updateLastActionTime();
+        }
+        
+        // Загрузка сделок пользователя
+        async function loadDeals() {
+            if (!currentUser) return;
+            
+            const incomingDealsDiv = document.getElementById('incoming-deals');
+            const outgoingDealsDiv = document.getElementById('outgoing-deals');
+            
+            incomingDealsDiv.innerHTML = '<div class="empty-state" style="padding: 20px;"><div class="empty-icon">⏳</div><p>Загрузка сделок...</p></div>';
+            outgoingDealsDiv.innerHTML = '<div class="empty-state" style="padding: 20px;"><div class="empty-icon">⏳</div><p>Загрузка сделок...</p></div>';
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_user_deals`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({ user_id: currentUser.id })
+                });
+                
+                const data = await response.json();
+                
+                // Входящие сделки
+                if (data.incoming && data.incoming.length > 0) {
+                    let html = '';
+                    data.incoming.forEach(deal => {
+                        const minutesAgo = Math.floor(deal.time_ago) || 0;
+                        const color = COLOR_PALETTE[deal.display_color] || COLOR_PALETTE.blue;
+                        
+                        html += `
+                        <div class="player-card" data-deal-id="${deal.id}" data-from-player="${deal.from_player}">
+                            <div class="color-indicator" style="background-color: ${color.main};"></div>
+                            <div class="player-info">
+                                <div class="player-name">Игрок</div>
+                                <div class="deal-time">Предложил ${minutesAgo} мин назад</div>
+                            </div>
+                            <button class="deal-btn accept-deal-btn">
+                                Принять
+                            </button>
+                        </div>
+                        `;
+                    });
+                    incomingDealsDiv.innerHTML = html;
+                    
+                    // Обработчики для принятия входящих сделок
+                    document.querySelectorAll('.accept-deal-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const card = e.target.closest('.player-card');
+                            const dealId = card.dataset.dealId;
+                            const fromPlayer = card.dataset.fromPlayer;
+                            openIncomingDealModal(dealId, fromPlayer);
+                        });
+                    });
+                } else {
+                    incomingDealsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">📥</div><p>Нет входящих сделок</p></div>';
+                }
+                
+                // Исходящие сделки
+                if (data.outgoing && data.outgoing.length > 0) {
+                    let html = '';
+                    data.outgoing.forEach(deal => {
+                        const minutesAgo = Math.floor(deal.time_ago) || 0;
+                        const color = COLOR_PALETTE[deal.display_color] || COLOR_PALETTE.blue;
+                        
+                        html += `
+                        <div class="player-card">
+                            <div class="color-indicator" style="background-color: ${color.main};"></div>
+                            <div class="player-info">
+                                <div class="player-name">Игрок</div>
+                                <div class="deal-time">Ожидает ${minutesAgo} мин</div>
+                            </div>
+                            <button class="deal-btn" disabled>
+                                Ожидание
+                            </button>
+                        </div>
+                        `;
+                    });
+                    outgoingDealsDiv.innerHTML = html;
+                } else {
+                    outgoingDealsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">📤</div><p>Нет исходящих сделок</p></div>';
+                }
+            } catch (error) {
+                incomingDealsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Ошибка загрузки</p></div>';
+                outgoingDealsDiv.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Ошибка загрузки</p></div>';
+            }
+        }
+        
+        // Открытие модального окна для входящей сделки
+        async function openIncomingDealModal(dealId, fromPlayerId) {
+            currentIncomingDeal = {
+                id: dealId,
+                fromPlayer: fromPlayerId
+            };
+            
+            // Показываем модальное окно
+            document.getElementById('modal-overlay').style.display = 'block';
+            document.getElementById('incoming-modal').style.display = 'block';
+            
+            // Загружаем историю сделок с этим игроком
+            await loadDealHistory(fromPlayerId, 'incoming-history-list');
+        }
+        
+        // Принятие входящей сделки
+        async function acceptIncomingDeal(choice) {
+            if (!currentIncomingDeal || !canPerformAction()) return;
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/accept_deal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        deal_id: currentIncomingDeal.id,
+                        user_id: currentUser.id,
+                        choice: choice
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    closeIncomingModal();
+                    
+                    // Обновляем данные
+                    loadDeals();
+                    loadPlayers();
+                    updateBalance();
+                    
+                    if (data.result) {
+                        // Сделка завершена
+                        const coins = data.result.from_coins || data.result.to_coins || 0;
+                        showMessage(`Сделка завершена! Вы получили ${coins} монет.`, 'success');
+                    } else {
+                        showMessage('Ваш выбор сохранён.', 'info');
+                    }
+                } else {
+                    alert(data.error || 'Ошибка принятия сделки');
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+            
+            updateLastActionTime();
         }
         
         // Загрузка рейтинга
         async function loadRating() {
-            // TODO: Реализовать функцию get_rating
-            document.getElementById('rating-list').innerHTML = '<p style="text-align: center; color: #666;">Рейтинг скоро появится...</p>';
-        }
-        
-        // Открытие модального окна сделки
-        function openDealModal(targetPlayerId) {
-            // TODO: Реализовать
-            alert('Создание сделки будет реализовано в следующем шаге');
-        }
-        
-        // Закрытие модального окна
-        function closeModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
-            document.getElementById('deal-modal').style.display = 'none';
+            const ratingList = document.getElementById('rating-list');
+            ratingList.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><p>Загрузка рейтинга...</p></div>';
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_rating`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({ limit_count: 50 })
+                });
+                
+                const data = await response.json();
+                
+                if (data.rating && data.rating.length > 0) {
+                    let html = '';
+                    data.rating.forEach((player, index) => {
+                        const rankClass = index === 0 ? 'rank-1' : 
+                                         index === 1 ? 'rank-2' : 
+                                         index === 2 ? 'rank-3' : '';
+                        
+                        html += `
+                        <div class="rating-item">
+                            <div class="rank ${rankClass}">${index + 1}</div>
+                            <div class="rating-info">
+                                <div class="rating-name">${player.first_name} ${player.last_name}</div>
+                                <div class="rating-class">${player.class}</div>
+                            </div>
+                            <div class="rating-stats">
+                                <div class="rating-coins">${player.coins || 0} монет</div>
+                                <div class="rating-deals">${player.deals || 0} сделок</div>
+                            </div>
+                        </div>
+                        `;
+                    });
+                    ratingList.innerHTML = html;
+                } else {
+                    ratingList.innerHTML = '<div class="empty-state"><div class="empty-icon">🏆</div><p>Рейтинг пуст</p></div>';
+                }
+            } catch (error) {
+                ratingList.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Ошибка загрузки рейтинга</p></div>';
+            }
         }
         
         // Покупка шоколадки
         async function buyBounty() {
-            if (!canPerformAction()) return;
+            if (!currentUser || !canPerformAction()) return;
             
-            if (confirm('Купить шоколадку "Baunty" за 50 монет?')) {
-                // TODO: Реализовать функцию покупки
-                alert('Покупка будет реализована в следующем шаге');
-                updateLastActionTime();
+            if (!confirm('Купить шоколадку "Baunty" за 50 монет?\n\nПосле покупки админ выдаст шоколадку в реальной жизни.')) {
+                return;
             }
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/purchase_item`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({
+                        user_id: currentUser.id,
+                        item_name: 'Baunty',
+                        item_price: 50
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage('Покупка совершена! Админ выдаст шоколадку в ближайшее время.', 'success');
+                    updateBalance();
+                } else {
+                    alert('Ошибка при покупке: ' + (data.error || 'неизвестная ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+            
+            updateLastActionTime();
+        }
+        
+        // Обновление баланса
+        async function updateBalance() {
+            if (!currentUser) return;
+            
+            try {
+                // Запрос для получения баланса из транзакций
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/transactions?profile_id=eq.${currentUser.id}&select=amount`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                
+                const transactions = await response.json();
+                currentBalance = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+                
+                // Обновляем отображение баланса
+                document.getElementById('player-balance').textContent = `${currentBalance} монет`;
+            } catch (error) {
+                console.error('Update balance error:', error);
+            }
+        }
+        
+        // Закрытие модальных окон
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('deal-modal').style.display = 'none';
+            currentModalTarget = null;
+        }
+        
+        function closeIncomingModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('incoming-modal').style.display = 'none';
+            currentIncomingDeal = null;
         }
         
         // Защита от быстрых кликов
         function canPerformAction() {
             const now = Date.now();
             if (now - lastActionTime < 2000) {
-                alert('Подождите 2 секунды перед следующим действием');
+                showMessage('Подождите 2 секунды перед следующим действием', 'warning');
                 return false;
             }
             return true;
@@ -539,6 +1611,48 @@
         function updateLastActionTime() {
             lastActionTime = Date.now();
         }
+        
+        // Вспомогательные функции
+        function showMessage(text, type = 'info') {
+            // Создаем временное уведомление
+            const notification = document.createElement('div');
+            notification.textContent = text;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${type === 'success' ? '#4CAF50' : type === 'warning' ? '#FF9800' : '#2196F3'};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 8px;
+                z-index: 2000;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideDown 0.3s ease;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideUp 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // Добавляем CSS для анимации уведомлений
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+                to { transform: translateX(-50%) translateY(0); opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateX(-50%) translateY(0); opacity: 1; }
+                to { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
