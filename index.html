@@ -2,526 +2,543 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Эволюция доверия</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --primary: #2196F3;
+            --success: #4CAF50;
+            --danger: #F44336;
+            --warning: #FF9800;
+            --text: #212121;
+            --bg: #FFFFFF;
+            --border: #E0E0E0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            max-width: 500px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+        
+        .screen {
+            display: none;
+            padding: 20px;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        .tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            font-weight: 600;
+        }
+        
+        .player-card {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+        }
+        
+        .color-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .player-info {
+            flex: 1;
+        }
+        
+        .player-name {
+            font-weight: 600;
+        }
+        
+        .deal-counters {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .deal-counters span {
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-right: 6px;
+        }
+        
+        .deal-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .deal-btn:disabled {
+            background: #CCCCCC;
+            cursor: not-allowed;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            z-index: 1001;
+            max-width: 90%;
+            width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .btn-cooperate {
+            background: var(--success);
+            color: white;
+            width: 100%;
+            padding: 16px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-cheat {
+            background: var(--danger);
+            color: white;
+            width: 100%;
+            padding: 16px;
+            margin: 8px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <!-- Баннер техработ (альтернативный вариант) -->
-            <div id="maintenanceBanner" class="maintenance-warning" style="display: block;">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                    <div style="display: flex; align-items: center;">
-                        <i class="fas fa-tools" style="font-size: 1.5rem;"></i>
-                        <div style="margin-left: 10px;">
-                            <strong>УРА! НАС ВЗЛОМАЛИ!</strong>
-                            <div style="font-size: 0.9rem;">Взломщики будут награждены🏆</div>
-                        </div>
-                    </div>
-                    <button id="closeMaintenanceBanner" class="btn-warning btn-small">
-                        <i class="fas fa-times"></i> Закрыть
-                    </button>
-                </div>
-            </div>
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-handshake"></i>
-                    <div>
-                        <h1>Эволюция доверия</h1>
-                        <p class="subtitle">Создавай сделки, зарабатывай монеты и повышай репутацию!</p>
-                    </div>
-                </div>
-                <div id="userInfo" style="display: none;">
-                    <button id="logoutBtn" class="btn-outline btn-small">
-                        <i class="fas fa-sign-out-alt"></i> Выйти
-                    </button>
-                </div>
-            </div>
-            
-        </header>
-
-        <div id="loadingMessage" class="loading">
-            <div class="spinner"></div>
-            <p>Загрузка приложения...</p>
-        </div>
-
-        <div id="errorMessage" class="error-message" style="display: none;">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Произошла ошибка при загрузке приложения. Пожалуйста, обновите страницу.</p>
-        </div>
-
-        <!-- Секция аутентификации -->
-        <section id="authSection" class="auth-section active">
-            <div class="card">
-                <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                    <i class="fas fa-user"></i> Вход / Регистрация
-                </h2>
-                <div id="authError" class="error-message" style="display: none;"></div>
-        <form id="authForm">
-            <div class="form-group">
-                <label for="code"><i class="fas fa-key"></i> Персональный код</label>
-                <input type="text" id="code" placeholder="Введите ваш персональный код" required>
-            </div>
-            <button type="submit" id="authBtn">
-                <i class="fas fa-sign-in-alt"></i> Войти
+    <!-- Экран входа -->
+    <div id="login-screen" class="screen active">
+        <div style="text-align: center; margin-top: 50px;">
+            <h1 style="color: var(--primary); margin-bottom: 30px;">🎮 Эволюция доверия</h1>
+            <input type="tel" id="login-code" placeholder="6-значный код" maxlength="6" pattern="[0-9]*" 
+                   style="width: 100%; padding: 16px; font-size: 18px; text-align: center; border: 2px solid var(--border); border-radius: 12px; margin-bottom: 16px;">
+            <button id="login-btn" 
+                    style="width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer;">
+                Войти в игру
             </button>
-        </form>
-            </div>
-            
-            <!-- Добавлен рейтинг на страницу авторизации -->
-            <div class="card">
-                <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                    <i class="fas fa-trophy"></i> Топ-10 игроков
-                </h2>
-                <table class="ranking-table">
-                    <thead>
-                        <tr>
-                            <th>Место</th>
-                            <th>Игрок</th>
-                            <th>Класс</th>
-                            <th>Монеты</th>
-                            <th>Репутация</th>
-                        </tr>
-                    </thead>
-                    <tbody id="topRankingTable">
-                        <!-- Топ-10 рейтинга будет загружен здесь -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- Секция профиля -->
-        <section id="profileSection" class="profile-section">
-            <div class="user-info">
-                <div class="user-info-avatar" id="userAvatar"></div>
-                <div>
-                    <h3 id="userGreeting">Привет, игрок!</h3>
-                    <!-- Убрано отображение класса здесь -->
-                </div>
-            </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-coins"></i>
-                    </div>
-                    <div class="stat-label">Монеты</div>
-                    <div class="stat-value" id="coinsValue">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div class="stat-label">Репутация</div>
-                    <div class="stat-value" id="reputationValue">0</div>
-                </div>
-            </div>
-
-            <div class="tabs">
-                <div class="tab active" data-tab="users">
-                    <i class="fas fa-users"></i> Игроки
-                </div>
-                <div class="tab" data-tab="deals">
-                    <i class="fas fa-handshake"></i> Мои сделки
-                </div>
-                <div class="tab" data-tab="investments">
-                    <i class="fas fa-piggy-bank"></i> Мои вклады
-                </div>
-                <div class="tab" data-tab="ranking">
-                    <i class="fas fa-trophy"></i> Рейтинг
-                </div>
-                <div class="tab" data-tab="shop">
-                    <i class="fas fa-store"></i> Магазин
-                </div>
-                <div class="tab" data-tab="adminOrders" id="adminOrdersTab" style="display: none;">
-                    <i class="fas fa-user-shield"></i> Управление заказами
-                </div>
-            </div>
-
-            <div class="tab-content active" id="usersTab">
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-search"></i> Поиск игроков
-                    </h2>
-                    <div class="search-container">
-                        <div class="form-group search-input">
-                            <input type="text" id="searchInput" placeholder="Введите имя пользователя">
-                        </div>
-                        <div class="form-group" style="min-width: 150px;">
-                            <select id="classFilter">
-                                <option value="">Все классы</option>
-                                <option value="5А">5А</option>
-                                <option value="5Б">5Б</option>
-                                <option value="5В">5В</option>
-                                <option value="5Г">5Г</option>
-                                <option value="6А">6А</option>
-                                <option value="6Б">6Б</option>
-                                <option value="6В">6В</option>
-                                <option value="6Г">6Г</option>
-                                <option value="6Д">6Д</option>
-                                <option value="7А">7А</option>
-                                <option value="7Б">7Б</option>
-                                <option value="8А">8А</option>
-                                <option value="8Б">8Б</option>
-                                <option value="8В">8В</option>
-                                <option value="9А">9А</option>
-                                <option value="9Б">9Б</option>
-                                <option value="9В">9В</option>
-                                <option value="10А">10А</option>
-                                <option value="10Б">10Б</option>
-                                <option value="11">11</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button id="searchBtn">
-                        <i class="fas fa-search"></i> Поиск
+            <div id="login-error" style="color: var(--danger); margin-top: 16px;"></div>
+        </div>
+    </div>
+    
+    <!-- Основной интерфейс -->
+    <div id="game-screen" class="screen">
+        <!-- Навигация -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="players">👥 ИГРОКИ</button>
+            <button class="tab" data-tab="deals">🤝 СДЕЛКИ</button>
+            <button class="tab" data-tab="rating">🏆 РЕЙТИНГ</button>
+            <button class="tab" data-tab="shop">🛒 МАГАЗИН</button>
+        </nav>
+        
+        <!-- Контент вкладок -->
+        <div class="tab-content">
+            <div id="players-tab" class="tab-pane active">
+                <div style="padding: 16px;">
+                    <h3 style="margin-bottom: 16px;">Игроки онлайн</h3>
+                    <div id="players-list"></div>
+                    <button id="refresh-players" 
+                            style="width: 100%; padding: 12px; background: #f5f5f5; border: none; border-radius: 12px; margin-top: 16px;">
+                        Обновить список
                     </button>
                 </div>
-
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-users"></i> Список игроков
-                    </h2>
-                    <div id="usersList" class="user-list">
-                        <!-- Список пользователей будет загружен здесь -->
-                    </div>
+            </div>
+            
+            <div id="deals-tab" class="tab-pane">
+                <div style="padding: 16px;">
+                    <h3 style="margin-bottom: 16px;">Входящие сделки</h3>
+                    <div id="incoming-deals"></div>
+                    <h3 style="margin-top: 24px; margin-bottom: 16px;">Исходящие сделки</h3>
+                    <div id="outgoing-deals"></div>
                 </div>
             </div>
-
-            <div class="tab-content" id="dealsTab">
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-inbox"></i> Входящие сделки
-                    </h2>
-                    <div id="incomingDeals">
-                        <!-- Входящие сделки будут загружены здесь -->
-                    </div>
+            
+            <div id="rating-tab" class="tab-pane">
+                <div style="padding: 16px;">
+                    <h3 style="margin-bottom: 16px;">Топ-50 игроков</h3>
+                    <div id="rating-list"></div>
+                    <button id="refresh-rating" 
+                            style="width: 100%; padding: 12px; background: #f5f5f5; border: none; border-radius: 12px; margin-top: 16px;">
+                        Обновить рейтинг
+                    </button>
                 </div>
-
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-clock"></i> Ожидающие ответа
-                    </h2>
-                    <div id="pendingDeals">
-                        <!-- Ожидающие ответа сделки будут загружены здесь -->
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-history"></i> Завершённые сделки
-                    </h2>
-                    <div class="completed-deals-container">
-                        <div class="completed-deals-column">
-                            <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                                <i class="fas fa-inbox"></i> Входящие
-                            </h3>
-                            <div id="completedIncomingDeals">
-                                <!-- Завершённые входящие сделки будут загружены здесь -->
-                            </div>
-                        </div>
-                        <div class="completed-deals-column">
-                            <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                                <i class="fas fa-paper-plane"></i> Исходящие
-                            </h3>
-                            <div id="completedOutgoingDeals">
-                                <!-- Завершённые исходящие сделки будут загружены здесь -->
-                            </div>
+            </div>
+            
+            <div id="shop-tab" class="tab-pane">
+                <div style="padding: 16px;">
+                    <h3 style="margin-bottom: 16px;">Магазин</h3>
+                    <div id="shop-items">
+                        <div style="border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                            <h4>🍫 Шоколадка "Baunty"</h4>
+                            <p style="color: #666; margin: 8px 0;">Цена: <strong>50 монет</strong></p>
+                            <button id="buy-bounty" 
+                                    style="width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 12px;">
+                                Купить за 50 монет
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="tab-content" id="investmentsTab">
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                        <i class="fas fa-piggy-bank"></i> Мои вклады
-                    </h2>
-                    
-                    <div class="active-deposits">
-                        <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <i class="fas fa-clock"></i> Активные вклады
-                        </h3>
-                        <div id="activeDepositsList">
-                            <!-- Активные вклады будут загружены здесь -->
-                        </div>
-                    </div>
-                    
-                    <!-- Перемещен раздел с вкладами перед истории -->
-                    <div class="deposit-category">
-                        <h3><i class="fas fa-shield-alt"></i> Безрисковые вклады (гарантированная доходность)</h3>
-                        <p style="margin-bottom: 15px; color: var(--gray);">Идеальны для стабильного роста. Чем дольше срок — тем выше прибыль.</p>
-                        
-                        <div class="deposit-options">
-                            <div class="deposit-option safe">
-                                <div class="deposit-header">
-                                    <div class="deposit-name">«По звонку»</div>
-                                    <div class="deposit-duration">45 минут</div>
-                                </div>
-                                <div class="deposit-profit">Доходность: +3%</div>
-                                <div class="deposit-description">
-                                    Сделай вклад перед уроком — забери прибыль после звонка.
-                                </div>
-                                <div class="deposit-example">
-                                    <strong>Пример:</strong> 100 монет → <span class="profit-positive">103 монеты</span>
-                                </div>
-                                <button class="btn-success open-deposit" data-type="call" data-duration="45" data-profit="3">
-                                    <i class="fas fa-lock-open"></i> Открыть вклад
-                                </button>
-                            </div>
-                            
-                            <div class="deposit-option safe">
-                                <div class="deposit-header">
-                                    <div class="deposit-name">«Спокойная ночь»</div>
-                                    <div class="deposit-duration">12 часов</div>
-                                </div>
-                                <div class="deposit-profit">Доходность: +8%</div>
-                                <div class="deposit-description">
-                                    Вложи перед сном — утром получи прибыль перед школой.
-                                </div>
-                                <div class="deposit-example">
-                                    <strong>Пример:</strong> 100 монет → <span class="profit-positive">108 монет</span>
-                                </div>
-                                <button class="btn-success open-deposit" data-type="night" data-duration="720" data-profit="8">
-                                    <i class="fas fa-lock-open"></i> Открыть вклад
-                                </button>
-                            </div>
-                            
-                            <div class="deposit-option safe">
-                                <div class="deposit-header">
-                                    <div class="deposit-name">«Чемпион»</div>
-                                    <div class="deposit-duration">24 часа</div>
-                                </div>
-                                <div class="deposit-profit">Доходность: +15%</div>
-                                <div class="deposit-description">
-                                    Для самых терпеливых. Максимальная надёжность и доход за сутки.
-                                </div>
-                                <div class="deposit-example">
-                                    <strong>Пример:</strong> 100 монет → <span class="profit-positive">115 монет</span>
-                                </div>
-                                <button class="btn-success open-deposit" data-type="champion" data-duration="1440" data-profit="15">
-                                    <i class="fas fa-lock-open"></i> Открыть вклад
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="deposit-category">
-                        <h3><i class="fas fa-dice"></i> Рисковые вклады (высокая доходность с риском потери)</h3>
-                        <p style="margin-bottom: 15px; color: var(--gray);">Подходят для азартных игроков. При удаче — крупный выигрыш, при неудаче — потери.</p>
-                        
-                        <div class="deposit-options">
-                            <div class="deposit-option risky">
-                                <div class="deposit-header">
-                                    <div class="deposit-name">«Крипта»</div>
-                                    <div class="deposit-duration">45 минут</div>
-                                </div>
-                                <div class="deposit-description">
-                                    Рискни на перемене! Сможешь ли ты обогнать одноклассников?
-                                </div>
-                                <div style="margin: 10px 0;">
-                                    <div><span class="profit-positive">Доходность: +20% с вероятностью 40%</span></div>
-                                    <div><span class="profit-negative">Убыточность: -10% с вероятностью 60%</span></div>
-                                </div>
-                                <div class="deposit-example">
-                                    <strong>Примеры:</strong><br>
-                                    <span class="profit-positive">Удача: 100 монет → 120 монет</span><br>
-                                    <span class="profit-negative">Провал: 100 монет → 90 монет</span>
-                                </div>
-                                <button class="btn-warning open-deposit" data-type="crypto" data-duration="45" data-profit="20" data-risk="true">
-                                    <i class="fas fa-dice"></i> Испытать удачу
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- История вкладов перенесена в конец -->
-                    <div class="deposit-history">
-                        <h3 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                            <i class="fas fa-history"></i> История вкладов
-                        </h3>
-                        <div id="depositHistoryList">
-                            <!-- История вкладов будет загружена здесь -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="rankingTab">
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-trophy"></i> Рейтинг игроков
-                    </h2>
-                    <table class="ranking-table">
-                        <thead>
-                            <tr>
-                                <th>Место</th>
-                                <th>Игрок</th>
-                                <th>Класс</th>
-                                <th>Монеты</th>
-                                <th>Репутация</th>
-                            </tr>
-                        </thead>
-                        <tbody id="rankingTable">
-                            <!-- Рейтинг будет загружен здесь -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Новая вкладка Магазин -->
-            <div class="tab-content" id="shopTab">
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-store"></i> Магазин
-                    </h2>
-                    <div id="shopProductsList" class="products-list">
-                        <!-- Список товаров будет загружен здесь -->
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-history"></i> История заказов
-                    </h2>
-                    <div id="shopOrderHistory">
-                        <!-- История заказов будет загружена здесь -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Новая вкладка Управление заказами (только для админа) -->
-            <div class="tab-content" id="adminOrdersTabContent">
-                <div class="card">
-                    <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <i class="fas fa-clipboard-list"></i> Все заказы
-                    </h2>
-                    <div id="adminOrdersList">
-                        <!-- Список заказов для админа будет загружен здесь -->
-                    </div>
-                </div>
-            </div>
-        </section>
+        </div>
+        
+        <!-- Информация о игроке -->
+        <div style="position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 12px; display: flex; justify-content: space-between;">
+            <span id="player-name"></span>
+            <span id="player-coins">0 монет</span>
+        </div>
     </div>
-
+    
     <!-- Модальное окно сделки -->
-    <div id="dealModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <i class="fas fa-handshake"></i> Предложить сделку
-            </h2>
-            <div class="user-info">
-                <div class="user-avatar" id="dealAvatar"></div>
-                <div>
-                    <h3 id="dealPlayerName">Игрок</h3>
-                    <p id="dealPlayerClass">Класс: -</p>
-                </div>
-            </div>
-            <div class="user-details" style="justify-content: space-around; margin: 20px 0;">
-                <div class="user-detail">
-                    <i class="fas fa-coins"></i>
-                    <span id="dealPlayerCoins">0</span>
-                </div>
-                <div class="user-detail">
-                    <i class="fas fa-star"></i>
-                    <span id="dealPlayerReputation">0</span>
-                </div>
+    <div id="modal-overlay" class="modal-overlay"></div>
+    <div id="deal-modal" class="modal">
+        <div style="position: relative;">
+            <h3 id="modal-player-name">Сделка с Игрок</h3>
+            <div id="modal-player-color" class="color-indicator" style="margin: 16px 0;"></div>
+            
+            <div id="deal-history" style="margin: 16px 0; padding: 16px; background: #f9f9f9; border-radius: 8px;">
+                <p style="color: #666;">История сделок:</p>
+                <div id="history-list"></div>
             </div>
             
-            <div class="deal-info">
-                <h3 style="margin-bottom: 10px;">Выберите вашу стратегию:</h3>
-                <p><i class="fas fa-check-circle" style="color: var(--success);"></i> <strong>Сотрудничать:</strong> Оба игрока получают по 2 монеты</p>
-                <p><i class="fas fa-times-circle" style="color: var(--danger);"></i> <strong>Жульничать:</strong> Вы получаете 3 монеты, другой игрок теряет 1 монету</p>
-                <p style="margin-top: 10px; font-style: italic;">Но будьте осторожны - если оба выберут "Жульничать", оба теряют по 1 монете!</p>
+            <div style="margin: 24px 0;">
+                <p style="margin-bottom: 12px; font-weight: 600;">Выберите действие:</p>
+                <button class="btn-cooperate">👍 Сотрудничать</button>
+                <button class="btn-cheat">👎 Жульничать</button>
             </div>
             
-            <div id="dealLimitInfo" class="deal-limit-info" style="display: none;">
-                <i class="fas fa-info-circle"></i>
-                <span id="dealLimitText">Вы уже совершили 0 из 5 возможных сделок с этим игроком сегодня.</span>
-            </div>
-            
-            <div class="choice-buttons">
-                <button id="cooperateBtn" class="btn-success">
-                    <i class="fas fa-handshake"></i> Сотрудничать
-                </button>
-                <button id="cheatBtn" class="btn-danger">
-                    <i class="fas fa-user-secret"></i> Жульничать
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Модальное окно ответа на сделку -->
-    <div id="responseModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <i class="fas fa-reply"></i> Ответить на сделку
-            </h2>
-            <div id="responseDealInfo">
-                <!-- Информация о сделке будет загружена здесь -->
-            </div>
-            
-            <div class="choice-buttons">
-                <button id="respondCooperateBtn" class="btn-success">
-                    <i class="fas fa-handshake"></i> Сотрудничать
-                </button>
-                <button id="respondCheatBtn" class="btn-danger">
-                    <i class="fas fa-user-secret"></i> Жульничать
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Модальное окно результата сделки -->
-    <div id="resultModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <i class="fas fa-chart-line"></i> Результат сделки
-            </h2>
-            <div id="resultContent">
-                <!-- Результат сделки будет загружен здесь -->
-            </div>
-            <button id="closeResultBtn" style="margin-top: 20px;">
-                <i class="fas fa-check"></i> Понятно
+            <button id="close-modal" 
+                    style="position: absolute; top: 0; right: 0; background: none; border: none; font-size: 24px; cursor: pointer;">
+                ✕
             </button>
         </div>
     </div>
-
-    <!-- Модальное окно открытия вклада -->
-    <div id="depositModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <i class="fas fa-piggy-bank"></i> Открытие вклада
-            </h2>
-            <div id="depositModalContent">
-                <!-- Содержимое модального окна вклада будет заполнено динамически -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Модальное окно результата вклада -->
-    <div id="depositResultModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2 style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
-                <i class="fas fa-chart-line"></i> Результат вклада
-            </h2>
-            <div id="depositResultContent">
-                <!-- Результат вклада будет загружен здесь -->
-            </div>
-            <button id="closeDepositResultBtn" style="margin-top: 20px;">
-                <i class="fas fa-check"></i> Понятно
-            </button>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="js/main.js"></script>
+    
+    <script>
+        const SUPABASE_URL = 'https://uceeqmeiaqzmvdghsgyi.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjZWVxbWVpYXF6bXZkZ2hzZ3lpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMjgxMDgsImV4cCI6MjA4MDYwNDEwOH0.vAwilbfGtEQLdEgk115JgNfSSXup-Zqjk0rwOrZgZWE';
+        
+        // Основные переменные
+        let currentUser = null;
+        let currentToken = null;
+        let lastActionTime = 0;
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedSession();
+            setupEventListeners();
+        });
+        
+        // Загрузка сохранённой сессии
+        function loadSavedSession() {
+            const savedUser = localStorage.getItem('user_data');
+            const savedToken = localStorage.getItem('game_token');
+            
+            if (savedUser && savedToken) {
+                currentUser = JSON.parse(savedUser);
+                currentToken = savedToken;
+                showGameScreen();
+                loadPlayers();
+                loadRating();
+            }
+        }
+        
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Кнопка входа
+            document.getElementById('login-btn').addEventListener('click', login);
+            
+            // Навигация по вкладкам
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    switchTab(tabName);
+                });
+            });
+            
+            // Кнопки обновления
+            document.getElementById('refresh-players')?.addEventListener('click', loadPlayers);
+            document.getElementById('refresh-rating')?.addEventListener('click', loadRating);
+            
+            // Модальное окно
+            document.getElementById('close-modal')?.addEventListener('click', closeModal);
+            document.getElementById('modal-overlay')?.addEventListener('click', closeModal);
+            
+            // Кнопки в модальном окне
+            document.querySelector('.btn-cooperate')?.addEventListener('click', () => makeDealChoice('cooperate'));
+            document.querySelector('.btn-cheat')?.addEventListener('click', () => makeDealChoice('cheat'));
+            
+            // Покупка в магазине
+            document.getElementById('buy-bounty')?.addEventListener('click', buyBounty);
+            
+            // Ввод кода по Enter
+            document.getElementById('login-code').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') login();
+            });
+        }
+        
+        // Функция входа
+        async function login() {
+            if (!canPerformAction()) return;
+            
+            const code = document.getElementById('login-code').value.trim();
+            const errorDiv = document.getElementById('login-error');
+            
+            if (!/^\d{6}$/.test(code)) {
+                errorDiv.textContent = 'Введите 6-значный код';
+                return;
+            }
+            
+            errorDiv.textContent = '';
+            updateLastActionTime();
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/api_login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({ code_param: code })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    currentToken = data.token;
+                    
+                    localStorage.setItem('user_data', JSON.stringify(data.user));
+                    localStorage.setItem('game_token', data.token);
+                    
+                    showGameScreen();
+                    loadPlayers();
+                    loadRating();
+                } else {
+                    errorDiv.textContent = data.error || 'Ошибка входа';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Ошибка сети';
+            }
+        }
+        
+        // Показать игровой экран
+        function showGameScreen() {
+            document.getElementById('login-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            
+            // Показать имя игрока
+            document.getElementById('player-name').textContent = 
+                `${currentUser.first_name} ${currentUser.last_name[0]}.`;
+        }
+        
+        // Переключение вкладок
+        function switchTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            
+            // Показать выбранную вкладку
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Загрузить данные если нужно
+            if (tabName === 'players') {
+                loadPlayers();
+            } else if (tabName === 'rating') {
+                loadRating();
+            }
+        }
+        
+        // Загрузка списка игроков
+        async function loadPlayers() {
+            if (!currentUser || !canPerformAction()) return;
+            
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '<p style="text-align: center; color: #666;">Загрузка...</p>';
+            updateLastActionTime();
+            
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_online_players`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    },
+                    body: JSON.stringify({ current_user_id: currentUser.id })
+                });
+                
+                const data = await response.json();
+                
+                if (data.players && data.players.length > 0) {
+                    renderPlayersList(data.players);
+                } else {
+                    playersList.innerHTML = '<p style="text-align: center; color: #666;">Нет игроков онлайн</p>';
+                }
+            } catch (error) {
+                playersList.innerHTML = '<p style="text-align: center; color: #666;">Ошибка загрузки</p>';
+            }
+        }
+        
+        // Отображение списка игроков
+        function renderPlayersList(players) {
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
+            
+            const colorMap = {
+                'blue': '#2196F3',
+                'green': '#4CAF50',
+                'red': '#F44336',
+                'purple': '#9C27B0',
+                'orange': '#FF9800',
+                'teal': '#009688',
+                'pink': '#E91E63',
+                'amber': '#FFC107'
+            };
+            
+            players.forEach(player => {
+                const playerEl = document.createElement('div');
+                playerEl.className = 'player-card';
+                playerEl.innerHTML = `
+                    <div class="color-indicator" style="background-color: ${colorMap[player.color.name] || '#cccccc'};"></div>
+                    <div class="player-info">
+                        <div class="player-name">${player.display_name}</div>
+                        <div class="deal-counters">
+                            <span>Вх: ${player.deals.incoming}/5</span>
+                            <span>Исх: ${player.deals.outgoing}/5</span>
+                        </div>
+                    </div>
+                    <button class="deal-btn" ${player.deals.can_trade ? '' : 'disabled'} data-player-id="${player.id}">
+                        ${player.deals.can_trade ? 'Сделка' : 'Лимит'}
+                    </button>
+                `;
+                
+                playersList.appendChild(playerEl);
+            });
+            
+            // Добавляем обработчики для кнопок сделок
+            document.querySelectorAll('.deal-btn:not(:disabled)').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    if (canPerformAction()) {
+                        const playerId = e.target.dataset.playerId;
+                        openDealModal(playerId);
+                        updateLastActionTime();
+                    }
+                });
+            });
+        }
+        
+        // Загрузка рейтинга
+        async function loadRating() {
+            // TODO: Реализовать функцию get_rating
+            document.getElementById('rating-list').innerHTML = '<p style="text-align: center; color: #666;">Рейтинг скоро появится...</p>';
+        }
+        
+        // Открытие модального окна сделки
+        function openDealModal(targetPlayerId) {
+            // TODO: Реализовать
+            alert('Создание сделки будет реализовано в следующем шаге');
+        }
+        
+        // Закрытие модального окна
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('deal-modal').style.display = 'none';
+        }
+        
+        // Покупка шоколадки
+        async function buyBounty() {
+            if (!canPerformAction()) return;
+            
+            if (confirm('Купить шоколадку "Baunty" за 50 монет?')) {
+                // TODO: Реализовать функцию покупки
+                alert('Покупка будет реализована в следующем шаге');
+                updateLastActionTime();
+            }
+        }
+        
+        // Защита от быстрых кликов
+        function canPerformAction() {
+            const now = Date.now();
+            if (now - lastActionTime < 2000) {
+                alert('Подождите 2 секунды перед следующим действием');
+                return false;
+            }
+            return true;
+        }
+        
+        function updateLastActionTime() {
+            lastActionTime = Date.now();
+        }
+    </script>
 </body>
 </html>
