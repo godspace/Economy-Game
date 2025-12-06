@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Эволюция доверия</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤝</text></svg>">
+</head>
+<body>
+    <!-- Экран аутентификации -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-container">
+            <h1>🤝 Эволюция доверия</h1>
+            <p>Введите 6-значный код из CSV файла</p>
+            <input type="text" id="code-input" maxlength="6" placeholder="000000" autocomplete="off">
+            <button id="login-btn">Войти</button>
+            <div class="error-message" id="login-error"></div>
+        </div>
+    </div>
+
+    <!-- Основной интерфейс (скрыт до входа) -->
+    <div id="app-screen" class="screen">
+        <!-- Верхняя панель с информацией о игроке -->
+        <header class="app-header">
+            <div class="player-info">
+                <div class="player-avatar" id="player-avatar"></div>
+                <div class="player-details">
+                    <div class="player-name" id="player-name">Игрок</div>
+                    <div class="player-coins">
+                        <span class="material-icons">monetization_on</span>
+                        <span id="coins-count">100</span>
+                    </div>
+                </div>
+            </div>
+            <button id="logout-btn" class="icon-btn">
+                <span class="material-icons">logout</span>
+            </button>
+        </header>
+
+        <!-- Вкладки -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="players">
+                <span class="material-icons">people</span>
+                <span>Игроки</span>
+            </button>
+            <button class="tab-btn" data-tab="deals">
+                <span class="material-icons">handshake</span>
+                <span>Сделки</span>
+            </button>
+            <button class="tab-btn" data-tab="rating">
+                <span class="material-icons">leaderboard</span>
+                <span>Рейтинг</span>
+            </button>
+            <button class="tab-btn" data-tab="shop">
+                <span class="material-icons">store</span>
+                <span>Магазин</span>
+            </button>
+            <!-- Только для админа -->
+            <button class="tab-btn admin-only" data-tab="orders" style="display: none;">
+                <span class="material-icons">list_alt</span>
+                <span>Заказы</span>
+            </button>
+        </nav>
+
+        <!-- Контейнер для содержимого вкладок -->
+        <main class="tab-content">
+            <div id="players-tab" class="tab-pane active">
+                <!-- Содержимое вкладки Игроки -->
+            </div>
+            <div id="deals-tab" class="tab-pane">
+                <!-- Содержимое вкладки Сделки -->
+            </div>
+            <div id="rating-tab" class="tab-pane">
+                <!-- Содержимое вкладки Рейтинг -->
+            </div>
+            <div id="shop-tab" class="tab-pane">
+                <!-- Содержимое вкладки Магазин -->
+            </div>
+            <div id="orders-tab" class="tab-pane">
+                <!-- Содержимое вкладки Заказы (админ) -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Модальное окно для сделки -->
+    <div id="deal-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="deal-title">Сделка с <span class="deal-player-name"></span></h2>
+            <div class="deal-choices">
+                <button class="choice-btn" data-choice="cooperate">
+                    <span class="material-icons">handshake</span>
+                    Сотрудничать (+2/+2)
+                </button>
+                <button class="choice-btn" data-choice="cheat">
+                    <span class="material-icons">warning</span>
+                    Жульничать (+3/-1)
+                </button>
+            </div>
+            <div class="deal-info">
+                <p>Осталось сделок с этим игроком: <span id="deals-left">5</span></p>
+            </div>
+            <button id="cancel-deal" class="secondary-btn">Отмена</button>
+        </div>
+    </div>
+
+    <!-- Уведомления -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Загрузчик -->
+    <div id="loader" class="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Подключаем Supabase и наши скрипты -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/deals.js"></script>
+    <script src="js/rating.js"></script>
+    <script src="js/shop.js"></script>
+    <script src="js/admin.js"></script>
+    <script>
+    // Инициализация всех модулей после загрузки
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Проверяем авторизацию
+        if (authManager.currentUser) {
+            // Инициализируем остальные модули
+            if (!window.dealsManager) {
+                // Загрузим модули динамически
+                await Promise.all([
+                    import('./js/deals.js'),
+                    import('./js/rating.js'),
+                    import('./js/shop.js'),
+                    import('./js/admin.js')
+                ]);
+            }
+            
+            // Инициализируем поиск
+            appManager.initSearch();
+        }
+    });
+    </script>
+    <!-- Оповещение о новой сделке -->
+    <div id="new-deal-notification" class="new-deal-notification">
+        <span class="material-icons">notifications</span>
+        <span id="notification-text">Новая сделка!</span>
+    </div>    
+</body>
+</html>
