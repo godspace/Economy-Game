@@ -71,8 +71,9 @@ const Utils = {
             'Content-Type': 'application/json',
         };
         
-        if (APP_STATE.token) {
-            defaultHeaders['Authorization'] = `Bearer ${APP_STATE.token}`;
+        // Для функций, требующих авторизации, используем session ID
+        if (APP_STATE.session && !url.includes('/login')) {
+            defaultHeaders['X-Session-ID'] = APP_STATE.session;
         }
         
         const response = await fetch(url, {
@@ -84,6 +85,11 @@ const Utils = {
         });
         
         if (!response.ok) {
+            if (response.status === 401) {
+                // Сессия истекла, разлогиниваем
+                handleLogout();
+                throw new Error('Сессия истекла. Пожалуйста, войдите снова.');
+            }
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
@@ -221,6 +227,7 @@ function debounce(func, wait) {
 }
 
 // Авторизация
+// Авторизация
 async function handleLogin() {
     const code = document.getElementById('login-code').value.trim();
     const errorElement = document.getElementById('login-error');
@@ -246,17 +253,17 @@ async function handleLogin() {
 
         if (data.success) {
             APP_STATE.user = data.profile;
-            APP_STATE.token = data.token;
+            APP_STATE.session = data.session; // Используем session вместо token
             
-            // Сохраняем токен в localStorage
-            localStorage.setItem('trust_token', data.token);
+            // Сохраняем сессию в localStorage
+            localStorage.setItem('trust_session', data.session);
             localStorage.setItem('trust_profile', JSON.stringify(data.profile));
             
             // Показываем игру
             showGameScreen();
             
             // Загружаем начальные данные
-            loadInitialData();
+            await loadInitialData();
             
             Utils.showNotification(`Добро пожаловать, ${data.profile.first_name}!`, 'success');
         } else {
@@ -270,6 +277,25 @@ async function handleLogin() {
     }
 }
 
+// Проверка сохраненной авторизации
+function checkSavedAuth() {
+    const savedSession = localStorage.getItem('trust_session');
+    const savedProfile = localStorage.getItem('trust_profile');
+    
+    if (savedSession && savedProfile) {
+        try {
+            APP_STATE.session = savedSession;
+            APP_STATE.user = JSON.parse(savedProfile);
+            
+            // Показываем игру (без проверки срока действия сессии)
+            showGameScreen();
+            loadInitialData();
+        } catch {
+            localStorage.removeItem('trust_session');
+            localStorage.removeItem('trust_profile');
+        }
+    }
+}
 // Проверка сохраненной авторизации
 function checkSavedAuth() {
     const savedToken = localStorage.getItem('trust_token');
