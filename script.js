@@ -1,17 +1,17 @@
-// Конфигурация Supabase
+// Обновленная конфигурация
 const SUPABASE_URL = 'https://dprlvkpzdhasgkgereqr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRwcmx2a3B6ZGhhc2drZ2VyZXFyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMzcwNjgsImV4cCI6MjA4MDYxMzA2OH0.rJ2FuvObQ557_LevHPT7vaAIrPga6m_laAFkZLwWBSQ';
 
-// URL Edge Functions
 const EDGE_FUNCTIONS = {
     login: `${SUPABASE_URL}/functions/v1/login`,
     deals: `${SUPABASE_URL}/functions/v1/deals`,
+    players: `${SUPABASE_URL}/functions/v1/players`,
     rating: `${SUPABASE_URL}/functions/v1/rating`,
     shop: `${SUPABASE_URL}/functions/v1/shop`,
     orders: `${SUPABASE_URL}/functions/v1/orders`
 };
 
-// Глобальное состояние приложения
+// Обновленный APP_STATE
 const APP_STATE = {
     user: null,
     token: null,
@@ -19,315 +19,136 @@ const APP_STATE = {
     deals: [],
     rating: [],
     lastActionTime: 0,
-    actionTimeout: 2000 // 2 секунды между действиями
+    actionTimeout: 2000
 };
 
-// Утилиты
-const Utils = {
-    // Rate limiting на клиенте
-    canPerformAction() {
-        const now = Date.now();
-        if (now - APP_STATE.lastActionTime < APP_STATE.actionTimeout) {
-            return false;
-        }
-        APP_STATE.lastActionTime = now;
-        return true;
-    },
-
-    // Показать/скрыть загрузку
-    showLoading() {
-        document.getElementById('loading-overlay').style.display = 'flex';
-    },
-
-    hideLoading() {
-        document.getElementById('loading-overlay').style.display = 'none';
-    },
-
-    // Уведомления
-    showNotification(message, type = 'info') {
-        const notificationCenter = document.getElementById('notification-center');
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.innerHTML = `
-            <span class="material-icons">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info'}</span>
-            <span>${message}</span>
-        `;
-        notificationCenter.appendChild(notification);
-
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    },
-
-    // Форматирование чисел
-    formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    },
-
-    // Декодирование JWT (упрощенное)
-    parseJWT(token) {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            return JSON.parse(atob(base64));
-        } catch {
-            return null;
-        }
+// Добавьте эти функции в Utils
+Utils.makeRequest = async function(url, options = {}) {
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+    };
+    
+    if (APP_STATE.token) {
+        defaultHeaders['Authorization'] = `Bearer ${APP_STATE.token}`;
     }
+    
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...defaultHeaders,
+            ...options.headers,
+        },
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return response.json();
 };
 
-// Обработчики событий DOM
-document.addEventListener('DOMContentLoaded', () => {
-    initEventListeners();
-    checkSavedAuth();
-});
-
-function initEventListeners() {
-    // Авторизация
-    document.getElementById('login-btn').addEventListener('click', handleLogin);
-    document.getElementById('login-code').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
-
-    // Выход
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
-
-    // Вкладки
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
-    });
-
-    // Модальное окно сделки
-    document.getElementById('new-deal-btn').addEventListener('click', () => {
-        if (!Utils.canPerformAction()) {
-            Utils.showNotification('Подождите 2 секунды между действиями', 'warning');
-            return;
-        }
-        showDealModal();
-    });
-
-    document.getElementById('close-deal-modal').addEventListener('click', hideDealModal);
-    document.getElementById('confirm-deal-btn').addEventListener('click', confirmDeal);
-
-    // Выбор игрока в модалке
-    document.addEventListener('click', (e) => {
-        if (e.target.closest('.choice-btn')) {
-            const choiceBtn = e.target.closest('.choice-btn');
-            document.querySelectorAll('.choice-btn').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            choiceBtn.classList.add('selected');
-            document.getElementById('confirm-deal-btn').disabled = false;
-        }
-    });
-}
-
-// Авторизация
-async function handleLogin() {
-    const code = document.getElementById('login-code').value.trim();
-    const errorElement = document.getElementById('login-error');
-
-    if (!code || code.length !== 6) {
-        errorElement.textContent = 'Введите 6-значный код';
-        return;
-    }
-
-    errorElement.textContent = '';
-    Utils.showLoading();
-
-    try {
-        const response = await fetch(EDGE_FUNCTIONS.login, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ code })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            APP_STATE.user = data.profile;
-            APP_STATE.token = data.token;
-            
-            // Сохраняем токен в localStorage
-            localStorage.setItem('trust_token', data.token);
-            localStorage.setItem('trust_profile', JSON.stringify(data.profile));
-            
-            // Показываем игру
-            showGameScreen();
-            
-            // Загружаем начальные данные
-            loadInitialData();
-            
-            Utils.showNotification(`Добро пожаловать, ${data.profile.first_name}!`, 'success');
-        } else {
-            throw new Error(data.error || 'Ошибка авторизации');
-        }
-    } catch (error) {
-        errorElement.textContent = error.message;
-        Utils.showNotification(error.message, 'error');
-    } finally {
-        Utils.hideLoading();
-    }
-}
-
-// Проверка сохраненной авторизации
-function checkSavedAuth() {
-    const savedToken = localStorage.getItem('trust_token');
-    const savedProfile = localStorage.getItem('trust_profile');
-    
-    if (savedToken && savedProfile) {
-        try {
-            APP_STATE.token = savedToken;
-            APP_STATE.user = JSON.parse(savedProfile);
-            
-            // Проверяем, не истек ли токен
-            const payload = Utils.parseJWT(savedToken);
-            if (payload && payload.exp > Date.now() / 1000) {
-                showGameScreen();
-                loadInitialData();
-            } else {
-                // Токен истек
-                localStorage.removeItem('trust_token');
-                localStorage.removeItem('trust_profile');
-            }
-        } catch {
-            localStorage.removeItem('trust_token');
-            localStorage.removeItem('trust_profile');
-        }
-    }
-}
-
-// Переключение экранов
-function showGameScreen() {
-    document.getElementById('auth-screen').classList.remove('active');
-    document.getElementById('game-screen').classList.add('active');
-    
-    // Обновляем информацию пользователя
-    updateUserInfo();
-}
-
-function updateUserInfo() {
-    if (!APP_STATE.user) return;
-    
-    document.getElementById('user-name').textContent = 
-        `${APP_STATE.user.first_name} ${APP_STATE.user.last_name}`;
-    document.getElementById('user-coins').textContent = APP_STATE.user.coins;
-    document.getElementById('user-color').style.backgroundColor = APP_STATE.user.color_tag;
-    document.getElementById('shop-balance').textContent = APP_STATE.user.coins;
-}
-
-// Переключение вкладок
-function switchTab(tabName) {
-    // Обновляем активную кнопку
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
-    
-    // Обновляем активную вкладку
-    document.querySelectorAll('.tab-pane').forEach(pane => {
-        pane.classList.remove('active');
-    });
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-    
-    // Загружаем данные для вкладки
-    switch (tabName) {
-        case 'players':
-            loadPlayers();
-            break;
-        case 'deals':
-            loadDeals();
-            break;
-        case 'rating':
-            loadRating();
-            break;
-        case 'shop':
-            loadShop();
-            break;
-    }
-}
-
-// Загрузка начальных данных
-async function loadInitialData() {
-    await Promise.all([
-        loadPlayers(),
-        loadDeals(),
-        loadRating()
-    ]);
-}
-
-// Загрузка списка игроков
+// Обновленная функция loadPlayers
 async function loadPlayers() {
     try {
-        // Здесь будет запрос к Supabase для получения списка игроков
-        // Пока используем заглушку
-        const mockPlayers = [
-            { id: 2, name: 'Игрок 2', coins: 150, online: true, color: '#E91E63', deals: 3 },
-            { id: 3, name: 'Игрок 3', coins: 200, online: false, color: '#9C27B0', deals: 1 },
-            { id: 4, name: 'Игрок 4', coins: 75, online: true, color: '#673AB7', deals: 0 },
-            { id: 5, name: 'Игрок 5', coins: 300, online: true, color: '#3F51B5', deals: 5 },
-        ];
+        const data = await Utils.makeRequest(EDGE_FUNCTIONS.players, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'get_players' })
+        });
         
-        renderPlayersList(mockPlayers);
+        if (data.success) {
+            APP_STATE.players = data.players;
+            renderPlayersList(data.players);
+        }
     } catch (error) {
+        console.error('Ошибка загрузки игроков:', error);
         Utils.showNotification('Ошибка загрузки игроков', 'error');
     }
 }
 
-function renderPlayersList(players) {
-    const container = document.getElementById('players-list');
-    container.innerHTML = '';
-    
-    players.forEach(player => {
-        const playerCard = document.createElement('div');
-        playerCard.className = `player-card ${player.online ? 'online' : ''}`;
-        playerCard.dataset.playerId = player.id;
-        playerCard.innerHTML = `
-            <div class="player-color" style="background-color: ${player.color};"></div>
-            <div class="player-name">${player.name}</div>
-            <div class="player-coins">${Utils.formatNumber(player.coins)} монет</div>
-            <div class="deal-count">Сделок: ${player.deals}/5</div>
-        `;
+// Обновленная функция loadRating
+async function loadRating() {
+    try {
+        const period = document.getElementById('rating-period')?.value || 'all';
+        const data = await Utils.makeRequest(EDGE_FUNCTIONS.rating, {
+            method: 'POST',
+            body: JSON.stringify({ period })
+        });
         
-        playerCard.addEventListener('click', () => selectPlayerForDeal(player));
-        container.appendChild(playerCard);
-    });
+        if (data.success) {
+            APP_STATE.rating = data.rating;
+            renderRatingList(data.rating);
+            
+            // Находим позицию текущего пользователя
+            const userPosition = data.rating.findIndex(
+                item => item.profile_id === APP_STATE.user?.id
+            );
+            
+            if (userPosition !== -1) {
+                document.getElementById('my-position').textContent = 
+                    `${userPosition + 1} место`;
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки рейтинга:', error);
+        Utils.showNotification('Ошибка загрузки рейтинга', 'error');
+    }
 }
 
-// Модальное окно сделки
-let selectedPlayerForDeal = null;
-
-function showDealModal() {
-    // Здесь будет реальная загрузка доступных игроков
-    // Пока просто показываем модалку
-    document.getElementById('deal-modal').classList.add('active');
+// Функция для создания сделки
+async function createDeal(toPlayerId, choice) {
+    if (!Utils.canPerformAction()) {
+        throw new Error('Подождите 2 секунды между действиями');
+    }
     
-    // Сбрасываем состояние
-    selectedPlayerForDeal = null;
-    document.querySelectorAll('.choice-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    document.getElementById('confirm-deal-btn').disabled = true;
+    try {
+        const data = await Utils.makeRequest(EDGE_FUNCTIONS.deals, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'create_deal',
+                data: {
+                    to_player_id: toPlayerId,
+                    choice: choice
+                }
+            })
+        });
+        
+        if (data.success) {
+            return data.deal;
+        }
+        throw new Error(data.error);
+    } catch (error) {
+        throw error;
+    }
 }
 
-function hideDealModal() {
-    document.getElementById('deal-modal').classList.remove('active');
-}
-
-function selectPlayerForDeal(player) {
-    selectedPlayerForDeal = player;
+// Функция для покупки
+async function purchaseItem(itemName, price) {
+    if (!Utils.canPerformAction()) {
+        throw new Error('Подождите 2 секунды между действиями');
+    }
     
-    // Обновляем UI
-    document.querySelectorAll('.player-card').forEach(card => {
-        card.classList.remove('selected');
-    });
-    document.querySelector(`.player-card[data-player-id="${player.id}"]`).classList.add('selected');
-    
-    // Можно добавить подтверждение выбора в модалке
+    try {
+        const data = await Utils.makeRequest(EDGE_FUNCTIONS.shop, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'purchase',
+                item_name: itemName
+            })
+        });
+        
+        if (data.success) {
+            // Обновляем баланс пользователя
+            APP_STATE.user.coins = data.new_balance;
+            updateUserInfo();
+            return data;
+        }
+        throw new Error(data.error);
+    } catch (error) {
+        throw error;
+    }
 }
 
+// Обновленная функция confirmDeal
 async function confirmDeal() {
     if (!selectedPlayerForDeal || !Utils.canPerformAction()) return;
     
@@ -339,115 +160,97 @@ async function confirmDeal() {
     
     const choice = selectedChoice.dataset.choice;
     
+    Utils.showLoading();
+    
     try {
-        // Здесь будет вызов Edge Function для создания сделки
+        await createDeal(selectedPlayerForDeal.id, choice);
         Utils.showNotification('Сделка предложена игроку', 'success');
         hideDealModal();
-        
-        // Обновляем список сделок
-        loadDeals();
+        loadDeals(); // Обновляем список сделок
     } catch (error) {
         Utils.showNotification(error.message, 'error');
+    } finally {
+        Utils.hideLoading();
     }
 }
 
-// Загрузка сделок
-async function loadDeals() {
-    // Заглушка
-    const mockDeals = [
-        { id: 1, player: 'Игрок 2', status: 'pending', type: 'outgoing', created: '10:30' },
-        { id: 2, player: 'Игрок 5', status: 'completed', result: 'both_cooperate', type: 'incoming', created: '09:15' },
-    ];
-    
-    renderDealsList(mockDeals);
-}
-
-function renderDealsList(deals) {
-    const container = document.getElementById('deals-list');
-    container.innerHTML = '';
-    
-    deals.forEach(deal => {
-        const dealElement = document.createElement('div');
-        dealElement.className = `deal-item ${deal.status}`;
-        dealElement.innerHTML = `
-            <div class="deal-header">
-                <span class="deal-player">${deal.player}</span>
-                <span class="deal-time">${deal.created}</span>
-            </div>
-            <div class="deal-status">${getDealStatusText(deal)}</div>
-            ${deal.type === 'incoming' && deal.status === 'pending' ? 
-                '<button class="btn-small" data-deal-id="' + deal.id + '">Ответить</button>' : ''}
-        `;
-        container.appendChild(dealElement);
-    });
-}
-
-function getDealStatusText(deal) {
-    const statusMap = {
-        'pending': 'Ожидает ответа',
-        'completed': 'Завершена',
-        'both_cooperate': 'Оба сотрудничали (+2)',
-        'both_cheated': 'Оба жульничали (-1)'
-    };
-    return statusMap[deal.result] || statusMap[deal.status] || deal.status;
-}
-
-// Загрузка рейтинга
-async function loadRating() {
-    // Заглушка
-    const mockRating = [
-        { position: 1, name: 'Игрок 5', class: '10A', coins: 300 },
-        { position: 2, name: 'Игрок 3', class: '9B', coins: 200 },
-        { position: 3, name: 'Игрок 2', class: '11A', coins: 150 },
-        { position: 4, name: 'Игрок 1', class: '10B', coins: 100 },
-        { position: 5, name: 'Игрок 4', class: '9A', coins: 75 },
-    ];
-    
-    renderRatingList(mockRating);
-}
-
-function renderRatingList(rating) {
-    const container = document.getElementById('rating-list');
-    container.innerHTML = '';
-    
-    rating.forEach(item => {
-        const ratingItem = document.createElement('div');
-        ratingItem.className = 'rating-item';
-        ratingItem.innerHTML = `
-            <div class="rating-position">${item.position}</div>
-            <div class="rating-info">
-                <div class="rating-name">${item.name}</div>
-                <div class="rating-class">${item.class}</div>
-            </div>
-            <div class="rating-coins">${Utils.formatNumber(item.coins)} монет</div>
-        `;
-        container.appendChild(ratingItem);
-    });
-}
-
-// Магазин
-async function loadShop() {
-    // Пока ничего не делаем, так как у нас один товар
-    updateUserInfo();
-}
-
-// Выход
-function handleLogout() {
-    if (!Utils.canPerformAction()) return;
-    
-    if (confirm('Вы уверены, что хотите выйти?')) {
-        APP_STATE.user = null;
-        APP_STATE.token = null;
+// Добавьте обработчик покупки
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.btn-buy')) {
+        const btn = e.target.closest('.btn-buy');
+        const itemName = btn.dataset.item;
+        const price = parseInt(btn.dataset.price);
         
-        localStorage.removeItem('trust_token');
-        localStorage.removeItem('trust_profile');
+        if (APP_STATE.user.coins < price) {
+            Utils.showNotification('Недостаточно монет', 'error');
+            return;
+        }
         
-        document.getElementById('game-screen').classList.remove('active');
-        document.getElementById('auth-screen').classList.add('active');
+        if (confirm(`Купить ${itemName} за ${price} монет?`)) {
+            Utils.showLoading();
+            purchaseItem(itemName, price)
+                .then(data => {
+                    Utils.showNotification(data.message, 'success');
+                })
+                .catch(error => {
+                    Utils.showNotification(error.message, 'error');
+                })
+                .finally(() => {
+                    Utils.hideLoading();
+                });
+        }
+    }
+});
+
+// Обновленная функция updateUserInfo
+function updateUserInfo() {
+    if (!APP_STATE.user) return;
+    
+    document.getElementById('user-name').textContent = 
+        `${APP_STATE.user.first_name} ${APP_STATE.user.last_name}`;
+    document.getElementById('user-coins').textContent = APP_STATE.user.coins;
+    document.getElementById('user-color').style.backgroundColor = APP_STATE.user.color_tag;
+    document.getElementById('shop-balance').textContent = APP_STATE.user.coins;
+}
+
+// Периодическое обновление данных
+setInterval(() => {
+    if (APP_STATE.user) {
+        // Обновляем онлайн статус каждые 30 секунд
+        updateOnlineStatus();
         
-        document.getElementById('login-code').value = '';
-        document.getElementById('login-code').focus();
+        // Обновляем баланс каждую минуту
+        const now = Date.now();
+        if (now - APP_STATE.lastBalanceUpdate > 60000) {
+            updateBalance();
+            APP_STATE.lastBalanceUpdate = now;
+        }
+    }
+}, 30000);
+
+async function updateOnlineStatus() {
+    try {
+        await Utils.makeRequest(EDGE_FUNCTIONS.players, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'update_online' })
+        });
+    } catch (error) {
+        console.error('Ошибка обновления статуса:', error);
+    }
+}
+
+async function updateBalance() {
+    try {
+        const data = await Utils.makeRequest(EDGE_FUNCTIONS.players, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'get_profile' })
+        });
         
-        Utils.showNotification('Вы вышли из системы', 'info');
+        if (data.success && data.profile) {
+            APP_STATE.user.coins = data.profile.coins;
+            updateUserInfo();
+        }
+    } catch (error) {
+        console.error('Ошибка обновления баланса:', error);
     }
 }
