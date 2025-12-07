@@ -2,163 +2,76 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#2196F3">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Эволюция доверия</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤝</text></svg>">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дилемма заключённого</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-    <!-- Экран аутентификации -->
-    <div id="auth-screen" class="screen active">
-        <div class="auth-container">
-            <h1>🤝 Эволюция доверия</h1>
-            <p>Введите 6-значный код из CSV файла</p>
-            <input type="text" id="code-input" maxlength="6" placeholder="000000" autocomplete="off">
-            <button id="login-btn">Войти</button>
-            <div class="error-message" id="login-error"></div>
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <h1>Дилемма заключённого</h1>
+            <div class="input-group">
+                <input type="text" id="player-code" maxlength="6" placeholder="6-значный код" pattern="\d{6}">
+                <button id="login-btn">Войти в игру</button>
+            </div>
+            <div id="login-error" class="error-message"></div>
         </div>
     </div>
 
-    <!-- Основной интерфейс (скрыт до входа) -->
-    <div id="app-screen" class="screen">
-        <!-- Верхняя панель с информацией о игроке -->
-        <header class="app-header">
+    <div id="game-screen" class="screen">
+        <header>
             <div class="player-info">
-                <div class="player-avatar" id="player-avatar"></div>
-                <div class="player-details">
-                    <div class="player-name" id="player-name">Игрок</div>
-                    <div class="player-coins">
-                        <span class="material-icons">monetization_on</span>
-                        <span id="coins-count">100</span>
-                    </div>
-                </div>
+                <div class="player-color" id="player-color-indicator"></div>
+                <span>Игрок</span>
+                <div class="coins">Монеты: <span id="coins-count">0</span></div>
             </div>
-            <button id="logout-btn" class="icon-btn">
-                <span class="material-icons">logout</span>
-            </button>
+            <button id="logout-btn">Выйти</button>
         </header>
 
-        <!-- Вкладки -->
-        <nav class="tabs">
-            <button class="tab-btn active" data-tab="players">
-                <span class="material-icons">people</span>
-                <span>Игроки</span>
-            </button>
-            <button class="tab-btn" data-tab="deals">
-                <span class="material-icons">handshake</span>
-                <span>Сделки</span>
-            </button>
-            <button class="tab-btn" data-tab="rating">
-                <span class="material-icons">leaderboard</span>
-                <span>Рейтинг</span>
-            </button>
-            <button class="tab-btn" data-tab="shop">
-                <span class="material-icons">store</span>
-                <span>Магазин</span>
-            </button>
-            <!-- Только для админа -->
-            <button class="tab-btn admin-only" data-tab="orders" style="display: none;">
-                <span class="material-icons">list_alt</span>
-                <span>Заказы</span>
-            </button>
-        </nav>
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="players">ИГРОКИ</button>
+            <button class="tab-btn" data-tab="deals">СДЕЛКИ</button>
+        </div>
 
-        <!-- Контейнер для содержимого вкладок -->
-        <main class="tab-content">
-            <div id="players-tab" class="tab-pane active">
-                <!-- Содержимое вкладки Игроки -->
+        <div class="tab-content active" id="players-tab">
+            <div class="players-list" id="players-list">
+                <!-- Список игроков будет здесь -->
             </div>
-            <div id="deals-tab" class="tab-pane">
-                <!-- Содержимое вкладки Сделки -->
-            </div>
-            <div id="rating-tab" class="tab-pane">
-                <!-- Содержимое вкладки Рейтинг -->
-            </div>
-            <div id="shop-tab" class="tab-pane">
-                <!-- Содержимое вкладки Магазин -->
-            </div>
-            <div id="orders-tab" class="tab-pane">
-                <!-- Содержимое вкладки Заказы (админ) -->
-            </div>
-        </main>
-    </div>
+        </div>
 
-    <!-- Модальное окно для сделки -->
-    <div id="deal-modal" class="modal">
-        <div class="modal-content">
-            <h2 id="deal-title">Сделка с <span class="deal-player-name"></span></h2>
-            <div class="deal-choices">
-                <button class="choice-btn" data-choice="cooperate">
-                    <span class="material-icons">handshake</span>
-                    Сотрудничать (+2/+2)
-                </button>
-                <button class="choice-btn" data-choice="cheat">
-                    <span class="material-icons">warning</span>
-                    Жульничать (+3/-1)
-                </button>
+        <div class="tab-content" id="deals-tab">
+            <h3>Ожидающие сделки</h3>
+            <div class="deals-list" id="pending-deals">
+                <!-- Список ожидающих сделок будет здесь -->
             </div>
-            <div class="deal-info">
-                <p>Осталось сделок с этим игроком: <span id="deals-left">5</span></p>
+            <h3>История сделок</h3>
+            <div class="deals-list" id="completed-deals">
+                <!-- История сделок будет здесь -->
             </div>
-            <button id="cancel-deal" class="secondary-btn">Отмена</button>
+        </div>
+
+        <!-- Модальное окно для сделки -->
+        <div id="deal-modal" class="modal">
+            <div class="modal-content">
+                <h3>Сделка с <span id="deal-partner">Игрок</span></h3>
+                <div class="choice-buttons">
+                    <button class="choice-btn cooperate" data-choice="cooperate">Сотрудничать (+2/+2)</button>
+                    <button class="choice-btn cheat" data-choice="cheat">Жульничать (+3/-1)</button>
+                </div>
+                <div class="deal-history">
+                    <h4>История сделок</h4>
+                    <div id="deal-history-list"></div>
+                </div>
+                <button class="close-modal">Отмена</button>
+            </div>
         </div>
     </div>
 
-    <!-- Уведомления -->
-    <div id="toast" class="toast"></div>
-
-    <!-- Загрузчик -->
-    <div id="loader" class="loader">
-        <div class="spinner"></div>
-    </div>
-
-    <!-- Подключаем Supabase и наши скрипты -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="js/config.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/deals.js"></script>
-    <script src="js/rating.js"></script>
-    <script src="js/shop.js"></script>
-    <script src="js/admin.js"></script>
-    <script>
-    <!-- Инициализация после загрузки всех скриптов -->
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM загружен, проверяем инициализацию...');
-        
-        // Проверяем, что Supabase загружен
-        if (typeof window.supabase === 'undefined') {
-            console.error('Supabase JS библиотека не загрузилась');
-            document.getElementById('login-error').textContent = 'Ошибка загрузки библиотеки. Проверьте интернет-соединение.';
-            document.getElementById('login-error').style.display = 'block';
-            return;
-        }
-        
-        // Проверяем, что наш config.js отработал
-        if (typeof window.SUPABASE === 'undefined') {
-            console.error('Настройки Supabase не загрузились');
-            document.getElementById('login-error').textContent = 'Ошибка конфигурации приложения.';
-            document.getElementById('login-error').style.display = 'block';
-            return;
-        }
-        
-        console.log('Все скрипты загружены, можно начинать работу');
-        
-        // Запускаем проверку подключения
-        if (window.authManager && typeof window.authManager.testConnection === 'function') {
-            window.authManager.testConnection();
-        }
-    });
-    </script>
-    <!-- Оповещение о новой сделке -->
-    <div id="new-deal-notification" class="new-deal-notification">
-        <span class="material-icons">notifications</span>
-        <span id="notification-text">Новая сделка!</span>
-    </div>    
+    <script type="module" src="supabase.js"></script>
+    <script type="module" src="auth.js"></script>
+    <script type="module" src="players.js"></script>
+    <script type="module" src="deals.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
