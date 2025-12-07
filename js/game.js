@@ -725,10 +725,71 @@ class GameManager {
                 result = choiceResult;
             }
             
+            // Замените весь блок if (result?.completed) на этот:
             if (result?.completed) {
-                const resultMessage = result.result_initiator > 0 ? 
-                    `Сделка завершена! Вы получили: +${result.result_initiator} монет` :
-                    `Сделка завершена! Вы потеряли: ${result.result_initiator} монет`;
+                // Определяем наш результат и роль
+                let ourResult;
+                let opponentResult;
+                let ourChoice;
+                let opponentChoice;
+                
+                // Получаем детали сделки для более информативного сообщения
+                try {
+                    const { data: dealDetails, error } = await this.supabase
+                        .from('deals')
+                        .select('initiator_choice, target_choice')
+                        .eq('id', this.currentDeal.dealId)
+                        .single();
+                        
+                    if (!error && dealDetails) {
+                        if (this.currentDeal.mode === 'create') {
+                            ourChoice = dealDetails.initiator_choice;
+                            opponentChoice = dealDetails.target_choice;
+                            ourResult = result.result_initiator;
+                            opponentResult = result.result_target;
+                        } else {
+                            ourChoice = dealDetails.target_choice;
+                            opponentChoice = dealDetails.initiator_choice;
+                            ourResult = result.result_target;
+                            opponentResult = result.result_initiator;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error getting deal details:', error);
+                }
+                
+                // Генерируем информативное сообщение
+                let resultMessage;
+                
+                if (ourChoice && opponentChoice) {
+                    // Подробное сообщение с объяснением
+                    const choiceText = {
+                        'cooperate': 'сотрудничали',
+                        'cheat': 'жульничали'
+                    };
+                    
+                    if (ourChoice === 'cooperate' && opponentChoice === 'cooperate') {
+                        resultMessage = '🤝 Оба сотрудничали! Вы получили +2 монеты';
+                    } else if (ourChoice === 'cooperate' && opponentChoice === 'cheat') {
+                        resultMessage = '😔 Вы сотрудничали, но игрок сжульничал. Вы потеряли 1 монету';
+                    } else if (ourChoice === 'cheat' && opponentChoice === 'cooperate') {
+                        resultMessage = '🎭 Вы сжульничали, а игрок доверился! Вы получили +3 монеты';
+                    } else {
+                        resultMessage = '💥 Оба сжульничали! Каждый теряет 1 монету';
+                    }
+                    
+                    resultMessage += ` (${ourResult > 0 ? '+' : ''}${ourResult} монет)`;
+                } else {
+                    // Простое сообщение, если не удалось получить детали
+                    if (ourResult > 0) {
+                        resultMessage = `Сделка завершена! Вы получили: +${ourResult} монет`;
+                    } else if (ourResult < 0) {
+                        resultMessage = `Сделка завершена! Вы потеряли: ${ourResult} монет`;
+                    } else {
+                        resultMessage = `Сделка завершена! Баланс не изменился`;
+                    }
+                }
+                
                 alert(resultMessage);
                 await this.updatePlayerBalance();
             } else if (result?.success) {

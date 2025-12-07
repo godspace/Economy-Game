@@ -19,7 +19,7 @@
                 </div>
             </div>
             <div class="header-center">
-                <h1>Дилемма Заключённого</h1>
+                <h1>Эволюция доверия</h1>
             </div>
             <div class="header-right">
                 <button id="logoutBtn" class="btn-logout">
@@ -143,12 +143,23 @@
                 <div class="choice-buttons">
                     <button class="choice-btn cooperate" data-choice="cooperate">
                         <span class="material-icons">handshake</span>
-                        Сотрудничать (+2)
+                        Сотрудничать (+2 / -1)
                     </button>
                     <button class="choice-btn cheat" data-choice="cheat">
                         <span class="material-icons">warning</span>
-                        Жульничать (+3/-1)
+                        Жульничать (+3 / -1)
                     </button>
+                </div>
+
+                <!-- Добавьте после choice-buttons -->
+                <div class="game-rules">
+                    <h4>Правила игры:</h4>
+                    <ul>
+                        <li>🤝 <strong>Оба сотрудничают</strong>: +2 монеты каждому</li>
+                        <li>🎭 <strong>Один жульничает</strong>: жулик получает +3, доверчивый теряет -1</li>
+                        <li>💥 <strong>Оба жульничают</strong>: -1 монета каждому</li>
+                        <li>⚠️ <strong>Лимит</strong>: максимум 5 сделок в каждую сторону с одним игроком</li>
+                    </ul>
                 </div>
 
                 <div class="deal-history">

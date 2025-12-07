@@ -675,3 +675,34 @@ body {
         font-size: 14px;
     }
 }
+
+/* Добавьте в конец файла */
+.game-rules {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.game-rules h4 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.game-rules ul {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 14px;
+    color: #666;
+}
+
+.game-rules li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.game-rules strong {
+    color: #333;
+}
