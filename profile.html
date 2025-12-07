@@ -5,45 +5,161 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Профиль игрока</title>
     <link rel="stylesheet" href="css/profile.css">
-    <!-- Подключаем Supabase через обычный скрипт -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="profile-container">
         <header class="profile-header">
-            <h1>👤 Профиль игрока</h1>
-            <button id="logoutBtn" class="btn-logout">Выйти</button>
+            <div class="header-left">
+                <div class="balance-display">
+                    <span class="balance-label">Баланс:</span>
+                    <span class="balance-amount" id="balanceValue">0</span>
+                    <span class="balance-icon">🪙</span>
+                </div>
+            </div>
+            <div class="header-center">
+                <h1>Дилемма Заключённого</h1>
+            </div>
+            <div class="header-right">
+                <button id="logoutBtn" class="btn-logout">
+                    <span class="material-icons">logout</span>
+                    Выйти
+                </button>
+            </div>
         </header>
 
-        <div class="profile-content">
-            <div class="player-card">
-                <div class="player-avatar">
-                    <div class="avatar-placeholder">
-                        <span id="avatarInitials">ИИ</span>
+        <div class="tabs-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="profile">
+                    <span class="material-icons">person</span>
+                    Профиль
+                </button>
+                <button class="tab-btn" data-tab="players">
+                    <span class="material-icons">groups</span>
+                    Игроки
+                    <span class="badge" id="playersCount">0</span>
+                </button>
+                <button class="tab-btn" data-tab="deals">
+                    <span class="material-icons">handshake</span>
+                    Сделки
+                    <span class="badge" id="pendingDealsCount">0</span>
+                </button>
+            </div>
+
+            <div class="tab-content active" id="profile-tab">
+                <div class="profile-content">
+                    <div class="player-card">
+                        <div class="player-avatar" id="playerAvatarColor">
+                            <span id="avatarInitials">ИИ</span>
+                        </div>
+                        <div class="player-info">
+                            <h2 id="playerName">Имя Фамилия</h2>
+                            <div class="player-class" id="playerClass">Класс</div>
+                            <div class="player-code">Код: <span id="playerCode">------</span></div>
+                            <div class="player-stats">
+                                <div class="stat">
+                                    <span class="stat-label">Всего сделок:</span>
+                                    <span class="stat-value" id="totalDeals">0</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Выиграно:</span>
+                                    <span class="stat-value" id="totalProfit">0</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="player-info">
-                    <h2 id="playerName">Имя Фамилия</h2>
-                    <div class="player-class" id="playerClass">Класс</div>
-                    <div class="player-code">Код: <span id="playerCode">------</span></div>
+            </div>
+
+            <div class="tab-content" id="players-tab">
+                <div class="players-content">
+                    <div class="search-box">
+                        <input type="text" id="searchPlayers" placeholder="Поиск игроков...">
+                    </div>
+                    <div class="players-list" id="playersList">
+                        <!-- Список игроков будет загружен здесь -->
+                    </div>
                 </div>
             </div>
 
-            <div class="balance-card">
-                <div class="balance-label">Баланс</div>
-                <div class="balance-amount">
-                    <span id="balanceValue">0</span> монет
-                </div>
-                <div class="balance-notice">
-                    Баланс защищен от изменений через консоль
+            <div class="tab-content" id="deals-tab">
+                <div class="deals-content">
+                    <div class="deals-tabs">
+                        <button class="deals-tab-btn active" data-deal-type="incoming">
+                            <span class="material-icons">inbox</span>
+                            Входящие
+                            <span class="badge" id="incomingDealsCount">0</span>
+                        </button>
+                        <button class="deals-tab-btn" data-deal-type="outgoing">
+                            <span class="material-icons">send</span>
+                            Исходящие
+                            <span class="badge" id="outgoingDealsCount">0</span>
+                        </button>
+                        <button class="deals-tab-btn" data-deal-type="history">
+                            <span class="material-icons">history</span>
+                            История
+                        </button>
+                    </div>
+
+                    <div class="deals-list-container">
+                        <div class="deals-list active" id="incoming-deals">
+                            <!-- Входящие сделки -->
+                        </div>
+                        <div class="deals-list" id="outgoing-deals">
+                            <!-- Исходящие сделки -->
+                        </div>
+                        <div class="deals-list" id="deals-history">
+                            <!-- История сделок -->
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="players-list-section">
-                <h3>Другие игроки</h3>
-                <div class="players-list" id="playersList">
-                    <!-- Список игроков будет загружен здесь -->
+    <!-- Модальное окно для сделки -->
+    <div class="modal" id="dealModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Сделка с Игроком</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="deal-info">
+                    <div class="color-badge" id="playerColorBadge"></div>
+                    <div class="deal-stats">
+                        <div class="deal-stat">
+                            <span>Входящих сделок:</span>
+                            <span id="incomingDealsStat">0/5</span>
+                        </div>
+                        <div class="deal-stat">
+                            <span>Исходящих сделок:</span>
+                            <span id="outgoingDealsStat">0/5</span>
+                        </div>
+                    </div>
                 </div>
+
+                <div class="choice-buttons">
+                    <button class="choice-btn cooperate" data-choice="cooperate">
+                        <span class="material-icons">handshake</span>
+                        Сотрудничать (+2)
+                    </button>
+                    <button class="choice-btn cheat" data-choice="cheat">
+                        <span class="material-icons">warning</span>
+                        Жульничать (+3/-1)
+                    </button>
+                </div>
+
+                <div class="deal-history">
+                    <h4>История сделок</h4>
+                    <div class="history-list" id="dealHistoryList">
+                        <!-- История сделок будет загружена здесь -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelDealBtn">Отмена</button>
             </div>
         </div>
     </div>
@@ -51,5 +167,6 @@
     <!-- Подключаем наши скрипты -->
     <script src="js/supabase.js"></script>
     <script src="js/profile.js"></script>
+    <script src="js/game.js"></script>
 </body>
 </html>
