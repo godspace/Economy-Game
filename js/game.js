@@ -1,3 +1,37 @@
+// Защита от изменения прототипов
+Object.freeze(Object.prototype);
+Object.freeze(Array.prototype);
+Object.freeze(Function.prototype);
+
+// Защита от переопределения методов
+const originalFetch = window.fetch;
+window.fetch = function(resource, init) {
+    // Блокируем запросы на изменение баланса
+    if (resource.includes('supabase.co/rest/v1/players') && 
+        (init?.method === 'PATCH' || init?.method === 'PUT')) {
+        console.warn('⚠️ Блокирован прямой запрос на изменение данных игрока');
+        return Promise.reject(new Error('Прямое изменение данных запрещено'));
+    }
+    return originalFetch.call(this, resource, init);
+};
+
+// Мониторинг изменений DOM
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach(mutation => {
+        // Проверяем изменения элементов с балансом
+        if (mutation.target.id === 'balanceValue' || 
+            mutation.target.classList.contains('balance-amount')) {
+            console.warn('⚠️ Обнаружено изменение DOM элемента баланса');
+        }
+    });
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true
+});
+
 class GameManager {
     constructor() {
         this.player = null;
