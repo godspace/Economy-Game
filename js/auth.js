@@ -1,57 +1,64 @@
-import { supabase } from './supabase.js'
+// Проверяем загрузку Supabase
+document.addEventListener('DOMContentLoaded', function() {
+    // Ждем немного для загрузки Supabase
+    setTimeout(initAuth, 100);
+});
 
-class AuthManager {
-    constructor() {
-        this.loginBtn = document.getElementById('loginBtn')
-        this.playerCodeInput = document.getElementById('playerCode')
-        this.statusMessage = document.getElementById('statusMessage')
-        
-        this.initEventListeners()
+function initAuth() {
+    if (!window.gameSupabase) {
+        console.error('Supabase не загружен');
+        document.getElementById('statusMessage').textContent = 'Ошибка загрузки системы. Обновите страницу.';
+        return;
     }
-    
-    initEventListeners() {
-        this.loginBtn.addEventListener('click', () => this.handleLogin())
-        
-        this.playerCodeInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.handleLogin()
-            }
-        })
-        
-        // Ограничиваем ввод только цифрами
-        this.playerCodeInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6)
-        })
-    }
-    
-    async handleLogin() {
-        const code = this.playerCodeInput.value.trim()
+
+    const supabase = window.gameSupabase;
+    const loginBtn = document.getElementById('loginBtn');
+    const playerCodeInput = document.getElementById('playerCode');
+    const statusMessage = document.getElementById('statusMessage');
+
+    // Ограничиваем ввод только цифрами
+    playerCodeInput.addEventListener('input', function(e) {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    });
+
+    // Обработка Enter
+    playerCodeInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            handleLogin();
+        }
+    });
+
+    // Обработка клика
+    loginBtn.addEventListener('click', handleLogin);
+
+    async function handleLogin() {
+        const code = playerCodeInput.value.trim();
         
         // Валидация
         if (!code || code.length !== 6) {
-            this.showError('Введите 6-значный код')
-            return
+            showError('Введите 6-значный код');
+            return;
         }
         
         // Показываем загрузку
-        this.setLoading(true)
-        this.clearMessage()
+        setLoading(true);
+        clearMessage();
         
         try {
-            // Сначала проверяем существование игрока
-            const { data: existingPlayer, error: findError } = await supabase
+            // Ищем игрока по коду
+            const { data: player, error: findError } = await supabase
                 .from('players')
                 .select('*')
                 .eq('code', code)
-                .single()
+                .single();
             
             if (findError) {
                 if (findError.code === 'PGRST116') {
-                    this.showError('Неверный код. Проверьте правильность ввода.')
+                    showError('Неверный код. Проверьте правильность ввода.');
                 } else {
-                    throw findError
+                    throw findError;
                 }
-                return
+                return;
             }
             
             // Обновляем статус игрока
@@ -61,57 +68,52 @@ class AuthManager {
                     is_visible: true,
                     last_login: new Date().toISOString()
                 })
-                .eq('code', code)
+                .eq('id', player.id);
             
-            if (updateError) throw updateError
+            if (updateError) throw updateError;
             
             // Сохраняем данные игрока
             sessionStorage.setItem('player', JSON.stringify({
-                id: existingPlayer.id,
-                code: existingPlayer.code,
-                first_name: existingPlayer.first_name,
-                last_name: existingPlayer.last_name,
-                class: existingPlayer.class,
-                balance: existingPlayer.balance || 0
-            }))
+                id: player.id,
+                code: player.code,
+                first_name: player.first_name,
+                last_name: player.last_name,
+                class: player.class,
+                balance: player.balance || 0
+            }));
             
             // Показываем успех и перенаправляем
-            this.showSuccess('Успешный вход! Перенаправление...')
+            showSuccess('Успешный вход! Перенаправление...');
             
             setTimeout(() => {
-                window.location.href = 'profile.html'
-            }, 1000)
+                window.location.href = 'profile.html';
+            }, 1000);
             
         } catch (error) {
-            console.error('Login error:', error)
-            this.showError('Ошибка входа. Попробуйте позже.')
+            console.error('Login error:', error);
+            showError('Ошибка входа. Попробуйте позже.');
         } finally {
-            this.setLoading(false)
+            setLoading(false);
         }
     }
-    
-    setLoading(isLoading) {
-        this.loginBtn.disabled = isLoading
-        this.loginBtn.textContent = isLoading ? 'Вход...' : 'Войти в игру'
+
+    function setLoading(isLoading) {
+        loginBtn.disabled = isLoading;
+        loginBtn.textContent = isLoading ? 'Вход...' : 'Войти в игру';
     }
-    
-    showError(message) {
-        this.statusMessage.textContent = message
-        this.statusMessage.className = 'status-message error'
+
+    function showError(message) {
+        statusMessage.textContent = message;
+        statusMessage.className = 'status-message error';
     }
-    
-    showSuccess(message) {
-        this.statusMessage.textContent = message
-        this.statusMessage.className = 'status-message success'
+
+    function showSuccess(message) {
+        statusMessage.textContent = message;
+        statusMessage.className = 'status-message success';
     }
-    
-    clearMessage() {
-        this.statusMessage.textContent = ''
-        this.statusMessage.className = 'status-message'
+
+    function clearMessage() {
+        statusMessage.textContent = '';
+        statusMessage.className = 'status-message';
     }
 }
-
-// Инициализируем при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    new AuthManager()
-})

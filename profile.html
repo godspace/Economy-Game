@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Профиль игрока</title>
     <link rel="stylesheet" href="css/profile.css">
-    <script type="module" src="js/profile.js" defer></script>
+    <!-- Подключаем Supabase через обычный скрипт -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="profile-container">
@@ -46,5 +47,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Подключаем наши скрипты -->
+    <script src="js/supabase.js"></script>
+    <script src="js/profile.js"></script>
 </body>
 </html>

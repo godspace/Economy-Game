@@ -1,143 +1,120 @@
-import { supabase } from './supabase.js'
+// Проверяем загрузку Supabase
+document.addEventListener('DOMContentLoaded', function() {
+    // Ждем немного для загрузки Supabase
+    setTimeout(initProfile, 100);
+});
 
-class ProfileManager {
-    constructor() {
-        this.player = null
-        this.logoutBtn = document.getElementById('logoutBtn')
-        this.playersList = document.getElementById('playersList')
-        
-        this.init()
+function initProfile() {
+    // Проверяем авторизацию
+    const playerData = sessionStorage.getItem('player');
+    if (!playerData) {
+        window.location.href = 'index.html';
+        return;
     }
+
+    if (!window.gameSupabase) {
+        console.error('Supabase не загружен');
+        return;
+    }
+
+    const supabase = window.gameSupabase;
+    const player = JSON.parse(playerData);
     
-    async init() {
-        // Проверяем, авторизован ли игрок
-        this.loadPlayerFromStorage()
+    // Обновляем UI
+    updateUI(player);
+    
+    // Загружаем список игроков
+    loadPlayersList(supabase, player);
+    
+    // Настраиваем кнопку выхода
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        sessionStorage.removeItem('player');
+        window.location.href = 'index.html';
+    });
+    
+    // Защита от изменения через консоль
+    setupConsoleProtection(player);
+}
+
+function updateUI(player) {
+    // Устанавливаем имя
+    document.getElementById('playerName').textContent = 
+        `${player.first_name} ${player.last_name}`;
+    
+    // Класс
+    document.getElementById('playerClass').textContent = player.class;
+    
+    // Код
+    document.getElementById('playerCode').textContent = player.code;
+    
+    // Баланс
+    document.getElementById('balanceValue').textContent = player.balance;
+    
+    // Инициалы для аватара
+    const initials = (player.first_name[0] + player.last_name[0]).toUpperCase();
+    document.getElementById('avatarInitials').textContent = initials;
+}
+
+async function loadPlayersList(supabase, currentPlayer) {
+    const playersList = document.getElementById('playersList');
+    playersList.innerHTML = '<div class="loading">Загрузка списка игроков...</div>';
+    
+    try {
+        // Загружаем только видимых игроков, исключая текущего
+        const { data: players, error } = await supabase
+            .from('players')
+            .select('id, first_name, last_name, class, balance')
+            .eq('is_visible', true)
+            .neq('id', currentPlayer.id)
+            .order('last_login', { ascending: false });
         
-        if (!this.player) {
-            // Если нет, перенаправляем на страницу входа
-            window.location.href = 'index.html'
-            return
+        if (error) throw error;
+        
+        if (!players || players.length === 0) {
+            playersList.innerHTML = '<div class="loading">Пока нет других игроков...</div>';
+            return;
         }
         
-        // Обновляем интерфейс
-        this.updateUI()
-        
-        // Загружаем список игроков
-        await this.loadPlayersList()
-        
-        // Настраиваем кнопку выхода
-        this.logoutBtn.addEventListener('click', () => this.handleLogout())
-        
-        // Защита от изменений через консоль
-        this.setupConsoleProtection()
-    }
-    
-    loadPlayerFromStorage() {
-        const playerData = sessionStorage.getItem('player')
-        if (playerData) {
-            this.player = JSON.parse(playerData)
-        }
-    }
-    
-    updateUI() {
-        // Устанавливаем имя
-        document.getElementById('playerName').textContent = 
-            `${this.player.first_name} ${this.player.last_name}`
-        
-        // Класс
-        document.getElementById('playerClass').textContent = this.player.class
-        
-        // Код
-        document.getElementById('playerCode').textContent = this.player.code
-        
-        // Баланс
-        document.getElementById('balanceValue').textContent = this.player.balance
-        
-        // Инициалы для аватара (первые буквы имени и фамилии)
-        const initials = (this.player.first_name[0] + this.player.last_name[0]).toUpperCase()
-        document.getElementById('avatarInitials').textContent = initials
-    }
-    
-    async loadPlayersList() {
-        this.playersList.innerHTML = '<div class="loading">Загрузка списка игроков...</div>'
-        
-        try {
-            // Загружаем только видимых игроков, исключая текущего
-            const { data: players, error } = await supabase
-                .from('players')
-                .select('id, first_name, last_name, class, balance')
-                .eq('is_visible', true)
-                .neq('id', this.player.id)
-                .order('last_login', { ascending: false })
-            
-            if (error) throw error
-            
-            if (players.length === 0) {
-                this.playersList.innerHTML = '<div class="loading">Пока нет других игроков...</div>'
-                return
-            }
-            
-            // Генерируем HTML для списка игроков
-            this.playersList.innerHTML = players.map(player => `
-                <div class="player-item">
-                    <div class="player-item-avatar">
-                        ${player.first_name[0]}${player.last_name[0]}
-                    </div>
-                    <div class="player-item-info">
-                        <h4>${player.first_name} ${player.last_name}</h4>
-                        <div class="player-item-class">${player.class} • ${player.balance} монет</div>
-                    </div>
+        // Генерируем HTML для списка игроков
+        playersList.innerHTML = players.map(p => `
+            <div class="player-item">
+                <div class="player-item-avatar">
+                    ${p.first_name[0]}${p.last_name[0]}
                 </div>
-            `).join('')
-            
-        } catch (error) {
-            console.error('Error loading players:', error)
-            this.playersList.innerHTML = 
-                '<div class="error-message">Не удалось загрузить список игроков</div>'
-        }
-    }
-    
-    handleLogout() {
-        // Очищаем sessionStorage и перенаправляем на страницу входа
-        sessionStorage.removeItem('player')
-        window.location.href = 'index.html'
-    }
-    
-    setupConsoleProtection() {
-        // Защита от изменения баланса через консоль
-        Object.defineProperty(window, 'player', {
-            get: () => this.player,
-            set: () => {
-                console.warn('Изменение игрока через консоль запрещено')
-                return false
-            }
-        })
+                <div class="player-item-info">
+                    <h4>${p.first_name} ${p.last_name}</h4>
+                    <div class="player-item-class">${p.class} • ${p.balance || 0} монет</div>
+                </div>
+            </div>
+        `).join('');
         
-        // Защита от изменения sessionStorage
-        const originalSetItem = sessionStorage.setItem
-        sessionStorage.setItem = function(key, value) {
-            if (key === 'player') {
-                console.warn('Попытка изменения данных игрока через консоль!')
-                return false
-            }
-            return originalSetItem.apply(this, arguments)
-        }
-        
-        // Защита от открытия DevTools (опционально)
-        document.addEventListener('keydown', function(e) {
-            // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
-            if (e.keyCode === 123 || 
-                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
-                (e.ctrlKey && e.keyCode === 85)) {
-                e.preventDefault()
-                console.log('Действие заблокировано системой безопасности')
-                return false
-            }
-        })
+    } catch (error) {
+        console.error('Error loading players:', error);
+        playersList.innerHTML = 
+            '<div class="error-message">Не удалось загрузить список игроков</div>';
     }
 }
 
-// Инициализируем при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    new ProfileManager()
-})
+function setupConsoleProtection(player) {
+    // Защита от изменения sessionStorage
+    const originalSetItem = sessionStorage.setItem;
+    sessionStorage.setItem = function(key, value) {
+        if (key === 'player') {
+            console.warn('Изменение данных игрока через консоль заблокировано!');
+            return false;
+        }
+        return originalSetItem.apply(this, arguments);
+    };
+    
+    // Защита от открытия DevTools (необязательно, можно закомментировать)
+    /*
+    document.addEventListener('keydown', function(e) {
+        if (e.keyCode === 123 || 
+            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74)) ||
+            (e.ctrlKey && e.keyCode === 85)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    */
+}

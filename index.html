@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход в игру</title>
     <link rel="stylesheet" href="css/auth.css">
-    <script type="module" src="js/main.js" defer></script>
+    <!-- Подключаем Supabase через обычный скрипт (не модуль) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="auth-container">
@@ -32,5 +33,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Подключаем наши скрипты после Supabase -->
+    <script src="js/supabase.js"></script>
+    <script src="js/auth.js"></script>
 </body>
 </html>
