@@ -385,15 +385,30 @@ class GameManager {
                 player2_code_param: targetCode
             });
             
-            if (error) throw error;
+            if (error) {
+                console.error('RPC Error:', error);
+                // Используем запасной вариант
+                document.getElementById(`incoming-${targetCode}`).textContent = '0/5';
+                document.getElementById(`outgoing-${targetCode}`).textContent = '0/5';
+                return;
+            }
+            
+            console.log('Deal stats loaded:', stats);
+            
+            // Проверяем, что stats существует и имеет нужные поля
+            const incomingCount = stats?.incoming_count || 0;
+            const outgoingCount = stats?.outgoing_count || 0;
             
             document.getElementById(`incoming-${targetCode}`).textContent = 
-                `${stats.incoming_count}/5`;
+                `${incomingCount}/5`;
             document.getElementById(`outgoing-${targetCode}`).textContent = 
-                `${stats.outgoing_count}/5`;
+                `${outgoingCount}/5`;
                 
         } catch (error) {
             console.error('Error loading deal stats:', error);
+            // Устанавливаем значения по умолчанию
+            document.getElementById(`incoming-${targetCode}`).textContent = '0/5';
+            document.getElementById(`outgoing-${targetCode}`).textContent = '0/5';
         }
     }
     
