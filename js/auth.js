@@ -1,4 +1,48 @@
 // auth.js - модуль аутентификации и управления сессией
+
+// Проверяем, что Supabase инициализирован
+if (typeof window.SUPABASE === 'undefined') {
+    console.error('Supabase не инициализирован в config.js');
+    // Создаем заглушку, чтобы не было ошибок
+    window.SUPABASE = {
+        from: () => ({
+            select: () => Promise.resolve({ data: null, error: { message: 'Supabase не инициализирован' } }),
+            insert: () => Promise.resolve({ data: null, error: { message: 'Supabase не инициализирован' } }),
+            update: () => Promise.resolve({ data: null, error: { message: 'Supabase не инициализирован' } }),
+            eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'Supabase не инициализирован' } }) })
+        }),
+        auth: { getSession: () => Promise.resolve({ data: { session: null }, error: null }) }
+    };
+}
+
+// Используем глобальный клиент Supabase
+const supabase = window.SUPABASE;
+
+// Проверка подключения к Supabase (упрощенная версия)
+async function testSupabaseConnection() {
+    console.log('Проверка подключения к Supabase...');
+    
+    try {
+        // Простой тестовый запрос
+        const { data, error } = await supabase
+            .from('students')
+            .select('count')
+            .limit(1);
+        
+        if (error) {
+            console.error('Ошибка подключения к Supabase:', error);
+            return false;
+        }
+        
+        console.log('Подключение к Supabase успешно');
+        return true;
+    } catch (error) {
+        console.error('Ошибка при проверке подключения:', error);
+        return false;
+    }
+}
+
+
 class AuthManager {
     constructor() {
         this.currentUser = null;
