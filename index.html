@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в игру</title>
+    <link rel="stylesheet" href="css/auth.css">
+    <script type="module" src="js/main.js" defer></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>🎮 Вход в игру</h1>
+            <p class="subtitle">Введите ваш 6-значный код</p>
+            
+            <div class="input-group">
+                <input type="text" 
+                       id="playerCode" 
+                       maxlength="6" 
+                       placeholder="123456"
+                       pattern="\d{6}"
+                       inputmode="numeric">
+                <div class="input-hint">Только цифры (0-9)</div>
+            </div>
+            
+            <button id="loginBtn" class="btn-primary">Войти в игру</button>
+            
+            <div class="status-message" id="statusMessage"></div>
+            
+            <div class="security-notice">
+                ⚠️ Код выдается один раз и не подлежит восстановлению
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль игрока</title>
+    <link rel="stylesheet" href="css/profile.css">
+    <script type="module" src="js/profile.js" defer></script>
+</head>
+<body>
+    <div class="profile-container">
+        <header class="profile-header">
+            <h1>👤 Профиль игрока</h1>
+            <button id="logoutBtn" class="btn-logout">Выйти</button>
+        </header>
+
+        <div class="profile-content">
+            <div class="player-card">
+                <div class="player-avatar">
+                    <div class="avatar-placeholder">
+                        <span id="avatarInitials">ИИ</span>
+                    </div>
+                </div>
+                <div class="player-info">
+                    <h2 id="playerName">Имя Фамилия</h2>
+                    <div class="player-class" id="playerClass">Класс</div>
+                    <div class="player-code">Код: <span id="playerCode">------</span></div>
+                </div>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">Баланс</div>
+                <div class="balance-amount">
+                    <span id="balanceValue">0</span> монет
+                </div>
+                <div class="balance-notice">
+                    Баланс защищен от изменений через консоль
+                </div>
+            </div>
+
+            <div class="players-list-section">
+                <h3>Другие игроки</h3>
+                <div class="players-list" id="playersList">
+                    <!-- Список игроков будет загружен здесь -->
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

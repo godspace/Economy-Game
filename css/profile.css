@@ -1,0 +1,205 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.profile-header h1 {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.btn-logout {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.btn-logout:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.profile-content {
+    padding: 30px;
+}
+
+.player-card {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #eee;
+}
+
+.avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    margin-right: 20px;
+}
+
+.player-info h2 {
+    font-size: 28px;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.player-class {
+    display: inline-block;
+    background: #eef2ff;
+    color: #667eea;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.player-code {
+    color: #666;
+    font-size: 16px;
+}
+
+.balance-card {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.balance-label {
+    font-size: 18px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.balance-amount {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.balance-notice {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.players-list-section h3 {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.players-list {
+    display: grid;
+    gap: 15px;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 12px;
+    border: 1px solid #eee;
+}
+
+.player-item-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    margin-right: 15px;
+}
+
+.player-item-info h4 {
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.player-item-class {
+    font-size: 12px;
+    color: #666;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.error-message {
+    text-align: center;
+    padding: 20px;
+    color: #c33;
+    background: #fee;
+    border-radius: 12px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .profile-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+
+    .player-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .avatar-placeholder {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+
+    .balance-amount {
+        font-size: 36px;
+    }
+}
