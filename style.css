@@ -421,3 +421,73 @@ header {
         text-align: center;
     }
 }
+
+/* Добавьте эти стили в конец файла style.css */
+
+/* Стили для истории сделок в модальном окне */
+.history-item .good {
+    color: #4cd964;
+    font-weight: 500;
+}
+
+.history-item .bad {
+    color: #ff4757;
+    font-weight: 500;
+}
+
+/* Анимация появления игроков */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.player-card {
+    animation: slideIn 0.3s ease forwards;
+}
+
+/* Стили для заголовка игры */
+.login-container h1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 2.5rem;
+    margin-bottom: 30px;
+    font-weight: 700;
+}
+
+/* Индикатор онлайн статуса */
+.player-header::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background-color: #4cd964;
+    border-radius: 50%;
+    margin-left: auto;
+    box-shadow: 0 0 0 2px rgba(76, 217, 100, 0.3);
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 480px) {
+    .login-container h1 {
+        font-size: 2rem;
+    }
+    
+    .player-card {
+        margin: 0 10px;
+    }
+    
+    .choice-buttons {
+        flex-direction: column;
+    }
+    
+    .choice-btn {
+        margin-bottom: 10px;
+    }
+}

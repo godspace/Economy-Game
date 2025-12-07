@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Дилемма заключённого</title>
+    <title>Эволюция доверия</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
     <div id="login-screen" class="screen active">
         <div class="login-container">
-            <h1>Дилемма заключённого</h1>
+            <h1>Эволюция доверия</h1>
             <div class="input-group">
                 <input type="text" id="player-code" maxlength="6" placeholder="6-значный код" pattern="\d{6}">
                 <button id="login-btn">Войти в игру</button>
@@ -68,10 +68,8 @@
         </div>
     </div>
 
-    <script type="module" src="supabase.js"></script>
-    <script type="module" src="auth.js"></script>
-    <script type="module" src="players.js"></script>
-    <script type="module" src="deals.js"></script>
-    <script type="module" src="app.js"></script>
+    <!-- Загружаем Supabase через script тег -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="app.js" type="module"></script>
 </body>
 </html>
