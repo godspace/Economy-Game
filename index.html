@@ -127,23 +127,31 @@
     <script src="js/shop.js"></script>
     <script src="js/admin.js"></script>
     <script>
-    // Инициализация всех модулей после загрузки
-    document.addEventListener('DOMContentLoaded', async () => {
-        // Проверяем авторизацию
-        if (authManager.currentUser) {
-            // Инициализируем остальные модули
-            if (!window.dealsManager) {
-                // Загрузим модули динамически
-                await Promise.all([
-                    import('./js/deals.js'),
-                    import('./js/rating.js'),
-                    import('./js/shop.js'),
-                    import('./js/admin.js')
-                ]);
-            }
-            
-            // Инициализируем поиск
-            appManager.initSearch();
+    <!-- Инициализация после загрузки всех скриптов -->
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM загружен, проверяем инициализацию...');
+        
+        // Проверяем, что Supabase загружен
+        if (typeof window.supabase === 'undefined') {
+            console.error('Supabase JS библиотека не загрузилась');
+            document.getElementById('login-error').textContent = 'Ошибка загрузки библиотеки. Проверьте интернет-соединение.';
+            document.getElementById('login-error').style.display = 'block';
+            return;
+        }
+        
+        // Проверяем, что наш config.js отработал
+        if (typeof window.SUPABASE === 'undefined') {
+            console.error('Настройки Supabase не загрузились');
+            document.getElementById('login-error').textContent = 'Ошибка конфигурации приложения.';
+            document.getElementById('login-error').style.display = 'block';
+            return;
+        }
+        
+        console.log('Все скрипты загружены, можно начинать работу');
+        
+        // Запускаем проверку подключения
+        if (window.authManager && typeof window.authManager.testConnection === 'function') {
+            window.authManager.testConnection();
         }
     });
     </script>
