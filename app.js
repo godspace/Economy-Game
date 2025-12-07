@@ -1,11 +1,11 @@
 import { supabase, getPlayerCode, clearPlayerCode } from './supabase.js'
 import { loginPlayer, logoutPlayer, getCurrentPlayer } from './auth.js'
-import { loadPlayersList, setupDealModal } from './players.js'
+import { loadPlayersList, openDealModal } from './players.js'
 import { loadPendingDeals, loadCompletedDeals } from './deals.js'
 
 // Инициализация приложения
 document.addEventListener('DOMContentLoaded', async () => {
-    // Проверка авторизации
+    // Проверяем, авторизован ли пользователь
     const playerCode = getPlayerCode()
     if (playerCode) {
         const { data: player } = await getCurrentPlayer(playerCode)
@@ -17,11 +17,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Обработчики событий
+    setupEventListeners()
+})
+
+function setupEventListeners() {
+    // Вход в игру
     document.getElementById('login-btn').addEventListener('click', handleLogin)
     document.getElementById('player-code').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleLogin()
     })
     
+    // Выход из игры
     document.getElementById('logout-btn').addEventListener('click', handleLogout)
     
     // Переключение вкладок
@@ -36,68 +42,76 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector('.close-modal').addEventListener('click', () => {
         document.getElementById('deal-modal').classList.remove('active')
     })
-})
+    
+    // Закрытие модального окна при клике на фон
+    document.getElementById('deal-modal').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('deal-modal')) {
+            document.getElementById('deal-modal').classList.remove('active')
+        }
+    })
+}
 
 async function handleLogin() {
     const code = document.getElementById('player-code').value.trim()
-    if (code.length !== 6 || !/^\d+$/.test(code)) {
-        showError('Введите 6-значный числовой код')
+    const errorEl = document.getElementById('login-error')
+    
+    // Валидация кода
+    if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
+        errorEl.textContent = 'Введите 6-значный числовой код'
+        errorEl.style.display = 'block'
         return
     }
     
     const { success, player, error } = await loginPlayer(code)
+    
     if (success) {
+        errorEl.style.display = 'none'
         showGameScreen(player)
     } else {
-        showError(error)
+        errorEl.textContent = error || 'Ошибка входа'
+        errorEl.style.display = 'block'
     }
 }
 
-function showError(message) {
-    const errorEl = document.getElementById('login-error')
-    errorEl.textContent = message
-    errorEl.classList.add('visible')
-    setTimeout(() => errorEl.classList.remove('visible'), 3000)
-}
-
 function showGameScreen(player) {
+    // Переключаем экраны
     document.getElementById('login-screen').classList.remove('active')
     document.getElementById('game-screen').classList.add('active')
     
-    // Обновить информацию игрока
+    // Обновляем информацию игрока
     document.getElementById('player-color-indicator').style.backgroundColor = player.color
     document.getElementById('coins-count').textContent = player.coins
     
-    // Загрузить данные
+    // Загружаем начальные данные
     loadPlayersList()
     loadPendingDeals()
     loadCompletedDeals()
     
-    // Начать обновление данных
+    // Запускаем периодическое обновление данных
     startDataPolling()
 }
 
 function handleLogout() {
     logoutPlayer()
-    clearPlayerCode()
     document.getElementById('game-screen').classList.remove('active')
     document.getElementById('login-screen').classList.add('active')
     document.getElementById('player-code').value = ''
+    document.getElementById('login-error').style.display = 'none'
     stopDataPolling()
 }
 
 function switchTab(tabName) {
-    // Обновить активные кнопки
+    // Обновляем активные кнопки
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName)
     })
     
-    // Показать активную вкладку
+    // Показываем активную вкладку
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.toggle('active', content.id === `${tabName}-tab`)
     })
     
-    // Обновить данные на вкладке
+    // Загружаем данные для вкладки
     if (tabName === 'players') {
         loadPlayersList()
     } else if (tabName === 'deals') {
@@ -112,15 +126,22 @@ function startDataPolling() {
     pollingInterval = setInterval(async () => {
         const playerCode = getPlayerCode()
         if (playerCode) {
+            // Обновляем счет монет
             const { data: player } = await getCurrentPlayer(playerCode)
             if (player) {
                 document.getElementById('coins-count').textContent = player.coins
+            }
+            
+            // Обновляем данные на активной вкладке
+            const activeTab = document.querySelector('.tab-btn.active').dataset.tab
+            if (activeTab === 'players') {
                 loadPlayersList()
+            } else if (activeTab === 'deals') {
                 loadPendingDeals()
                 loadCompletedDeals()
             }
         }
-    }, 5000) // Обновлять каждые 5 секунд
+    }, 3000) // Обновление каждые 3 секунды
 }
 
 function stopDataPolling() {
@@ -128,3 +149,6 @@ function stopDataPolling() {
         clearInterval(pollingInterval)
     }
 }
+
+// Экспортируем функции, которые могут понадобиться
+export { switchTab }
