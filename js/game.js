@@ -10,6 +10,7 @@ class GameManager {
             'color-brown', 'color-grey', 'color-blue-grey'
         ];
         this.playerColors = new Map();
+        this.currentDeal = null;
         
         this.init();
     }
@@ -46,18 +47,27 @@ class GameManager {
         });
         
         // Поиск игроков
-        document.getElementById('searchPlayers').addEventListener('input', (e) => {
-            this.filterPlayers(e.target.value);
-        });
+        const searchInput = document.getElementById('searchPlayers');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.filterPlayers(e.target.value);
+            });
+        }
         
         // Модальное окно
-        document.querySelector('.modal-close').addEventListener('click', () => {
-            this.hideModal();
-        });
+        const modalClose = document.querySelector('.modal-close');
+        if (modalClose) {
+            modalClose.addEventListener('click', () => {
+                this.hideModal();
+            });
+        }
         
-        document.getElementById('cancelDealBtn').addEventListener('click', () => {
-            this.hideModal();
-        });
+        const cancelDealBtn = document.getElementById('cancelDealBtn');
+        if (cancelDealBtn) {
+            cancelDealBtn.addEventListener('click', () => {
+                this.hideModal();
+            });
+        }
         
         // Кнопки выбора
         document.querySelectorAll('.choice-btn').forEach(btn => {
@@ -68,22 +78,44 @@ class GameManager {
         });
         
         // Кнопка выхода
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            sessionStorage.removeItem('player');
-            window.location.href = 'index.html';
-        });
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('player');
+                window.location.href = 'index.html';
+            });
+        }
+        
+        // Клик по фону модального окна
+        const modal = document.getElementById('dealModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.hideModal();
+                }
+            });
+        }
     }
     
     async loadAllData() {
-        await Promise.all([
-            this.loadPlayersList(),
-            this.loadPendingDeals(),
-            this.loadDealsHistory(),
-            this.updatePlayerStats()
-        ]);
+        try {
+            await Promise.all([
+                this.loadPlayersList(),
+                this.loadPendingDeals(),
+                this.loadDealsHistory(),
+                this.updatePlayerStats()
+            ]);
+        } catch (error) {
+            console.error('Error loading all data:', error);
+        }
     }
     
     async loadPlayersList() {
+        const container = document.getElementById('playersList');
+        if (!container) return;
+        
+        container.innerHTML = '<div class="loading">Загрузка списка игроков...</div>';
+        
         try {
             const { data: players, error } = await this.supabase
                 .from('players')
@@ -95,10 +127,15 @@ class GameManager {
             if (error) throw error;
             
             this.displayPlayersList(players || []);
-            document.getElementById('playersCount').textContent = players?.length || 0;
+            
+            const playersCount = document.getElementById('playersCount');
+            if (playersCount) {
+                playersCount.textContent = players?.length || 0;
+            }
             
         } catch (error) {
             console.error('Error loading players:', error);
+            container.innerHTML = '<div class="error-message">Не удалось загрузить список игроков</div>';
         }
     }
     
@@ -109,8 +146,8 @@ class GameManager {
                 .from('deals')
                 .select(`
                     id,
-                    initiator:players!deals_initiator_id_fkey(code, balance),
-                    target:players!deals_target_id_fkey(code, balance),
+                    initiator:players!deals_initiator_id_fkey(id, code),
+                    target:players!deals_target_id_fkey(id, code),
                     created_at
                 `)
                 .eq('target_id', this.player.id)
@@ -121,8 +158,8 @@ class GameManager {
                 .from('deals')
                 .select(`
                     id,
-                    initiator:players!deals_initiator_id_fkey(code, balance),
-                    target:players!deals_target_id_fkey(code, balance),
+                    initiator:players!deals_initiator_id_fkey(id, code),
+                    target:players!deals_target_id_fkey(id, code),
                     created_at
                 `)
                 .eq('initiator_id', this.player.id)
@@ -133,10 +170,18 @@ class GameManager {
             this.displayIncomingDeals(incomingDeals || []);
             this.displayOutgoingDeals(outgoingDeals || []);
             
-            document.getElementById('pendingDealsCount').textContent = 
-                (incomingDeals?.length || 0) + (outgoingDeals?.length || 0);
-            document.getElementById('incomingDealsCount').textContent = incomingDeals?.length || 0;
-            document.getElementById('outgoingDealsCount').textContent = outgoingDeals?.length || 0;
+            // Обновляем счетчики
+            const incomingCount = incomingDeals?.length || 0;
+            const outgoingCount = outgoingDeals?.length || 0;
+            const totalCount = incomingCount + outgoingCount;
+            
+            const pendingDealsCount = document.getElementById('pendingDealsCount');
+            const incomingDealsCount = document.getElementById('incomingDealsCount');
+            const outgoingDealsCount = document.getElementById('outgoingDealsCount');
+            
+            if (pendingDealsCount) pendingDealsCount.textContent = totalCount;
+            if (incomingDealsCount) incomingDealsCount.textContent = incomingCount;
+            if (outgoingDealsCount) outgoingDealsCount.textContent = outgoingCount;
             
         } catch (error) {
             console.error('Error loading deals:', error);
@@ -144,13 +189,16 @@ class GameManager {
     }
     
     async loadDealsHistory() {
+        const container = document.getElementById('deals-history');
+        if (!container) return;
+        
         try {
             const { data: history, error } = await this.supabase
                 .from('deal_history')
                 .select(`
                     *,
-                    player1:players!deal_history_player1_id_fkey(code),
-                    player2:players!deal_history_player2_id_fkey(code)
+                    player1:players!deal_history_player1_id_fkey(id, code),
+                    player2:players!deal_history_player2_id_fkey(id, code)
                 `)
                 .or(`player1_id.eq.${this.player.id},player2_id.eq.${this.player.id}`)
                 .order('completed_at', { ascending: false })
@@ -170,13 +218,13 @@ class GameManager {
             // Подсчитываем общую статистику
             const { data: history, error } = await this.supabase
                 .from('deal_history')
-                .select('player1_result, player2_result')
+                .select('*')
                 .or(`player1_id.eq.${this.player.id},player2_id.eq.${this.player.id}`);
             
             if (error) throw error;
             
             let totalProfit = 0;
-            let totalDeals = history?.length || 0;
+            const totalDeals = history?.length || 0;
             
             history?.forEach(deal => {
                 if (deal.player1_id === this.player.id) {
@@ -186,8 +234,11 @@ class GameManager {
                 }
             });
             
-            document.getElementById('totalDeals').textContent = totalDeals;
-            document.getElementById('totalProfit').textContent = totalProfit;
+            const totalDealsElement = document.getElementById('totalDeals');
+            const totalProfitElement = document.getElementById('totalProfit');
+            
+            if (totalDealsElement) totalDealsElement.textContent = totalDeals;
+            if (totalProfitElement) totalProfitElement.textContent = totalProfit;
             
         } catch (error) {
             console.error('Error updating player stats:', error);
@@ -196,8 +247,9 @@ class GameManager {
     
     displayPlayersList(players) {
         const container = document.getElementById('playersList');
+        if (!container) return;
         
-        if (!players.length) {
+        if (!players || players.length === 0) {
             container.innerHTML = '<div class="empty-state">Нет других игроков</div>';
             return;
         }
@@ -258,19 +310,20 @@ class GameManager {
     
     displayIncomingDeals(deals) {
         const container = document.getElementById('incoming-deals');
+        if (!container) return;
         
-        if (!deals.length) {
+        if (!deals || deals.length === 0) {
             container.innerHTML = '<div class="empty-state">Нет входящих сделок</div>';
             return;
         }
         
         container.innerHTML = deals.map(deal => {
-            const initiatorCode = deal.initiator.code;
+            const initiatorCode = deal.initiator?.code || '';
             const colorClass = this.getPlayerColor(initiatorCode);
-            const playerNumber = this.colors.indexOf(colorClass) + 1;
+            const playerNumber = initiatorCode ? (this.colors.indexOf(colorClass) + 1) : '?';
             
             return `
-                <div class="deal-item pending" data-deal-id="${deal.id}">
+                <div class="deal-item pending" data-deal-id="${deal.id}" data-initiator-code="${initiatorCode}">
                     <div class="deal-header">
                         <div class="deal-player">
                             <div class="color-badge ${colorClass}">${playerNumber}</div>
@@ -280,7 +333,7 @@ class GameManager {
                             </div>
                         </div>
                         <div class="deal-actions">
-                            <button class="btn-accept" data-deal-id="${deal.id}">
+                            <button class="btn-accept" data-deal-id="${deal.id}" data-initiator-code="${initiatorCode}">
                                 Принять
                             </button>
                         </div>
@@ -293,23 +346,25 @@ class GameManager {
         container.querySelectorAll('.btn-accept').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const dealId = e.target.dataset.dealId;
-                this.showDealModal(null, 'respond', dealId);
+                const initiatorCode = e.target.dataset.initiatorCode;
+                this.showDealModal(initiatorCode, 'respond', dealId);
             });
         });
     }
     
     displayOutgoingDeals(deals) {
         const container = document.getElementById('outgoing-deals');
+        if (!container) return;
         
-        if (!deals.length) {
+        if (!deals || deals.length === 0) {
             container.innerHTML = '<div class="empty-state">Нет исходящих сделок</div>';
             return;
         }
         
         container.innerHTML = deals.map(deal => {
-            const targetCode = deal.target.code;
+            const targetCode = deal.target?.code || '';
             const colorClass = this.getPlayerColor(targetCode);
-            const playerNumber = this.colors.indexOf(colorClass) + 1;
+            const playerNumber = targetCode ? (this.colors.indexOf(colorClass) + 1) : '?';
             
             return `
                 <div class="deal-item pending" data-deal-id="${deal.id}">
@@ -332,22 +387,27 @@ class GameManager {
     
     displayDealsHistory(history) {
         const container = document.getElementById('deals-history');
+        if (!container) return;
         
-        if (!history.length) {
+        if (!history || history.length === 0) {
             container.innerHTML = '<div class="empty-state">История сделок пуста</div>';
             return;
         }
         
         container.innerHTML = history.map(deal => {
             const isPlayer1 = deal.player1_id === this.player.id;
-            const opponentCode = isPlayer1 ? deal.player2.code : deal.player1.code;
+            const opponentCode = isPlayer1 ? deal.player2?.code : deal.player1?.code;
             const playerChoice = isPlayer1 ? deal.player1_choice : deal.player2_choice;
             const opponentChoice = isPlayer1 ? deal.player2_choice : deal.player1_choice;
             const playerResult = isPlayer1 ? deal.player1_result : deal.player2_result;
             const opponentResult = isPlayer1 ? deal.player2_result : deal.player1_result;
             
             const colorClass = this.getPlayerColor(opponentCode);
-            const playerNumber = this.colors.indexOf(colorClass) + 1;
+            const playerNumber = opponentCode ? (this.colors.indexOf(colorClass) + 1) : '?';
+            
+            const choiceIcon = (choice) => choice === 'cooperate' ? '🤝' : '🎭';
+            const resultClass = playerResult > 0 ? 'positive' : 'negative';
+            const resultSign = playerResult > 0 ? '+' : '';
             
             return `
                 <div class="deal-item completed">
@@ -362,20 +422,215 @@ class GameManager {
                         <div class="deal-result">
                             <div class="history-choices">
                                 <span class="history-choice ${playerChoice}">
-                                    Вы: ${playerChoice === 'cooperate' ? '🤝' : '🎭'}
+                                    Вы: ${choiceIcon(playerChoice)}
                                 </span>
                                 <span class="history-choice ${opponentChoice}">
-                                    Он: ${opponentChoice === 'cooperate' ? '🤝' : '🎭'}
+                                    Он: ${choiceIcon(opponentChoice)}
                                 </span>
                             </div>
-                            <div class="history-result ${playerResult > 0 ? 'positive' : 'negative'}">
-                                Ваш результат: ${playerResult > 0 ? '+' : ''}${playerResult}
+                            <div class="history-result ${resultClass}">
+                                Ваш результат: ${resultSign}${playerResult}
                             </div>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
+    }
+    
+    getPlayerColor(playerCode) {
+        if (!playerCode) {
+            return 'color-grey';
+        }
+        
+        if (!this.playerColors.has(playerCode)) {
+            const hash = playerCode.split('').reduce((acc, char) => {
+                return acc + char.charCodeAt(0);
+            }, 0);
+            
+            const colorIndex = hash % this.colors.length;
+            this.playerColors.set(playerCode, this.colors[colorIndex]);
+        }
+        
+        return this.playerColors.get(playerCode);
+    }
+    
+    async showDealModal(targetCode, mode, dealId = null) {
+        console.log('showDealModal called:', { targetCode, mode, dealId });
+        
+        this.currentDeal = {
+            targetCode,
+            mode,
+            dealId
+        };
+        
+        const modal = document.getElementById('dealModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const playerColorBadge = document.getElementById('playerColorBadge');
+        
+        if (!modal || !modalTitle || !playerColorBadge) {
+            console.error('Modal elements not found');
+            return;
+        }
+        
+        let opponentCode = targetCode;
+        
+        // Если это ответ на сделку, получаем информацию о сделке
+        if (mode === 'respond' && dealId && !targetCode) {
+            try {
+                const { data: dealInfo, error } = await this.supabase
+                    .from('deals')
+                    .select(`
+                        id,
+                        initiator:players!deals_initiator_id_fkey(code)
+                    `)
+                    .eq('id', dealId)
+                    .single();
+                
+                if (error) throw error;
+                
+                if (dealInfo?.initiator?.code) {
+                    opponentCode = dealInfo.initiator.code;
+                    this.currentDeal.targetCode = opponentCode;
+                }
+            } catch (error) {
+                console.error('Error getting deal info:', error);
+                opponentCode = null;
+            }
+        }
+        
+        // Устанавливаем заголовок
+        if (mode === 'create') {
+            modalTitle.textContent = 'Предложить сделку';
+        } else if (mode === 'respond') {
+            modalTitle.textContent = 'Ответить на сделку';
+        } else {
+            modalTitle.textContent = 'История сделок';
+        }
+        
+        // Устанавливаем цвет и номер игрока
+        const colorClass = this.getPlayerColor(opponentCode);
+        const playerNumber = opponentCode ? (this.colors.indexOf(colorClass) + 1) : '?';
+        playerColorBadge.className = `color-badge ${colorClass}`;
+        playerColorBadge.textContent = playerNumber;
+        
+        // Показываем/скрываем элементы в зависимости от режима
+        const choiceButtons = document.querySelector('.choice-buttons');
+        const cancelButton = document.getElementById('cancelDealBtn');
+        
+        if (choiceButtons) {
+            choiceButtons.style.display = mode === 'view' ? 'none' : 'grid';
+        }
+        if (cancelButton) {
+            cancelButton.style.display = mode === 'view' ? 'none' : 'block';
+        }
+        
+        // Загружаем статистику и историю, если есть код оппонента
+        if (opponentCode) {
+            await this.loadModalStats(opponentCode);
+            await this.loadDealHistory(opponentCode);
+        } else {
+            // Устанавливаем значения по умолчанию
+            document.getElementById('incomingDealsStat').textContent = '0/5';
+            document.getElementById('outgoingDealsStat').textContent = '0/5';
+            document.getElementById('dealHistoryList').innerHTML = '<div class="empty-state">Нет истории сделок</div>';
+        }
+        
+        modal.classList.add('active');
+    }
+    
+    hideModal() {
+        const modal = document.getElementById('dealModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        this.currentDeal = null;
+    }
+    
+    async loadModalStats(opponentCode) {
+        try {
+            const { data: stats, error } = await this.supabase.rpc('get_deal_stats', {
+                player1_code_param: this.player.code,
+                player2_code_param: opponentCode
+            });
+            
+            if (error) {
+                console.error('RPC Error:', error);
+                // Используем запасной вариант
+                document.getElementById('incomingDealsStat').textContent = '0/5';
+                document.getElementById('outgoingDealsStat').textContent = '0/5';
+                return;
+            }
+            
+            const incomingCount = stats?.incoming_count || 0;
+            const outgoingCount = stats?.outgoing_count || 0;
+            
+            const incomingDealsStat = document.getElementById('incomingDealsStat');
+            const outgoingDealsStat = document.getElementById('outgoingDealsStat');
+            
+            if (incomingDealsStat) incomingDealsStat.textContent = `${incomingCount}/5`;
+            if (outgoingDealsStat) outgoingDealsStat.textContent = `${outgoingCount}/5`;
+            
+        } catch (error) {
+            console.error('Error loading modal stats:', error);
+            document.getElementById('incomingDealsStat').textContent = '0/5';
+            document.getElementById('outgoingDealsStat').textContent = '0/5';
+        }
+    }
+    
+    async loadDealHistory(opponentCode) {
+        try {
+            const { data: stats, error } = await this.supabase.rpc('get_deal_stats', {
+                player1_code_param: this.player.code,
+                player2_code_param: opponentCode
+            });
+            
+            if (error) {
+                console.error('RPC Error:', error);
+                const historyList = document.getElementById('dealHistoryList');
+                if (historyList) {
+                    historyList.innerHTML = '<div class="empty-state">Нет истории сделок</div>';
+                }
+                return;
+            }
+            
+            const historyList = document.getElementById('dealHistoryList');
+            if (!historyList) return;
+            
+            if (!stats?.history || stats.history.length === 0) {
+                historyList.innerHTML = '<div class="empty-state">Нет истории сделок</div>';
+                return;
+            }
+            
+            historyList.innerHTML = stats.history.map(deal => {
+                const player1Choice = deal.player1_choice || 'unknown';
+                const player2Choice = deal.player2_choice || 'unknown';
+                const player1Result = deal.player1_result || 0;
+                
+                return `
+                    <div class="history-item">
+                        <div class="history-choices">
+                            <span class="history-choice ${player1Choice}">
+                                ${player1Choice === 'cooperate' ? '🤝' : '🎭'}
+                            </span>
+                            <span class="history-choice ${player2Choice}">
+                                ${player2Choice === 'cooperate' ? '🤝' : '🎭'}
+                            </span>
+                        </div>
+                        <div class="history-result ${player1Result > 0 ? 'positive' : 'negative'}">
+                            ${player1Result > 0 ? '+' : ''}${player1Result}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch (error) {
+            console.error('Error loading deal history:', error);
+            const historyList = document.getElementById('dealHistoryList');
+            if (historyList) {
+                historyList.innerHTML = '<div class="empty-state">Нет истории сделок</div>';
+            }
+        }
     }
     
     async loadDealStats(targetCode) {
@@ -393,17 +648,15 @@ class GameManager {
                 return;
             }
             
-            console.log('Deal stats loaded:', stats);
-            
-            // Проверяем, что stats существует и имеет нужные поля
             const incomingCount = stats?.incoming_count || 0;
             const outgoingCount = stats?.outgoing_count || 0;
             
-            document.getElementById(`incoming-${targetCode}`).textContent = 
-                `${incomingCount}/5`;
-            document.getElementById(`outgoing-${targetCode}`).textContent = 
-                `${outgoingCount}/5`;
-                
+            const incomingElement = document.getElementById(`incoming-${targetCode}`);
+            const outgoingElement = document.getElementById(`outgoing-${targetCode}`);
+            
+            if (incomingElement) incomingElement.textContent = `${incomingCount}/5`;
+            if (outgoingElement) outgoingElement.textContent = `${outgoingCount}/5`;
+            
         } catch (error) {
             console.error('Error loading deal stats:', error);
             // Устанавливаем значения по умолчанию
@@ -412,146 +665,34 @@ class GameManager {
         }
     }
     
-    getPlayerColor(playerCode) {
-        if (!this.playerColors.has(playerCode)) {
-            // Генерируем детерминированный цвет на основе кода игрока
-            const hash = playerCode.split('').reduce((acc, char) => {
-                return acc + char.charCodeAt(0);
-            }, 0);
-            
-            const colorIndex = hash % this.colors.length;
-            this.playerColors.set(playerCode, this.colors[colorIndex]);
-        }
-        
-        return this.playerColors.get(playerCode);
-    }
-    
-    async showDealModal(targetCode, mode, dealId = null) {
-        this.currentDeal = {
-            targetCode,
-            mode,
-            dealId
-        };
-        
-        const modal = document.getElementById('dealModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const playerColorBadge = document.getElementById('playerColorBadge');
-        
-        if (mode === 'create') {
-            modalTitle.textContent = 'Предложить сделку';
-            
-            // Проверяем лимит сделок
-            const { data: stats, error } = await this.supabase.rpc('get_deal_stats', {
-                player1_code_param: this.player.code,
-                player2_code_param: targetCode
-            });
-            
-            if (stats.incoming_count + stats.outgoing_count >= 10) {
-                alert('Лимит сделок с этим игроком исчерпан (максимум 10 сделок)');
-                return;
-            }
-        } else if (mode === 'respond') {
-            modalTitle.textContent = 'Ответить на сделку';
-        } else {
-            modalTitle.textContent = 'История сделок';
-        }
-        
-        // Устанавливаем цвет игрока
-        const colorClass = this.getPlayerColor(targetCode);
-        const playerNumber = this.colors.indexOf(colorClass) + 1;
-        playerColorBadge.className = `color-badge ${colorClass}`;
-        playerColorBadge.textContent = playerNumber;
-        
-        // Загружаем статистику
-        await this.loadModalStats(targetCode);
-        
-        // Загружаем историю сделок
-        await this.loadDealHistory(targetCode);
-        
-        modal.classList.add('active');
-    }
-    
-    hideModal() {
-        document.getElementById('dealModal').classList.remove('active');
-        this.currentDeal = null;
-    }
-    
-    async loadModalStats(targetCode) {
-        try {
-            const { data: stats, error } = await this.supabase.rpc('get_deal_stats', {
-                player1_code_param: this.player.code,
-                player2_code_param: targetCode
-            });
-            
-            if (error) throw error;
-            
-            document.getElementById('incomingDealsStat').textContent = 
-                `${stats.incoming_count}/5`;
-            document.getElementById('outgoingDealsStat').textContent = 
-                `${stats.outgoing_count}/5`;
-                
-        } catch (error) {
-            console.error('Error loading modal stats:', error);
-        }
-    }
-    
-    async loadDealHistory(targetCode) {
-        try {
-            const { data: stats, error } = await this.supabase.rpc('get_deal_stats', {
-                player1_code_param: this.player.code,
-                player2_code_param: targetCode
-            });
-            
-            if (error) throw error;
-            
-            const historyList = document.getElementById('dealHistoryList');
-            
-            if (!stats.history || stats.history.length === 0) {
-                historyList.innerHTML = '<div class="empty-state">Нет истории сделок</div>';
-                return;
-            }
-            
-            historyList.innerHTML = stats.history.map(deal => `
-                <div class="history-item">
-                    <div class="history-choices">
-                        <span class="history-choice ${deal.player1_choice}">
-                            ${deal.player1_choice === 'cooperate' ? '🤝' : '🎭'}
-                        </span>
-                        <span class="history-choice ${deal.player2_choice}">
-                            ${deal.player2_choice === 'cooperate' ? '🤝' : '🎭'}
-                        </span>
-                    </div>
-                    <div class="history-result ${deal.player1_result > 0 ? 'positive' : 'negative'}">
-                        ${deal.player1_result > 0 ? '+' : ''}${deal.player1_result}
-                    </div>
-                </div>
-            `).join('');
-            
-        } catch (error) {
-            console.error('Error loading deal history:', error);
-        }
-    }
-    
     async makeDealChoice(choice) {
-        if (!this.currentDeal) return;
+        if (!this.currentDeal) {
+            console.error('No current deal');
+            return;
+        }
+        
+        const { targetCode, mode, dealId } = this.currentDeal;
         
         try {
             let result;
             
-            if (this.currentDeal.mode === 'create') {
+            if (mode === 'create') {
                 // Создаем новую сделку
                 const { data: createResult, error: createError } = await this.supabase.rpc(
                     'create_deal',
                     {
                         initiator_code_param: this.player.code,
-                        target_code_param: this.currentDeal.targetCode
+                        target_code_param: targetCode
                     }
                 );
                 
-                if (createError) throw createError;
+                if (createError) {
+                    console.error('Create deal error:', createError);
+                    throw createError;
+                }
                 
-                if (!createResult.success) {
-                    alert(createResult.error);
+                if (!createResult?.success) {
+                    alert(createResult?.error || 'Ошибка создания сделки');
                     this.hideModal();
                     return;
                 }
@@ -569,12 +710,12 @@ class GameManager {
                 if (choiceError) throw choiceError;
                 result = choiceResult;
                 
-            } else if (this.currentDeal.mode === 'respond') {
+            } else if (mode === 'respond') {
                 // Отвечаем на сделку
                 const { data: choiceResult, error: choiceError } = await this.supabase.rpc(
                     'make_choice',
                     {
-                        deal_id_param: this.currentDeal.dealId,
+                        deal_id_param: dealId,
                         player_code_param: this.player.code,
                         choice_param: choice
                     }
@@ -584,10 +725,13 @@ class GameManager {
                 result = choiceResult;
             }
             
-            if (result.completed) {
-                alert(`Сделка завершена! Ваш результат: ${result.result_initiator > 0 ? '+' : ''}${result.result_initiator}`);
-                this.updatePlayerBalance();
-            } else {
+            if (result?.completed) {
+                const resultMessage = result.result_initiator > 0 ? 
+                    `Сделка завершена! Вы получили: +${result.result_initiator} монет` :
+                    `Сделка завершена! Вы потеряли: ${result.result_initiator} монет`;
+                alert(resultMessage);
+                await this.updatePlayerBalance();
+            } else if (result?.success) {
                 alert('Ждем выбора второго игрока...');
             }
             
@@ -596,7 +740,7 @@ class GameManager {
             
         } catch (error) {
             console.error('Error making deal choice:', error);
-            alert('Ошибка при обработке сделки: ' + error.message);
+            alert('Ошибка при обработке сделки: ' + (error.message || 'Неизвестная ошибка'));
         }
     }
     
@@ -610,9 +754,13 @@ class GameManager {
                 .single();
             
             if (!error && playerData) {
-                this.player.balance = playerData.balance;
+                this.player.balance = playerData.balance || 0;
                 sessionStorage.setItem('player', JSON.stringify(this.player));
-                document.getElementById('balanceValue').textContent = this.player.balance;
+                
+                const balanceValue = document.getElementById('balanceValue');
+                if (balanceValue) {
+                    balanceValue.textContent = this.player.balance;
+                }
             }
         } catch (error) {
             console.error('Error updating balance:', error);
@@ -632,7 +780,16 @@ class GameManager {
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(`${tabName}-tab`).classList.add('active');
+        
+        const tabElement = document.getElementById(`${tabName}-tab`);
+        if (tabElement) {
+            tabElement.classList.add('active');
+        }
+        
+        // Если переключились на вкладку сделок, обновляем данные
+        if (tabName === 'deals') {
+            this.loadPendingDeals();
+        }
     }
     
     switchDealsTab(e) {
@@ -648,7 +805,11 @@ class GameManager {
         document.querySelectorAll('.deals-list').forEach(list => {
             list.classList.remove('active');
         });
-        document.getElementById(`${dealType}-deals`).classList.add('active');
+        
+        const listElement = document.getElementById(`${dealType}-deals`);
+        if (listElement) {
+            listElement.classList.add('active');
+        }
     }
     
     filterPlayers(searchTerm) {
@@ -656,8 +817,11 @@ class GameManager {
         const term = searchTerm.toLowerCase();
         
         players.forEach(player => {
-            const playerNumber = player.querySelector('h4').textContent.toLowerCase();
-            const playerCode = player.dataset.playerCode;
+            const playerNumberElement = player.querySelector('h4');
+            if (!playerNumberElement) return;
+            
+            const playerNumber = playerNumberElement.textContent.toLowerCase();
+            const playerCode = player.dataset.playerCode || '';
             
             if (playerNumber.includes(term) || playerCode.includes(term)) {
                 player.style.display = 'flex';
@@ -677,5 +841,13 @@ class GameManager {
 
 // Инициализируем игру
 document.addEventListener('DOMContentLoaded', () => {
-    window.gameManager = new GameManager();
+    // Даем время на загрузку Supabase
+    setTimeout(() => {
+        if (window.gameSupabase) {
+            window.gameManager = new GameManager();
+        } else {
+            console.error('Supabase не загружен');
+            alert('Ошибка загрузки игры. Пожалуйста, обновите страницу.');
+        }
+    }, 1000);
 });
