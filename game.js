@@ -134,8 +134,8 @@ async function updateMyStats() {
 }
 
 // В. Список игроков (с логикой блокировок)
+// В. Список игроков (с логикой блокировок и статусов)
 async function refreshPlayersForDeals() {
-    // Не грузим список, если вкладка закрыта (экономия трафика)
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
     const { data: players } = await supabase
@@ -153,10 +153,17 @@ async function refreshPlayersForDeals() {
     }
 
     players.forEach(p => {
-        // Считаем количество сделок с конкретным игроком
+        // 1. Считаем общие лимиты
         const outgoing = myDealsHistory.filter(d => d.initiator_id === myId && d.receiver_id === p.id).length;
         const incoming = myDealsHistory.filter(d => d.initiator_id === p.id && d.receiver_id === myId).length;
         
+        // 2. Проверяем, висит ли УЖЕ отправленное предложение (pending)
+        const hasPendingDeal = myDealsHistory.some(d => 
+            d.initiator_id === myId && 
+            d.receiver_id === p.id && 
+            d.status === 'pending'
+        );
+
         // Условия блокировки
         const isClassmate = p.class_name === myClass;
         const isLimitReached = outgoing >= 5;
@@ -164,9 +171,12 @@ async function refreshPlayersForDeals() {
         // Рисуем кнопку
         let btnHtml = '';
         if (isClassmate) {
-            btnHtml = `<button disabled class="w-full text-xs bg-gray-800 text-gray-500 py-2 rounded cursor-not-allowed border border-gray-700">Одноклассник 🚫</button>`;
+            btnHtml = `<button disabled class="w-full text-xs bg-gray-800 text-gray-600 py-2 rounded cursor-not-allowed border border-gray-700">Одноклассник 🚫</button>`;
         } else if (isLimitReached) {
             btnHtml = `<button disabled class="w-full text-xs bg-gray-800 text-gray-500 py-2 rounded cursor-not-allowed border border-gray-700">Лимит исчерпан 🔒</button>`;
+        } else if (hasPendingDeal) {
+            // НОВОЕ СОСТОЯНИЕ КНОПКИ
+            btnHtml = `<button disabled class="w-full text-xs bg-yellow-900/50 text-yellow-500 py-2 rounded cursor-wait border border-yellow-700/50 animate-pulse">Ждем ответа... ⏳</button>`;
         } else {
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full text-xs bg-red-900 hover:bg-red-700 text-white py-2 rounded transition font-bold shadow-md">Предложить сделку</button>`;
         }
