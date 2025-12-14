@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра - Новогодняя Дилемма</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="snowflakes" aria-hidden="true"></div>
+        
+        <!-- Шапка с информацией об игроке -->
+        <div class="player-stats">
+            <div class="player-info">
+                <h2 id="playerName">Тайный Санта</h2>
+                <div class="coin-display">
+                    <i class="fas fa-coins"></i>
+                    Баланс: <span id="coinDisplay">0</span> монет
+                </div>
+            </div>
+            <div class="deal-count">
+                Сделок заключено: <span id="totalDeals">0</span>
+            </div>
+            <button id="logoutBtn" class="btn-logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+        
+        <!-- Список доступных игроков -->
+        <div class="players-list">
+            <h3><i class="fas fa-users"></i> Игроки онлайн</h3>
+            <div id="playersList" class="players-container">
+                <p class="loading">Загрузка игроков...</p>
+            </div>
+        </div>
+        
+        <!-- Интерфейс сделки -->
+        <div id="dealInterface" class="deal-interface" style="display: none;">
+            <!-- Контент будет загружен динамически -->
+        </div>
+        
+        <!-- Правила игры -->
+        <div class="rules-panel">
+            <h3><i class="fas fa-gavel"></i> Правила сделки:</h3>
+            <div class="rules-grid">
+                <div class="rule-card">
+                    <div class="rule-icon positive">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <p>Оба сотрудничают → <strong>+2 монеты</strong> каждому</p>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon negative">
+                        <i class="fas fa-user-secret"></i>
+                    </div>
+                    <p>Оба жульничают → <strong>-1 монета</strong> каждому</p>
+                </div>
+                <div class="rule-card">
+                    <div class="rule-icon mixed">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <p>Один жульничает → жулик <strong>+3</strong>, доверчивый <strong>-1</strong></p>
+                </div>
+            </div>
+            <p class="rule-note">
+                <i class="fas fa-exclamation-triangle"></i>
+                С одним игроком можно заключить только 5 сделок за игру
+            </p>
+        </div>
+        
+        <!-- Статистика -->
+        <div class="stats-panel">
+            <h3><i class="fas fa-chart-line"></i> Статистика</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">Средний выигрыш:</span>
+                    <span class="stat-value" id="avgWin">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Успешных сделок:</span>
+                    <span class="stat-value" id="successDeals">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Рейтинг доверия:</span>
+                    <span class="stat-value" id="trustRating">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Уведомления -->
+    <div id="notifications"></div>
+    
+    <!-- Загрузка -->
+    <div id="loading" class="loading-overlay">
+        <div class="spinner">
+            <div class="snowflake-spin">❄</div>
+            <p>Загрузка игры...</p>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

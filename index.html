@@ -3,39 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход в игру</title>
-    <link rel="stylesheet" href="css/auth.css">
-    <!-- Подключаем Supabase через обычный скрипт (не модуль) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Новогодняя Дилемма Заключённого</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="auth-container">
-        <div class="auth-card">
-            <h1>🎮 Вход в игру</h1>
-            <p class="subtitle">Введите ваш 6-значный код</p>
-            
-            <div class="input-group">
-                <input type="text" 
-                       id="playerCode" 
-                       maxlength="6" 
-                       placeholder="123456"
-                       pattern="\d{6}"
-                       inputmode="numeric">
-                <div class="input-hint">Только цифры (0-9)</div>
+    <div class="container">
+        <div class="snowflakes" aria-hidden="true">
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+            <div class="snowflake">❄</div>
+        </div>
+        
+        <div class="login-card">
+            <div class="header">
+                <i class="fas fa-gift"></i>
+                <h1>Новогодняя Дилемма</h1>
+                <p class="subtitle">Социальный эксперимент в духе "Тайного Санты"</p>
             </div>
             
-            <button id="loginBtn" class="btn-primary">Войти в игру</button>
+            <div class="form-group">
+                <label for="code">Введите ваш 6-значный код:</label>
+                <div class="code-input">
+                    <input type="text" id="code" maxlength="6" pattern="\d{6}" 
+                           placeholder="123456" required>
+                    <button class="btn-eye" type="button" id="toggleCode">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="hint">Только цифры 0-9</div>
+            </div>
             
-            <div class="status-message" id="statusMessage"></div>
+            <button class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> Войти в игру
+            </button>
+            
+            <div class="rules">
+                <h3><i class="fas fa-info-circle"></i> Правила игры:</h3>
+                <ul>
+                    <li>Оба сотрудничают → <span class="positive">+2 монеты каждому</span></li>
+                    <li>Оба жульничают → <span class="negative">-1 монета каждому</span></li>
+                    <li>Один жульничает → <span class="positive">жулик +3</span>, <span class="negative">доверчивый -1</span></li>
+                    <li>С одним игроком можно заключить только 5 сделок</li>
+                    <li>Все игроки анонимны как "Тайный Санта"</li>
+                </ul>
+            </div>
             
             <div class="security-notice">
-                ⚠️ Код выдается один раз и не подлежит восстановлению
+                <i class="fas fa-shield-alt"></i>
+                <span>Ваш код защищён и не передаётся другим игрокам</span>
             </div>
         </div>
+        
+        <div class="footer">
+            <p>Игра предназначена для школьников. Все решения анонимны.</p>
+        </div>
     </div>
-
-    <!-- Подключаем наши скрипты после Supabase -->
-    <script src="js/supabase.js"></script>
-    <script src="js/auth.js"></script>
+    
+    <div id="loading" class="loading-overlay">
+        <div class="spinner">
+            <div class="snowflake-spin">❄</div>
+            <p>Проверка кода...</p>
+        </div>
+    </div>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="auth.js"></script>
 </body>
 </html>
