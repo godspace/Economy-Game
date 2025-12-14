@@ -14,6 +14,10 @@ let myDealsHistory = [];
 let currentTargetId = null;
 let respondingToDealId = null;
 
+// Пагинация
+let visiblePlayersCount = 25; // Сколько показывать сначала
+const PLAYERS_PER_PAGE = 25;
+
 // --- 3. ИНИЦИАЛИЗАЦИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
     createSnow();
@@ -72,10 +76,8 @@ async function showGameScreen() {
 // --- 5. ВКЛАДКИ ---
 window.switchTab = function(tabName) {
     ['game', 'rating', 'shop', 'admin'].forEach(t => {
-        const content = document.getElementById(`tab-content-${t}`);
-        const btn = document.getElementById(`tab-btn-${t}`);
-        if(content) content.classList.add('hidden');
-        if(btn) btn.classList.remove('active');
+        document.getElementById(`tab-content-${t}`).classList.add('hidden');
+        document.getElementById(`tab-btn-${t}`).classList.remove('active');
     });
 
     document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
@@ -104,6 +106,7 @@ async function fetchAllMyDeals() {
         myDealsHistory = deals;
         checkIncomingDeals();     
         refreshPlayersForDeals(); 
+        
         if (!document.getElementById('modal-move').classList.contains('hidden')) {
              const activeTarget = currentTargetId || (respondingToDealId ? getPartnerIdFromDeal(respondingToDealId) : null);
              if(activeTarget) renderModalHistory(activeTarget);
@@ -122,7 +125,7 @@ async function updateMyStats() {
     if (data) document.getElementById('my-coins').innerText = data.coins;
 }
 
-// --- СПИСОК ИГРОКОВ (КРУПНЫЕ КАРТОЧКИ) ---
+// --- СПИСОК ИГРОКОВ (СОРТИРОВКА + ПАГИНАЦИЯ) ---
 async function refreshPlayersForDeals() {
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
@@ -133,61 +136,82 @@ async function refreshPlayersForDeals() {
         .eq('is_online', true);
 
     const list = document.getElementById('players-list');
+    
+    // ВАЖНО: Не очищаем список полностью, если просто обновляем данные, 
+    // но для простоты кода очистим и перерисуем с учетом пагинации.
     list.innerHTML = '';
 
     if (!players || players.length === 0) {
-        list.innerHTML = '<p class="col-span-1 text-center text-[#6a994e] text-lg py-10 italic">В лесу пока тихо... Ждем эльфов.</p>';
+        list.innerHTML = '<p class="col-span-1 text-center text-[#e9c46a] text-lg py-10 italic">В лесу пока тихо... Ждем эльфов.</p>';
         return;
     }
 
-    players.forEach(p => {
+    // 1. ПОДГОТОВКА ДАННЫХ ДЛЯ СОРТИРОВКИ
+    const processedPlayers = players.map(p => {
         const outgoing = myDealsHistory.filter(d => d.initiator_id === myId && d.receiver_id === p.id).length;
         const incoming = myDealsHistory.filter(d => d.initiator_id === p.id && d.receiver_id === myId).length;
         const hasPendingDeal = myDealsHistory.some(d => d.initiator_id === myId && d.receiver_id === p.id && d.status === 'pending');
-        
         const isClassmate = p.class_name === myClass;
         const isLimitReached = outgoing >= 5;
 
-        // КНОПКИ (Увеличенные)
+        // Присваиваем "вес" для сортировки (чем меньше, тем выше в списке)
+        let sortWeight = 0;
+        if (hasPendingDeal) sortWeight = -1; // Ожидающие ответа - в самый верх
+        if (isLimitReached) sortWeight = 10; // Лимит исчерпан - вниз
+        if (isClassmate) sortWeight = 20;    // Одноклассники - в самый низ (неиграбельны)
+
+        return { ...p, outgoing, incoming, hasPendingDeal, isClassmate, isLimitReached, sortWeight };
+    });
+
+    // 2. СОРТИРОВКА
+    processedPlayers.sort((a, b) => a.sortWeight - b.sortWeight);
+
+    // 3. ПАГИНАЦИЯ (Отрезаем кусочек)
+    const visiblePlayers = processedPlayers.slice(0, visiblePlayersCount);
+
+    // 4. ОТРИСОВКА
+    visiblePlayers.forEach(p => {
         let btnHtml = '';
-        if (isClassmate) {
-            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2a4d31] text-[#6a994e] font-bold border border-[#6a994e] opacity-50 text-sm">🚫 СВОЙ КЛАСС</button>`;
-        } else if (isLimitReached) {
-            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2a4d31] text-[#6a994e] font-bold border border-[#6a994e] opacity-50 text-sm">🔒 ЛИМИТ (5)</button>`;
-        } else if (hasPendingDeal) {
-            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#a7c957]/20 text-[#a7c957] font-bold border border-[#a7c957] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
+        if (p.isClassmate) {
+            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
+        } else if (p.isLimitReached) {
+            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🔒 ЛИМИТ (5/5)</button>`;
+        } else if (p.hasPendingDeal) {
+            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
         } else {
-            // АКТИВНАЯ КНОПКА
-            btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-[#bc4749] hover:bg-[#a33a3c] text-[#f2e8cf] text-lg font-bold shadow-lg transition active:scale-95 border-b-4 border-[#8f3234]">ПРЕДЛОЖИТЬ</button>`;
+            // Кнопка стала ярче (красный + золотой)
+            btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-[#d64045] hover:bg-[#b02e33] text-white text-lg font-bold shadow-lg transition active:scale-95 border-2 border-white/20">ПРЕДЛОЖИТЬ</button>`;
         }
 
+        // Подсвечиваем серым тех, с кем играть нельзя
+        const cardOpacity = (p.isClassmate || p.isLimitReached) ? 'opacity-60 bg-[#152518]' : 'bg-[#1a2f1d]';
+        const borderColor = (p.isClassmate || p.isLimitReached) ? 'border-[#2c3e30]' : 'border-[#60a846]';
+
         const el = document.createElement('div');
-        // Карточка теперь Sage Green (#6a994e) но чуть темнее для фона
-        el.className = 'bg-[#4a7036] p-5 rounded-2xl border-2 border-[#6a994e] shadow-lg flex flex-col justify-between gap-4 relative overflow-hidden';
+        el.className = `${cardOpacity} p-5 rounded-2xl border-2 ${borderColor} shadow-lg flex flex-col justify-between gap-4 relative overflow-hidden transition-all duration-300`;
         
-        // Декор
-        const deco = `<div class="absolute -right-4 -top-4 text-[#6a994e] opacity-30 text-8xl pointer-events-none">🎄</div>`;
+        const deco = `<div class="absolute -right-4 -top-4 text-[#60a846] opacity-10 text-8xl pointer-events-none">🎄</div>`;
 
         el.innerHTML = `
             ${deco}
             <div class="flex items-center gap-4 relative z-10">
-                 <div class="bg-[#f2e8cf] rounded-full p-3 shadow-md">
+                 <div class="bg-[#fffdf5] rounded-full p-3 shadow-md border-2 border-[#e9c46a]">
                     <span class="text-4xl block leading-none">🎅</span>
                  </div>
                  <div class="leading-tight">
-                    <div class="text-2xl font-bold text-[#f2e8cf] tracking-wide">Тайный Санта</div>
-                    <div class="text-sm text-[#a7c957] font-bold uppercase tracking-wider">Анонимный игрок</div>
+                    <div class="text-2xl font-bold text-[#fffdf5] tracking-wide text-shadow">Тайный Санта</div>
+                    <div class="text-sm text-[#e9c46a] font-bold uppercase tracking-wider">Анонимный игрок</div>
                  </div>
             </div>
             
-            <div class="flex justify-between items-center bg-[#386641] rounded-lg p-3 border border-[#6a994e] relative z-10">
-                <div class="text-center w-1/2 border-r border-[#6a994e]">
-                    <div class="text-[10px] text-[#a7c957] uppercase tracking-widest mb-1">Вы предл.</div>
-                    <div class="text-xl font-bold ${outgoing >= 5 ? 'text-[#bc4749]' : 'text-[#f2e8cf]'}">${outgoing}/5</div>
+            <div class="flex justify-between items-center bg-[#0f1c11]/50 rounded-lg p-3 border border-[#60a846]/30 relative z-10">
+                <div class="text-center w-1/2 border-r border-[#60a846]/30">
+                    <div class="text-[10px] text-[#e9c46a] uppercase tracking-widest mb-1">Вы предл.</div>
+                    <div class="text-xl font-bold ${p.outgoing >= 5 ? 'text-[#d64045]' : 'text-white'}">${p.outgoing}/5</div>
                 </div>
                 <div class="text-center w-1/2">
-                    <div class="text-[10px] text-[#a7c957] uppercase tracking-widest mb-1">Вам предл.</div>
-                    <div class="text-xl font-bold ${incoming >= 5 ? 'text-[#bc4749]' : 'text-[#f2e8cf]'}">${incoming}/5</div>
+                    <div class="text-[10px] text-[#e9c46a] uppercase tracking-widest mb-1">Вам предл.</div>
+                    <div class="text-xl font-bold ${p.incoming >= 5 ? 'text-[#d64045]' : 'text-white'}">${p.incoming}/5</div>
                 </div>
             </div>
 
@@ -197,6 +221,18 @@ async function refreshPlayersForDeals() {
         `;
         list.appendChild(el);
     });
+
+    // 5. КНОПКА "ЗАГРУЗИТЬ ЕЩЕ"
+    if (processedPlayers.length > visiblePlayersCount) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.innerText = `ПОКАЗАТЬ ЕЩЕ (${processedPlayers.length - visiblePlayersCount})`;
+        loadMoreBtn.className = "w-full py-3 mt-4 rounded-xl border-2 border-[#e9c46a] text-[#e9c46a] font-bold uppercase hover:bg-[#e9c46a] hover:text-[#1a2f1d] transition";
+        loadMoreBtn.onclick = () => {
+            visiblePlayersCount += PLAYERS_PER_PAGE;
+            refreshPlayersForDeals(); // Перерисовываем с новым лимитом
+        };
+        list.appendChild(loadMoreBtn);
+    }
 }
 
 function checkIncomingDeals() {
@@ -205,13 +241,14 @@ function checkIncomingDeals() {
     container.innerHTML = '';
     deals.forEach(deal => {
         const el = document.createElement('div');
-        el.className = 'bg-[#a7c957] border-4 border-[#f2e8cf] p-4 rounded-xl shadow-xl animate-bounce-slow mb-4';
+        // Очень высокий контраст для уведомлений
+        el.className = 'bg-[#e9c46a] border-4 border-white p-4 rounded-xl shadow-2xl animate-bounce-slow mb-4 text-[#1a2f1d]';
         el.innerHTML = `
             <div class="flex justify-between items-center mb-2">
-                <span class="text-xl text-[#386641] font-bold uppercase">🔔 Внимание!</span>
+                <span class="text-xl font-bold uppercase tracking-wider">🔔 Внимание!</span>
             </div>
-            <div class="text-sm text-[#386641] mb-3 font-bold">Кто-то вызывает вас на сделку!</div>
-            <button onclick="openResponseModal('${deal.id}')" class="w-full py-3 rounded-lg bg-[#386641] text-[#f2e8cf] font-bold shadow-md hover:bg-[#2a4d31] transition text-lg">
+            <div class="text-sm mb-3 font-bold">Кто-то вызывает вас на сделку!</div>
+            <button onclick="openResponseModal('${deal.id}')" class="w-full py-3 rounded-lg bg-[#1a2f1d] text-[#e9c46a] font-bold shadow-md hover:scale-105 transition text-lg border-2 border-[#1a2f1d]">
                 ОТКРЫТЬ
             </button>
         `;
@@ -230,7 +267,7 @@ function renderModalHistory(partnerId) {
     history.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     if (history.length === 0) {
-        container.innerHTML = '<div class="text-center text-[#6a994e] py-6 italic text-sm">История чиста, как первый снег...</div>';
+        container.innerHTML = '<div class="text-center text-[#e9c46a] py-6 italic text-sm opacity-70">История взаимодействий пуста...</div>';
         return;
     }
 
@@ -238,7 +275,8 @@ function renderModalHistory(partnerId) {
         if (d.status === 'pending') return;
 
         const el = document.createElement('div');
-        el.className = 'bg-[#2a4d31] p-3 rounded-lg border border-[#4a7036] flex justify-between items-center shadow-sm';
+        // Темный фон для истории для контраста
+        el.className = 'bg-[#0f1c11] p-3 rounded-lg border border-[#60a846]/50 flex justify-between items-center shadow-sm mb-2';
 
         const iamInitiator = d.initiator_id === myId;
         const myMove = iamInitiator ? d.initiator_move : d.receiver_move;
@@ -246,17 +284,17 @@ function renderModalHistory(partnerId) {
         const myPoints = iamInitiator ? d.points_initiator : d.points_receiver;
 
         const moveIcon = (m) => m === 'cooperate' ? '🤝' : '😈';
-        const color = myPoints > 0 ? 'text-[#a7c957]' : 'text-[#bc4749]';
+        const color = myPoints > 0 ? 'text-[#e9c46a]' : 'text-[#d64045]';
 
         el.innerHTML = `
             <div class="flex items-center gap-2">
-                <span class="text-[10px] text-[#6a994e] uppercase">Вы</span>
+                <span class="text-[10px] text-[#60a846] uppercase font-bold">Вы</span>
                 <span class="text-2xl">${moveIcon(myMove)}</span>
             </div>
-            <div class="font-bold ${color} text-xl bg-[#0f1c11] px-3 py-1 rounded border border-[#6a994e]">${myPoints > 0 ? '+' : ''}${myPoints}</div>
+            <div class="font-bold ${color} text-xl px-3 py-1 bg-black/30 rounded border border-white/10 min-w-[50px] text-center">${myPoints > 0 ? '+' : ''}${myPoints}</div>
             <div class="flex items-center gap-2">
                 <span class="text-2xl">${moveIcon(theirMove)}</span>
-                <span class="text-[10px] text-[#6a994e] uppercase">Они</span>
+                <span class="text-[10px] text-[#60a846] uppercase font-bold">Они</span>
             </div>
         `;
         container.appendChild(el);
@@ -286,11 +324,11 @@ async function loadAdminOrders() {
     const { data: orders } = await supabase.rpc('get_admin_orders');
     const container = document.getElementById('admin-orders-list');
     container.innerHTML = '';
-    if (!orders || orders.length === 0) { container.innerHTML = '<p class="text-[#6a994e] text-center text-sm">Корзина пуста</p>'; return; }
+    if (!orders || orders.length === 0) { container.innerHTML = '<p class="text-[#e9c46a] text-center text-sm opacity-70">Корзина пуста</p>'; return; }
     orders.forEach(order => {
         const el = document.createElement('div');
-        el.className = 'bg-[#2a4d31] p-4 rounded-xl border border-[#6a994e] flex justify-between items-center';
-        el.innerHTML = `<div><div class="font-bold text-champagne text-lg">${order.player_name}</div><div class="text-sm text-[#a7c957] font-bold">Покупка: ${order.item_name}</div></div><button onclick="deliverOrder('${order.id}')" class="bg-[#a7c957] hover:bg-[#8da34f] text-[#386641] font-bold py-2 px-4 rounded-lg shadow-md text-sm">ВЫДАТЬ</button>`;
+        el.className = 'bg-[#1a2f1d] p-4 rounded-xl border-2 border-[#60a846] flex justify-between items-center shadow-md';
+        el.innerHTML = `<div><div class="font-bold text-white text-lg">${order.player_name}</div><div class="text-sm text-[#e9c46a] font-bold">Покупка: ${order.item_name}</div></div><button onclick="deliverOrder('${order.id}')" class="bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-2 px-4 rounded-lg shadow-md text-sm uppercase">Выдать</button>`;
         container.appendChild(el);
     });
 }
@@ -303,11 +341,11 @@ async function loadLeaderboard(limit, tableId) {
     if (!players) return;
     players.forEach((p, index) => {
         const row = document.createElement('tr');
-        let rankColor = "text-[#f2e8cf]/70";
-        if (index === 0) rankColor = "text-[#a7c957] font-bold scale-110 origin-left";
-        if (index === 1) rankColor = "text-[#f2e8cf] font-bold";
-        if (index === 2) rankColor = "text-[#bc4749] font-bold";
-        row.innerHTML = `<td class="${rankColor} text-center">${index + 1}</td><td class="text-[#f2e8cf] font-medium">${p.last_name} ${p.first_name}</td><td class="text-xs text-[#6a994e] font-bold">${p.class_name}</td><td class="text-right text-[#a7c957] font-bold text-lg">${p.coins}</td>`;
+        let rankColor = "text-[#fffdf5]/70";
+        if (index === 0) rankColor = "text-[#e9c46a] font-bold text-lg";
+        if (index === 1) rankColor = "text-[#e0e0e0] font-bold";
+        if (index === 2) rankColor = "text-[#cd7f32] font-bold";
+        row.innerHTML = `<td class="${rankColor} text-center">${index + 1}</td><td class="text-[#fffdf5] font-medium tracking-wide">${p.last_name} ${p.first_name}</td><td class="text-xs text-[#e9c46a] font-bold opacity-80">${p.class_name}</td><td class="text-right text-[#e9c46a] font-bold text-lg tracking-wider">${p.coins}</td>`;
         container.appendChild(row);
     });
 }
