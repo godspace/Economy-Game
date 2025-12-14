@@ -83,19 +83,26 @@ function startGameLoop() {
 }
 
 // 1. Загрузка ВСЕХ сделок, где я участвую
+// 1. Загрузка ВСЕХ сделок через защищенную функцию
 async function fetchAllMyDeals() {
-    const { data: deals } = await supabase
-        .from('deals')
-        .select('*')
-        .or(`initiator_id.eq.${myId},receiver_id.eq.${myId}`)
-        .order('created_at', { ascending: false });
+    // ВАЖНО: Используем RPC, чтобы обойти RLS политики
+    const { data: deals, error } = await supabase.rpc('get_my_deals', { 
+        player_uuid: myId 
+    });
+
+    if (error) {
+        console.error("Ошибка получения сделок:", error);
+        return;
+    }
 
     if (deals) {
         myDealsHistory = deals;
-        // После загрузки сделок обновляем интерфейсы, которые от них зависят
-        checkIncomingDeals();     // Вкладка "Игра" (уведомления)
-        refreshPlayersForDeals(); // Вкладка "Игра" (список + счетчики)
-        // Если открыта вкладка истории, обновляем её в реальном времени
+        
+        // После загрузки обновляем интерфейс
+        checkIncomingDeals();     
+        refreshPlayersForDeals(); 
+        
+        // Обновляем историю, если открыта вкладка
         if (!document.getElementById('tab-content-history').classList.contains('hidden')) {
             renderHistoryTab();
         }
