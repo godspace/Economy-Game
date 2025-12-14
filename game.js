@@ -349,4 +349,13 @@ function createSnow() {
         div.style.fontSize = (Math.random() * 10 + 10) + 'px';
         container.appendChild(div);
     }
-}
+};
+
+// --- ВЫХОД ИЗ ИГРЫ ---
+window.logout = function() {
+    if (confirm("Вы действительно хотите выйти?")) {
+        localStorage.removeItem('santa_id');
+        localStorage.removeItem('santa_class');
+        location.reload(); // Перезагрузка вернет на экран входа
+    }
+};
