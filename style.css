@@ -1,73 +1,113 @@
 /* style.css */
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
+:root {
+    --hunter-green: #386641;
+    --sage-green: #6a994e;
+    --yellow-green: #a7c957;
+    --champagne-mist: #f2e8cf;
+    --blushed-brick: #bc4749;
+}
+
 body {
-    background-color: #0f172a;
-    background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
-    color: #f8fafc;
+    background-color: var(--hunter-green);
+    /* Можно оставить текстуру или убрать, на темном зеленом она смотрится хорошо */
+    background-image: url('https://www.transparenttextures.com/patterns/stardust.png'); 
+    color: var(--champagne-mist);
     font-family: 'Roboto', sans-serif;
     margin: 0;
-    overflow-x: hidden; /* Чтобы снежинки не расширяли экран */
+    overflow-x: hidden;
 }
 
-/* Эффект матового стекла для карточек */
+/* СТЕКЛЯННЫЕ ПАНЕЛИ */
 .glass-panel {
-    background: rgba(15, 23, 42, 0.85);
+    background: rgba(56, 102, 65, 0.85); /* Hunter Green полупрозрачный */
     backdrop-filter: blur(8px);
-    border: 1px solid #b91c1c; /* Красная рамка */
-    border-radius: 12px;
-    box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+    border: 2px solid var(--blushed-brick); /* Кирпичная рамка */
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* Золотая кнопка */
-.btn-gold {
-    background: linear-gradient(45deg, #d97706, #fbbf24);
-    color: #451a03;
+/* КНОПКИ */
+/* Основная кнопка действия (бывшая золотая) */
+.btn-primary {
+    background: var(--yellow-green);
+    color: var(--hunter-green); /* Темный текст для контраста */
     font-weight: bold;
-    transition: transform 0.1s, box-shadow 0.2s;
+    border: 2px solid var(--sage-green);
+    transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
 }
-.btn-gold:hover { box-shadow: 0 0 10px #fbbf24; }
-.btn-gold:active { transform: scale(0.96); }
+.btn-primary:hover {
+    background: #b5d660; /* Чуть светлее */
+    box-shadow: 0 0 10px var(--yellow-green);
+}
+.btn-primary:active { transform: scale(0.96); }
+.btn-primary:disabled {
+    background: #4a5c43;
+    color: #6a7c63;
+    border-color: #4a5c43;
+    cursor: not-allowed;
+    box-shadow: none;
+}
 
-/* Таблицы рейтинга */
+/* Кнопка "Опасно" / Отказ (Кирпичная) */
+.btn-danger {
+    background: var(--blushed-brick);
+    color: var(--champagne-mist);
+}
+.btn-danger:hover { background: #d65456; }
+
+/* ТАБЛИЦЫ РЕЙТИНГА */
 .ranking-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
 }
 .ranking-table th {
     text-align: left;
-    padding: 8px;
-    color: #fca5a5; /* Светло-красный */
-    border-bottom: 1px solid #451a03;
+    padding: 10px;
+    color: var(--blushed-brick);
+    border-bottom: 2px solid var(--sage-green);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
 }
 .ranking-table td {
-    padding: 8px;
-    border-bottom: 1px solid #334155;
+    padding: 12px 10px;
+    border-bottom: 1px solid rgba(106, 153, 78, 0.3); /* Sage green прозрачный */
 }
-.ranking-table tr:nth-child(1) td { color: #fbbf24; font-weight: bold; } /* 1 место - золото */
-.ranking-table tr:nth-child(2) td { color: #e2e8f0; font-weight: bold; } /* 2 место - серебро */
-.ranking-table tr:nth-child(3) td { color: #b45309; font-weight: bold; } /* 3 место - бронза */
+/* Цвета мест */
+.ranking-table tr:nth-child(1) td { color: var(--yellow-green); font-weight: bold; font-size: 1.1em; } 
+.ranking-table tr:nth-child(2) td { color: var(--champagne-mist); font-weight: bold; opacity: 0.9; }
+.ranking-table tr:nth-child(3) td { color: var(--blushed-brick); font-weight: bold; opacity: 0.9; }
 
-/* Вкладки (Табы) */
+/* ТАБЫ (ВКЛАДКИ) */
 .tab-btn {
-    padding: 10px 20px;
-    border-bottom: 2px solid transparent;
-    color: #94a3b8;
-    cursor: pointer;
-    font-weight: bold;
+    background: rgba(56, 102, 65, 0.5);
+    color: var(--sage-green);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+.tab-btn:hover {
+    background: rgba(106, 153, 78, 0.3);
+    color: var(--champagne-mist);
 }
 .tab-btn.active {
-    color: #fbbf24;
-    border-bottom: 2px solid #fbbf24;
+    background: var(--yellow-green);
+    color: var(--hunter-green);
+    font-weight: bold;
+    border-radius: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Снежинки */
+/* СНЕЖИНКИ */
 .snowflake {
-    position: fixed; top: -20px; color: #fff; user-select: none; pointer-events: none; z-index: 0;
+    position: fixed; top: -20px; color: var(--champagne-mist); 
+    user-select: none; pointer-events: none; z-index: 0;
     animation: fall linear infinite;
+    text-shadow: 0 0 5px rgba(255,255,255,0.3);
 }
 @keyframes fall { to { transform: translateY(105vh); } }
 
-/* Утилиты скрытия */
+/* Утилиты */
 .hidden { display: none !important; }

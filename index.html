@@ -7,113 +7,155 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .text-champagne { color: var(--champagne-mist); }
+        .text-yellow-green { color: var(--yellow-green); }
+        .text-brick { color: var(--blushed-brick); }
+        .text-sage { color: var(--sage-green); }
+        
+        .bg-hunter { background-color: var(--hunter-green); }
+        .bg-sage { background-color: var(--sage-green); }
+        
+        .border-sage { border-color: var(--sage-green); }
+        .border-brick { border-color: var(--blushed-brick); }
+    </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start p-4 pt-8">
+<body class="min-h-screen flex flex-col items-center justify-start p-4 pt-8 bg-[#386641]">
 
     <div id="snow-container"></div>
 
     <div id="login-screen" class="glass-panel p-6 max-w-sm w-full z-10 flex flex-col gap-6">
         <div class="text-center">
-            <h1 class="text-3xl font-bold text-red-500 mb-1">🎅 Вход</h1>
-            <p class="text-xs text-gray-400">Введите секретный код эльфа</p>
+            <h1 class="text-4xl font-bold text-brick mb-2">🎅 Вход</h1>
+            <p class="text-sm text-champagne opacity-80">Введите секретный код эльфа</p>
         </div>
         <div>
             <input type="text" id="access-code" maxlength="6" placeholder="Код..." 
-                   class="w-full p-3 rounded bg-slate-800 border border-red-900 text-center text-xl text-white mb-3 focus:outline-none focus:border-yellow-500 tracking-widest">
-            <button id="login-btn" class="btn-gold w-full py-3 rounded-lg shadow-lg text-sm uppercase tracking-wider">Войти в игру</button>
-            <p id="login-error" class="text-red-400 mt-2 text-sm text-center hidden"></p>
+                   class="w-full p-4 rounded-xl bg-[#2a4d31] border border-[#6a994e] text-center text-2xl text-champagne mb-4 focus:outline-none focus:border-[#a7c957] tracking-[0.2em] placeholder-opacity-30 placeholder-[#f2e8cf]">
+            <button id="login-btn" class="btn-primary w-full py-4 rounded-xl shadow-lg text-lg uppercase tracking-wider">Войти в игру</button>
+            <p id="login-error" class="text-brick mt-2 text-sm text-center hidden font-bold"></p>
         </div>
-        <div class="border-t border-slate-700 pt-4">
-            <h3 class="text-center text-yellow-500 font-bold mb-3 text-sm uppercase">🏆 Лидеры школы</h3>
-            <table class="ranking-table" id="login-leaderboard"></table>
+        <div class="border-t border-[#6a994e] pt-4">
+            <h3 class="text-center text-yellow-green font-bold mb-3 text-sm uppercase tracking-widest">🏆 Лидеры школы</h3>
+            <table class="ranking-table" id="login-leaderboard">
+                </table>
         </div>
     </div>
 
     <div id="game-screen" class="hidden w-full max-w-2xl z-10">
         
-        <div class="glass-panel p-4 mb-4 flex justify-between items-start bg-slate-900/90 shadow-lg">
+        <div class="glass-panel p-5 mb-5 flex justify-between items-start shadow-xl">
             <div>
-                <div class="text-xs text-gray-400">Вы: Тайный Санта</div>
-                <div class="text-2xl font-bold text-yellow-400 drop-shadow-md">💰 <span id="my-coins">0</span></div>
+                <div class="text-xs text-sage font-bold uppercase tracking-wider">Вы: Тайный Санта</div>
+                <div class="text-3xl font-bold text-yellow-green drop-shadow-sm mt-1">💰 <span id="my-coins">0</span></div>
             </div>
-            <div class="flex flex-col items-end gap-1">
+            <div class="flex flex-col items-end gap-2">
                 <div class="text-right">
-                    <div class="text-xs text-gray-400">Ваш класс</div>
-                    <div class="font-bold text-lg text-white" id="my-class">--</div>
+                    <div class="text-xs text-sage font-bold uppercase tracking-wider">Ваш класс</div>
+                    <div class="font-bold text-xl text-champagne" id="my-class">--</div>
                 </div>
-                <button onclick="logout()" class="text-[10px] uppercase font-bold text-red-400 border border-red-900/50 hover:bg-red-900/30 px-2 py-1 rounded transition">Выйти 🚪</button>
+                <button onclick="logout()" class="text-[10px] uppercase font-bold text-brick border border-brick hover:bg-brick hover:text-white px-3 py-1 rounded-full transition">Выйти 🚪</button>
             </div>
         </div>
 
-        <div class="flex justify-center mb-5 space-x-1 bg-slate-800/50 p-1 rounded-lg overflow-x-auto">
-            <button onclick="switchTab('game')" id="tab-btn-game" class="tab-btn active text-xs flex-1 min-w-[60px]">🎄 ИГРА</button>
-            <button onclick="switchTab('shop')" id="tab-btn-shop" class="tab-btn text-xs flex-1 min-w-[60px]">🍫 МАГАЗИН</button>
-            <button onclick="switchTab('rating')" id="tab-btn-rating" class="tab-btn text-xs flex-1 min-w-[60px]">🏆 ТОП</button>
-            <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn text-xs flex-1 hidden text-red-400 font-bold border-red-900 min-w-[60px]">ADMIN</button>
+        <div class="flex justify-center mb-6 space-x-2 bg-[#2a4d31] p-2 rounded-xl shadow-inner overflow-x-auto">
+            <button onclick="switchTab('game')" id="tab-btn-game" class="tab-btn active text-sm flex-1 min-w-[70px] py-2">🎄 ИГРА</button>
+            <button onclick="switchTab('shop')" id="tab-btn-shop" class="tab-btn text-sm flex-1 min-w-[70px] py-2">🍫 МАГАЗИН</button>
+            <button onclick="switchTab('rating')" id="tab-btn-rating" class="tab-btn text-sm flex-1 min-w-[70px] py-2">🏆 ТОП</button>
+            <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn text-sm flex-1 hidden text-brick font-bold border-brick min-w-[70px] py-2">ADMIN</button>
         </div>
 
         <div id="tab-content-game">
-            <div id="incoming-deals" class="mb-6 space-y-3"></div>
-            <div class="flex items-center justify-between mb-3 px-1">
-                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Анонимные эльфы</h2>
-                <span class="text-[10px] text-gray-500 bg-slate-800 px-2 py-1 rounded border border-slate-700">Лимит: 5</span>
+            <div id="incoming-deals" class="mb-6 space-y-4"></div>
+            
+            <div class="flex items-center justify-between mb-4 px-2">
+                <h2 class="text-base font-bold text-champagne uppercase tracking-widest opacity-70">Анонимные эльфы</h2>
+                <span class="text-xs text-yellow-green bg-[#2a4d31] px-3 py-1 rounded-full border border-[#6a994e]">Лимит: 5</span>
             </div>
-            <div id="players-list" class="grid grid-cols-2 gap-3"></div>
+            
+            <div id="players-list" class="grid grid-cols-1 gap-4">
+                </div>
         </div>
 
         <div id="tab-content-shop" class="hidden">
-            <div class="glass-panel p-6 text-center">
-                <h2 class="text-xl font-bold text-white mb-6">Новогодняя Лавка</h2>
-                <div class="bg-slate-800 p-4 rounded-xl border border-slate-600 shadow-xl max-w-xs mx-auto relative group">
-                    <div class="text-6xl mb-4 transform group-hover:scale-110 transition duration-300">🍫</div>
-                    <h3 class="text-lg font-bold text-white mb-1">Baunty</h3>
-                    <p class="text-gray-400 text-xs mb-4">Райское наслаждение</p>
-                    <div class="text-2xl font-bold text-yellow-400 mb-4">99 💰</div>
-                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" class="w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold transition active:scale-95">КУПИТЬ</button>
-                    <p id="shop-status" class="text-xs text-yellow-500 mt-3 font-bold bg-yellow-900/20 p-2 rounded hidden border border-yellow-700/50">📦 Заказ оформлен! Ждите выдачи.</p>
+            <div class="glass-panel p-8 text-center">
+                <h2 class="text-2xl font-bold text-champagne mb-8">Лесная Лавка</h2>
+                
+                <div class="bg-[#2a4d31] p-6 rounded-2xl border-2 border-[#6a994e] shadow-xl max-w-sm mx-auto relative group">
+                    <div class="text-7xl mb-6 transform group-hover:scale-110 transition duration-300">🍫</div>
+                    <h3 class="text-2xl font-bold text-champagne mb-2">Baunty</h3>
+                    <p class="text-sage text-sm mb-6 font-bold">Райское наслаждение</p>
+                    <div class="text-4xl font-bold text-yellow-green mb-6">99 💰</div>
+                    
+                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" 
+                            class="btn-primary w-full py-4 rounded-xl text-xl shadow-lg active:scale-95">
+                        КУПИТЬ
+                    </button>
+                    
+                    <p id="shop-status" class="text-sm text-yellow-green mt-4 font-bold bg-[#386641] p-3 rounded-lg hidden border border-[#a7c957]">
+                        📦 Заказ оформлен! Ждите выдачи.
+                    </p>
+                </div>
+                
+                <div class="mt-8 text-xs text-sage opacity-70">
+                    * Вы не можете сделать новый заказ, пока не получили предыдущий.
                 </div>
             </div>
         </div>
 
-        <div id="tab-content-rating" class="hidden glass-panel p-4">
-            <h2 class="text-center text-yellow-400 font-bold mb-4 text-sm uppercase">Рейтинг школы</h2>
+        <div id="tab-content-rating" class="hidden glass-panel p-6">
+            <h2 class="text-center text-yellow-green font-bold mb-6 text-lg uppercase tracking-widest">Рейтинг школы</h2>
             <div class="overflow-x-auto">
                 <table class="ranking-table w-full text-left" id="main-leaderboard">
-                    <thead><tr class="text-xs text-gray-500 uppercase"><th class="p-2">#</th><th class="p-2">Имя</th><th class="p-2">Класс</th><th class="p-2 text-right">Coins</th></tr></thead>
-                    <tbody class="text-sm"></tbody>
+                    <thead>
+                        <tr class="text-xs text-sage uppercase">
+                            <th class="p-3">#</th>
+                            <th class="p-3">Имя</th>
+                            <th class="p-3">Класс</th>
+                            <th class="p-3 text-right">Coins</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-base">
+                        </tbody>
                 </table>
             </div>
         </div>
 
-        <div id="tab-content-admin" class="hidden glass-panel p-4 border-red-900/50">
-            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                <h2 class="text-red-500 font-bold uppercase text-sm">📦 Заказы</h2>
-                <button onclick="loadAdminOrders()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white">Обновить</button>
+        <div id="tab-content-admin" class="hidden glass-panel p-4 border-brick">
+            <div class="flex justify-between items-center mb-4 border-b border-[#6a994e] pb-2">
+                <h2 class="text-brick font-bold uppercase text-sm">📦 Заказы</h2>
+                <button onclick="loadAdminOrders()" class="text-xs bg-[#2a4d31] hover:bg-[#386641] px-4 py-2 rounded-lg text-champagne">Обновить</button>
             </div>
-            <div id="admin-orders-list" class="space-y-2"></div>
+            <div id="admin-orders-list" class="space-y-3">
+                </div>
         </div>
     </div>
 
-    <div id="modal-move" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-4">
-        <div class="glass-panel p-5 w-full max-w-sm text-center bg-slate-900 border-yellow-500/50 flex flex-col max-h-[90vh]">
-            <h3 id="modal-title" class="text-xl mb-2 text-white font-bold flex-shrink-0">Ваш выбор?</h3>
+    <div id="modal-move" class="fixed inset-0 bg-[#0f1c11]/95 hidden items-center justify-center z-50 p-4">
+        <div class="glass-panel p-6 w-full max-w-sm text-center bg-[#2a4d31] border-[#a7c957] flex flex-col max-h-[90vh]">
+            <h3 id="modal-title" class="text-2xl mb-3 text-champagne font-bold flex-shrink-0">Ваш выбор?</h3>
             
-            <div class="flex-grow overflow-y-auto mb-4 bg-slate-800/50 rounded p-2 border border-slate-700">
-                <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-2 sticky top-0 bg-slate-800/90 py-1">История с этим игроком</div>
+            <div class="flex-grow overflow-y-auto mb-6 bg-[#1f3a24] rounded-xl p-3 border border-[#386641] shadow-inner">
+                <div class="text-xs text-sage uppercase tracking-widest mb-3 sticky top-0 bg-[#1f3a24] py-1 font-bold z-10">История с игроком</div>
                 <div id="modal-history-list" class="space-y-2 text-sm">
                     </div>
             </div>
 
-            <p class="text-xs text-gray-400 mb-4 px-2 flex-shrink-0">
-                <span class="text-green-400 font-bold">Сотрудничество:</span> +2/+2<br>
-                <span class="text-red-400 font-bold">Обман:</span> вы +3, он -1
+            <p class="text-sm text-champagne/70 mb-6 px-2 flex-shrink-0 leading-relaxed">
+                <span class="text-yellow-green font-bold">Сотрудничество:</span> +2 / +2<br>
+                <span class="text-brick font-bold">Обман:</span> вы +3, он -1
             </p>
             
-            <div class="grid grid-cols-2 gap-3 flex-shrink-0">
-                <button onclick="makeMove('cooperate')" class="py-3 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold shadow-lg active:scale-95">🤝 Дружба</button>
-                <button onclick="makeMove('defect')" class="py-3 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold shadow-lg active:scale-95">😈 Обман</button>
+            <div class="grid grid-cols-2 gap-4 flex-shrink-0">
+                <button onclick="makeMove('cooperate')" class="py-4 rounded-xl bg-[#6a994e] hover:bg-[#588540] text-[#1f3a24] font-bold text-lg shadow-lg active:scale-95 border-b-4 border-[#4a7036]">
+                    🤝 Дружба
+                </button>
+                <button onclick="makeMove('defect')" class="py-4 rounded-xl bg-[#bc4749] hover:bg-[#a33a3c] text-champagne font-bold text-lg shadow-lg active:scale-95 border-b-4 border-[#8f3234]">
+                    😈 Обман
+                </button>
             </div>
-            <button onclick="closeModal()" class="mt-4 text-gray-500 text-xs hover:text-white underline flex-shrink-0">Отмена</button>
+            <button onclick="closeModal()" class="mt-6 text-sage text-sm hover:text-champagne underline flex-shrink-0 transition">Отмена</button>
         </div>
     </div>
 
