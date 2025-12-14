@@ -17,18 +17,15 @@
             <h1 class="text-3xl font-bold text-red-500 mb-1">🎅 Вход</h1>
             <p class="text-xs text-gray-400">Введите секретный код эльфа</p>
         </div>
-
         <div>
             <input type="text" id="access-code" maxlength="6" placeholder="Код..." 
                    class="w-full p-3 rounded bg-slate-800 border border-red-900 text-center text-xl text-white mb-3 focus:outline-none focus:border-yellow-500 tracking-widest">
             <button id="login-btn" class="btn-gold w-full py-3 rounded-lg shadow-lg text-sm uppercase tracking-wider">Войти в игру</button>
             <p id="login-error" class="text-red-400 mt-2 text-sm text-center hidden"></p>
         </div>
-
         <div class="border-t border-slate-700 pt-4">
             <h3 class="text-center text-yellow-500 font-bold mb-3 text-sm uppercase">🏆 Лидеры школы</h3>
-            <table class="ranking-table" id="login-leaderboard">
-                </table>
+            <table class="ranking-table" id="login-leaderboard"></table>
         </div>
     </div>
 
@@ -39,21 +36,17 @@
                 <div class="text-xs text-gray-400">Вы: Тайный Санта</div>
                 <div class="text-2xl font-bold text-yellow-400 drop-shadow-md">💰 <span id="my-coins">0</span></div>
             </div>
-            
             <div class="flex flex-col items-end gap-1">
                 <div class="text-right">
                     <div class="text-xs text-gray-400">Ваш класс</div>
                     <div class="font-bold text-lg text-white" id="my-class">--</div>
                 </div>
-                <button onclick="logout()" class="text-[10px] uppercase font-bold text-red-400 border border-red-900/50 hover:bg-red-900/30 px-2 py-1 rounded transition">
-                    Выйти 🚪
-                </button>
+                <button onclick="logout()" class="text-[10px] uppercase font-bold text-red-400 border border-red-900/50 hover:bg-red-900/30 px-2 py-1 rounded transition">Выйти 🚪</button>
             </div>
         </div>
 
         <div class="flex justify-center mb-5 space-x-1 bg-slate-800/50 p-1 rounded-lg overflow-x-auto">
             <button onclick="switchTab('game')" id="tab-btn-game" class="tab-btn active text-xs flex-1 min-w-[60px]">🎄 ИГРА</button>
-            <button onclick="switchTab('history')" id="tab-btn-history" class="tab-btn text-xs flex-1 min-w-[60px]">📜 СДЕЛКИ</button>
             <button onclick="switchTab('shop')" id="tab-btn-shop" class="tab-btn text-xs flex-1 min-w-[60px]">🍫 МАГАЗИН</button>
             <button onclick="switchTab('rating')" id="tab-btn-rating" class="tab-btn text-xs flex-1 min-w-[60px]">🏆 ТОП</button>
             <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn text-xs flex-1 hidden text-red-400 font-bold border-red-900 min-w-[60px]">ADMIN</button>
@@ -61,46 +54,23 @@
 
         <div id="tab-content-game">
             <div id="incoming-deals" class="mb-6 space-y-3"></div>
-            
             <div class="flex items-center justify-between mb-3 px-1">
-                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Доступные эльфы</h2>
+                <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Анонимные эльфы</h2>
                 <span class="text-[10px] text-gray-500 bg-slate-800 px-2 py-1 rounded border border-slate-700">Лимит: 5</span>
             </div>
-            <div id="players-list" class="grid grid-cols-2 gap-3">
-                </div>
-        </div>
-
-        <div id="tab-content-history" class="hidden">
-            <div class="glass-panel p-4 min-h-[300px]">
-                <h2 class="text-center text-yellow-400 font-bold mb-4 text-sm uppercase">История сделок</h2>
-                <div id="history-list" class="space-y-3 text-sm">
-                    </div>
-            </div>
+            <div id="players-list" class="grid grid-cols-2 gap-3"></div>
         </div>
 
         <div id="tab-content-shop" class="hidden">
             <div class="glass-panel p-6 text-center">
                 <h2 class="text-xl font-bold text-white mb-6">Новогодняя Лавка</h2>
-                
-                <div class="bg-slate-800 p-4 rounded-xl border border-slate-600 shadow-xl max-w-xs mx-auto relative overflow-hidden group">
-                    <div class="absolute top-0 left-0 w-full h-full bg-white/5 opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none"></div>
-                    
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-600 shadow-xl max-w-xs mx-auto relative group">
                     <div class="text-6xl mb-4 transform group-hover:scale-110 transition duration-300">🍫</div>
                     <h3 class="text-lg font-bold text-white mb-1">Baunty</h3>
-                    <p class="text-gray-400 text-xs mb-4">Райское наслаждение за монеты</p>
+                    <p class="text-gray-400 text-xs mb-4">Райское наслаждение</p>
                     <div class="text-2xl font-bold text-yellow-400 mb-4">99 💰</div>
-                    
-                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" 
-                            class="w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold hover:shadow-lg hover:from-blue-500 transition active:scale-95">
-                        КУПИТЬ
-                    </button>
-                    <p id="shop-status" class="text-xs text-yellow-500 mt-3 font-bold bg-yellow-900/20 p-2 rounded hidden border border-yellow-700/50">
-                        📦 Заказ оформлен! Покажите учителю экран для выдачи.
-                    </p>
-                </div>
-
-                <div class="mt-8 text-[10px] text-gray-500 max-w-xs mx-auto">
-                    * Вы не можете купить новую шоколадку, пока статус предыдущего заказа не изменится на "Выдано".
+                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" class="w-full py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold transition active:scale-95">КУПИТЬ</button>
+                    <p id="shop-status" class="text-xs text-yellow-500 mt-3 font-bold bg-yellow-900/20 p-2 rounded hidden border border-yellow-700/50">📦 Заказ оформлен! Ждите выдачи.</p>
                 </div>
             </div>
         </div>
@@ -109,47 +79,41 @@
             <h2 class="text-center text-yellow-400 font-bold mb-4 text-sm uppercase">Рейтинг школы</h2>
             <div class="overflow-x-auto">
                 <table class="ranking-table w-full text-left" id="main-leaderboard">
-                    <thead>
-                        <tr class="text-xs text-gray-500 uppercase">
-                            <th class="p-2">#</th>
-                            <th class="p-2">Имя</th>
-                            <th class="p-2">Класс</th>
-                            <th class="p-2 text-right">Coins</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-sm">
-                        </tbody>
+                    <thead><tr class="text-xs text-gray-500 uppercase"><th class="p-2">#</th><th class="p-2">Имя</th><th class="p-2">Класс</th><th class="p-2 text-right">Coins</th></tr></thead>
+                    <tbody class="text-sm"></tbody>
                 </table>
             </div>
         </div>
 
         <div id="tab-content-admin" class="hidden glass-panel p-4 border-red-900/50">
             <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                <h2 class="text-red-500 font-bold uppercase text-sm">📦 Активные заказы</h2>
-                <button onclick="loadAdminOrders()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white transition">Обновить список</button>
+                <h2 class="text-red-500 font-bold uppercase text-sm">📦 Заказы</h2>
+                <button onclick="loadAdminOrders()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-white">Обновить</button>
             </div>
-            <div id="admin-orders-list" class="space-y-2">
-                </div>
+            <div id="admin-orders-list" class="space-y-2"></div>
         </div>
     </div>
 
     <div id="modal-move" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-4">
-        <div class="glass-panel p-6 w-full max-w-sm text-center bg-slate-900 border-yellow-500/50">
-            <h3 id="modal-title" class="text-xl mb-2 text-white font-bold">Ваш выбор?</h3>
-            <p class="text-sm text-gray-400 mb-6 px-4 leading-relaxed">
-                <span class="text-green-400 font-bold">Сотрудничество:</span> оба получают +2.<br>
-                <span class="text-red-400 font-bold">Жульничество:</span> вы +3, он -1 (если он доверился).
+        <div class="glass-panel p-5 w-full max-w-sm text-center bg-slate-900 border-yellow-500/50 flex flex-col max-h-[90vh]">
+            <h3 id="modal-title" class="text-xl mb-2 text-white font-bold flex-shrink-0">Ваш выбор?</h3>
+            
+            <div class="flex-grow overflow-y-auto mb-4 bg-slate-800/50 rounded p-2 border border-slate-700">
+                <div class="text-[10px] text-gray-400 uppercase tracking-widest mb-2 sticky top-0 bg-slate-800/90 py-1">История с этим игроком</div>
+                <div id="modal-history-list" class="space-y-2 text-sm">
+                    </div>
+            </div>
+
+            <p class="text-xs text-gray-400 mb-4 px-2 flex-shrink-0">
+                <span class="text-green-400 font-bold">Сотрудничество:</span> +2/+2<br>
+                <span class="text-red-400 font-bold">Обман:</span> вы +3, он -1
             </p>
             
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="makeMove('cooperate')" class="py-4 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold shadow-lg shadow-green-900/50 transition transform active:scale-95">
-                    🤝 Дружба
-                </button>
-                <button onclick="makeMove('defect')" class="py-4 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold shadow-lg shadow-red-900/50 transition transform active:scale-95">
-                    😈 Обман
-                </button>
+            <div class="grid grid-cols-2 gap-3 flex-shrink-0">
+                <button onclick="makeMove('cooperate')" class="py-3 rounded-xl bg-green-700 hover:bg-green-600 text-white font-bold shadow-lg active:scale-95">🤝 Дружба</button>
+                <button onclick="makeMove('defect')" class="py-3 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold shadow-lg active:scale-95">😈 Обман</button>
             </div>
-            <button onclick="closeModal()" class="mt-6 text-gray-500 text-xs hover:text-white transition underline">Отмена / Вернуться назад</button>
+            <button onclick="closeModal()" class="mt-4 text-gray-500 text-xs hover:text-white underline flex-shrink-0">Отмена</button>
         </div>
     </div>
 
