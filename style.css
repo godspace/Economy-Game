@@ -1,0 +1,73 @@
+/* style.css */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+    background-color: #0f172a;
+    background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
+    color: #f8fafc;
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    overflow-x: hidden; /* Чтобы снежинки не расширяли экран */
+}
+
+/* Эффект матового стекла для карточек */
+.glass-panel {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid #b91c1c; /* Красная рамка */
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+
+/* Золотая кнопка */
+.btn-gold {
+    background: linear-gradient(45deg, #d97706, #fbbf24);
+    color: #451a03;
+    font-weight: bold;
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+.btn-gold:hover { box-shadow: 0 0 10px #fbbf24; }
+.btn-gold:active { transform: scale(0.96); }
+
+/* Таблицы рейтинга */
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+.ranking-table th {
+    text-align: left;
+    padding: 8px;
+    color: #fca5a5; /* Светло-красный */
+    border-bottom: 1px solid #451a03;
+}
+.ranking-table td {
+    padding: 8px;
+    border-bottom: 1px solid #334155;
+}
+.ranking-table tr:nth-child(1) td { color: #fbbf24; font-weight: bold; } /* 1 место - золото */
+.ranking-table tr:nth-child(2) td { color: #e2e8f0; font-weight: bold; } /* 2 место - серебро */
+.ranking-table tr:nth-child(3) td { color: #b45309; font-weight: bold; } /* 3 место - бронза */
+
+/* Вкладки (Табы) */
+.tab-btn {
+    padding: 10px 20px;
+    border-bottom: 2px solid transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-weight: bold;
+}
+.tab-btn.active {
+    color: #fbbf24;
+    border-bottom: 2px solid #fbbf24;
+}
+
+/* Снежинки */
+.snowflake {
+    position: fixed; top: -20px; color: #fff; user-select: none; pointer-events: none; z-index: 0;
+    animation: fall linear infinite;
+}
+@keyframes fall { to { transform: translateY(105vh); } }
+
+/* Утилиты скрытия */
+.hidden { display: none !important; }
