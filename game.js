@@ -17,7 +17,7 @@ let respondingToDealId = null;
 
 let playersCache = {}; 
 let currentTariffId = null; 
-let allTransferTargets = []; 
+let allTransferTargets = []; // Кэш для перевода
 
 let visiblePlayersCount = 25; 
 const PLAYERS_PER_PAGE = 25;
@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showGameScreen();
         startGameLoop();
     } else {
+        // Загружаем лидерборд, даже если не вошли
         loadLeaderboard(10, 'login-leaderboard');
     }
     const loginBtn = document.getElementById('login-btn');
@@ -106,6 +107,7 @@ function startGameLoop() {
 function refreshAllData() {
     fetchAllMyDeals();
     updateMyStats();
+    
     if (document.getElementById('tab-btn-bank').classList.contains('active')) {
         loadMyInvestments();
         checkPendingTransfers(); 
@@ -162,10 +164,15 @@ async function refreshPlayersForDeals() {
 
     const processedPlayers = players.map(p => {
         const isLimit = p.outgoing >= 5 || p.incoming >= 5;
+        
         const safeName = isLimit ? p.revealed_name : null;
         const safeClass = isLimit ? p.ret_class_name : null;
 
-        playersCache[p.ret_id] = { name: safeName, className: safeClass, limitReached: isLimit };
+        playersCache[p.ret_id] = { 
+            name: safeName, 
+            className: safeClass, 
+            limitReached: isLimit 
+        };
 
         return {
             id: p.ret_id,
@@ -184,6 +191,7 @@ async function refreshPlayersForDeals() {
 
     visiblePlayers.forEach(p => {
         let btnHtml = '';
+        
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#1f3a24] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
@@ -308,15 +316,15 @@ window.confirmInvest = async function() {
     else { alert("✅ Вклад открыт!"); updateMyStats(); loadMyInvestments(); }
 };
 
-// [ИСПРАВЛЕНО] Новая версия с подсветкой готовых вкладов
 async function loadMyInvestments() {
     const { data: investments } = await supabaseClient.rpc('get_my_investments', { my_id: myId });
     const list = document.getElementById('my-investments-list');
     const countEl = document.getElementById('active-invest-count');
+    
     list.innerHTML = '';
     
     if (!investments || investments.length === 0) { 
-        list.innerHTML = '<div class="text-center text-sage/30 py-4 text-sm italic">Портфель пуст</div>'; 
+        list.innerHTML = '<div class="text-center text-[#fffdf5]/30 py-4 text-sm italic">Портфель пуст</div>'; 
         countEl.innerText = '0'; return; 
     }
     
@@ -336,10 +344,12 @@ async function loadMyInvestments() {
         if(inv.tariff_id === 'champion') { title = 'Чемпион'; icon = '🏆'; }
         if(inv.tariff_id === 'crypto') { title = 'Crypto'; icon = '💀'; }
         
+        // Стили для карточки
         let cardClass = "bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/30 relative transition-all duration-300";
         if (isReady) cardClass += " invest-ready"; // Добавляем пульсацию
         if (inv.tariff_id === 'crypto') cardClass += " border-[#d64045]/50";
 
+        // Кнопка или Таймер
         let actionHtml = '';
         if (isReady) {
             actionHtml = `
@@ -385,7 +395,6 @@ window.collectMoney = async function(invId) {
 
 // --- 9. ПЕРЕВОДЫ ---
 
-// [ИСПРАВЛЕНО] Новая карточка перевода
 async function checkPendingTransfers() {
     const container = document.getElementById('incoming-transfers');
     const { data: transfers } = await supabaseClient.rpc('get_my_transfers', { my_id: myId });
@@ -395,7 +404,9 @@ async function checkPendingTransfers() {
     if (transfers && transfers.length > 0) {
         transfers.forEach(tr => {
             const el = document.createElement('div');
+            // Используем новый класс transfer-card из CSS
             el.className = 'transfer-card p-5 rounded-2xl mb-4 animate-fade-in';
+            
             el.innerHTML = `
                 <div class="flex justify-between items-center mb-4 relative z-10">
                     <div class="flex items-center gap-2">
@@ -409,6 +420,7 @@ async function checkPendingTransfers() {
                         <span class="text-3xl font-bold text-[#e9c46a] text-shadow">+${tr.amount}</span>
                     </div>
                 </div>
+                
                 <button onclick="claimTransfer('${tr.id}')" class="relative z-10 w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold text-lg shadow-lg transition active:scale-95 border-b-4 border-[#3e6b2e] flex items-center justify-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                     ПРИНЯТЬ МОНЕТЫ
@@ -488,7 +500,7 @@ window.confirmTransfer = async function() {
     else { alert("✅ Перевод отправлен! Получатель должен принять его в Банке."); updateMyStats(); }
 };
 
-// --- ОСТАЛЬНОЕ ---
+// --- ОСТАЛЬНОЕ (Магазин, Админка, Модалки) ---
 async function buyItem(itemName, cost) {
     if (!confirm(`Купить ${itemName} за ${cost} монет?`)) return;
     const { data, error } = await supabaseClient.rpc('buy_item', { my_id: myId, item_label: itemName, cost: cost });
@@ -518,7 +530,7 @@ async function loadAdminOrders() {
 }
 window.deliverOrder = async function(orderId) { if(confirm("Выдать?")) { await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); loadAdminOrders(); } };
 
-// [ИСПРАВЛЕНО] Улучшенный рендер рейтинга с медалями
+// [ИСПРАВЛЕНО] Безопасная функция загрузки таблицы
 async function loadLeaderboard(limit, tableId) {
     const { data: players, error } = await supabaseClient.rpc('get_leaderboard', { limit_count: limit });
     if (error) { console.error("Ошибка рейтинга:", error); return; }
@@ -544,21 +556,35 @@ async function loadLeaderboard(limit, tableId) {
     players.forEach((p, index) => {
         const row = document.createElement('tr');
         
+        // Определяем стили для Топ-3
         let rowClass = "leaderboard-row text-sm";
         let rankDisplay = index + 1;
         let icon = "";
 
-        if (index === 0) { rowClass += " rank-1"; icon = "👑"; } 
-        else if (index === 1) { rowClass += " rank-2"; icon = "🥈"; } 
-        else if (index === 2) { rowClass += " rank-3"; icon = "🥉"; }
+        if (index === 0) {
+            rowClass += " rank-1";
+            icon = "👑";
+        } else if (index === 1) {
+            rowClass += " rank-2";
+            icon = "🥈";
+        } else if (index === 2) {
+            rowClass += " rank-3";
+            icon = "🥉";
+        }
 
         row.className = rowClass;
         
         row.innerHTML = `
             <td class="p-3 font-bold rank-num text-center w-12">${rankDisplay}</td>
-            <td class="p-3"><div class="font-bold text-[#fffdf5] flex items-center gap-2">${p.last_name} ${p.first_name} ${icon}</div></td>
+            <td class="p-3">
+                <div class="font-bold text-[#fffdf5] flex items-center gap-2">
+                    ${p.last_name} ${p.first_name} ${icon}
+                </div>
+            </td>
             <td class="p-3 text-xs text-[#60a846] font-bold uppercase">${p.class_name}</td>
-            <td class="p-3 text-right"><span class="font-mono text-[#e9c46a] font-bold text-lg">${p.coins}</span></td>
+            <td class="p-3 text-right">
+                <span class="font-mono text-[#e9c46a] font-bold text-lg">${p.coins}</span>
+            </td>
         `;
         container.appendChild(row);
     });
@@ -572,11 +598,13 @@ window.openDealModal = (targetId) => {
     const tipsText = document.getElementById('modal-tips');
 
     if (pData && pData.limitReached) {
+        // ИСТОРИЯ
         const classSuffix = pData.className ? ` (${pData.className})` : '';
         modalTitle.innerText = pData.name ? `Архив: ${pData.name}${classSuffix}` : "Архив сделок";
         if(actionsDiv) actionsDiv.classList.add('hidden');
         if(tipsText) tipsText.classList.add('hidden');
     } else {
+        // ИГРА (Скрыто)
         modalTitle.innerText = "Предложить сделку";
         if(actionsDiv) actionsDiv.classList.remove('hidden');
         if(tipsText) tipsText.classList.remove('hidden');
