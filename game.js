@@ -517,17 +517,41 @@ async function checkShopStatus() {
 }
 
 async function loadAdminOrders() {
-    const { data: orders } = await supabaseClient.rpc('get_admin_orders');
+    // Если вкладка админа закрыта, не тратим ресурсы
+    if (document.getElementById('tab-content-admin').classList.contains('hidden')) return;
+    
+    // [ИСПРАВЛЕНО] Теперь мы передаем свой ID (myId) в функцию
+    const { data: orders, error } = await supabaseClient.rpc('get_admin_orders', { requestor_id: myId });
+    
     const container = document.getElementById('admin-orders-list');
     container.innerHTML = '';
-    if (!orders || orders.length === 0) { container.innerHTML = '<p class="text-center text-sage">Пусто</p>'; return; }
+
+    // Обработка ошибки доступа (если кто-то пытается взломать или слетели права)
+    if (error) {
+        console.error("Admin Access Error:", error);
+        container.innerHTML = '<p class="text-center text-brick font-bold text-sm">⛔ Нет доступа</p>';
+        return;
+    }
+
+    if (!orders || orders.length === 0) { 
+        container.innerHTML = '<p class="text-center text-sage">Пусто</p>'; 
+        return; 
+    }
+
     orders.forEach(order => {
         const el = document.createElement('div');
-        el.className = 'bg-[#1f3a24] p-3 rounded-lg flex justify-between items-center';
-        el.innerHTML = `<div><div class="font-bold text-champagne">${order.player_name}</div><div class="text-xs text-sage">${order.item_name}</div></div><button onclick="deliverOrder('${order.id}')" class="bg-yellow-green text-[#1a2f1d] px-3 py-1 rounded font-bold text-xs">ВЫДАТЬ</button>`;
+        el.className = 'bg-[#1f3a24] p-3 rounded-lg flex justify-between items-center border border-[#60a846]/30';
+        el.innerHTML = `
+            <div>
+                <div class="font-bold text-champagne">${order.player_name}</div>
+                <div class="text-xs text-sage">${order.item_name}</div>
+            </div>
+            <button onclick="deliverOrder('${order.id}')" class="bg-yellow-green hover:bg-[#d4a373] text-[#1a2f1d] px-3 py-1 rounded font-bold text-xs shadow transition active:scale-95">ВЫДАТЬ</button>
+        `;
         container.appendChild(el);
     });
 }
+
 window.deliverOrder = async function(orderId) { if(confirm("Выдать?")) { await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); loadAdminOrders(); } };
 
 // [ИСПРАВЛЕНО] Безопасная функция загрузки таблицы
