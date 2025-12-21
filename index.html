@@ -100,17 +100,21 @@
             
             <div id="incoming-transfers" class="space-y-3"></div>
 
+            <button onclick="openTransferModal()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-[#60a846] to-[#4a7036] hover:brightness-110 text-[#fffdf5] font-bold text-lg uppercase shadow-lg border-2 border-[#fffdf5]/20 flex items-center justify-center gap-3 transition active:scale-95 group relative overflow-hidden">
+                <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition"></div>
+                <span class="text-2xl">💸</span>
+                <span>ПЕРЕВОД ДРУГУ</span>
+            </button>
+
             <div class="glass-panel p-6 flex flex-col gap-4">
                 <div class="flex justify-between items-center border-b border-[#6a994e]/30 pb-4">
-                    <div>
-                        <div class="text-xs text-sage font-bold uppercase tracking-widest">Мои вклады</div>
-                        <div class="text-2xl font-bold text-champagne mt-1"><span id="active-invest-count">0</span> активных</div>
+                    <div class="text-xs text-sage font-bold uppercase tracking-widest">Мои вклады</div>
+                    <div class="bg-[#0f1c11] px-3 py-1 rounded-lg border border-sage/30">
+                        <span id="active-invest-count" class="text-yellow-green font-bold text-lg">0</span>
+                        <span class="text-[10px] text-sage ml-1">АКТИВНЫХ</span>
                     </div>
-                    <button onclick="openTransferModal()" class="bg-[#60a846] hover:bg-[#4a7036] text-[#1f3a24] font-bold py-2 px-4 rounded-lg shadow-lg text-sm flex items-center gap-2 transition active:scale-95">
-                        <span>💸</span> Перевести
-                    </button>
                 </div>
-                <div id="my-investments-list" class="space-y-3"></div>
+                <div id="my-investments-list" class="space-y-3 min-h-[50px]"></div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
