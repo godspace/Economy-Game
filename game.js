@@ -4,7 +4,6 @@
 const SUPABASE_URL = 'https://ferhcoqknnobeesscvdv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlcmhjb3Frbm5vYmVlc3NjdmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3MjQ0NDUsImV4cCI6MjA4MTMwMDQ0NX0.pJB2oBN9Asp8mO0Od1lHD6sRjr-swoaJu5Z-ZJvw9jA';
 
-// ИСПРАВЛЕНИЕ: Переименовали переменную в supabaseClient, чтобы не конфликтовать с библиотекой
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- 2. СОСТОЯНИЕ ---
@@ -16,7 +15,7 @@ let currentTargetId = null;
 let respondingToDealId = null;
 
 // Пагинация
-let visiblePlayersCount = 25; // Сколько показывать сначала
+let visiblePlayersCount = 25; 
 const PLAYERS_PER_PAGE = 25;
 
 // --- 3. ИНИЦИАЛИЗАЦИЯ ---
@@ -56,11 +55,9 @@ async function login() {
 
 window.logout = async function() {
     if (confirm("Покинуть волшебный лес?")) {
-        // Отправляем сигнал на сервер, что игрок вышел
         if (myId) {
             await supabaseClient.rpc('logout_player', { player_uuid: myId });
         }
-        
         localStorage.removeItem('santa_id');
         localStorage.removeItem('santa_class');
         location.reload();
@@ -72,12 +69,8 @@ async function showGameScreen() {
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('my-class').innerText = myClass || 'Elf';
 
-    // Проверяем админку
-    const { data } = await supabaseClient.from('players').select('is_admin').eq('id', myId).single();
-    if (data && data.is_admin) {
-        isAdmin = true;
-        document.getElementById('tab-btn-admin').classList.remove('hidden');
-    }
+    // [ИСПРАВЛЕНО] Используем безопасную функцию вместо прямого SELECT (ошибка 406)
+    updateMyStats(); 
 }
 
 // --- 5. ВКЛАДКИ ---
@@ -98,7 +91,6 @@ window.switchTab = function(tabName) {
 // --- 6. ИГРОВОЙ ЦИКЛ ---
 function startGameLoop() {
     refreshAllData();
-    // Обновляем данные каждые 3 секунды
     setInterval(refreshAllData, 3000);
 }
 
@@ -115,7 +107,6 @@ async function fetchAllMyDeals() {
         checkIncomingDeals();     
         refreshPlayersForDeals(); 
         
-        // Если открыта модалка, обновляем её историю в реальном времени
         if (!document.getElementById('modal-move').classList.contains('hidden')) {
              const activeTarget = currentTargetId || (respondingToDealId ? getPartnerIdFromDeal(respondingToDealId) : null);
              if(activeTarget) renderModalHistory(activeTarget);
@@ -129,16 +120,25 @@ function getPartnerIdFromDeal(dealId) {
     return deal.initiator_id === myId ? deal.receiver_id : deal.initiator_id;
 }
 
+// [ИСПРАВЛЕНО] Новая функция обновления статистики через RPC
 async function updateMyStats() {
-    const { data } = await supabaseClient.from('players').select('coins').eq('id', myId).single();
-    if (data) document.getElementById('my-coins').innerText = data.coins;
+    const { data, error } = await supabaseClient.rpc('get_my_stats', { player_uuid: myId });
+    
+    if (data && !error) {
+        document.getElementById('my-coins').innerText = data.coins;
+        
+        // Проверяем админку здесь
+        if (data.is_admin) {
+            isAdmin = true;
+            document.getElementById('tab-btn-admin').classList.remove('hidden');
+        }
+    }
 }
 
 // --- СПИСОК ИГРОКОВ (СОРТИРОВКА + ПАГИНАЦИЯ) ---
 async function refreshPlayersForDeals() {
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
-    // ИСПОЛЬЗУЕМ БЕЗОПАСНУЮ RPC ФУНКЦИЮ
     const { data: players, error } = await supabaseClient.rpc('get_active_players', { my_id: myId });
 
     if (error) {
@@ -154,31 +154,26 @@ async function refreshPlayersForDeals() {
         return;
     }
 
-    // 1. ПОДГОТОВКА ДАННЫХ ДЛЯ СОРТИРОВКИ
     const processedPlayers = players.map(p => {
-        const outgoing = p.outgoing;
-        const incoming = p.incoming;
-        const hasPendingDeal = p.has_pending;
-        const isClassmate = p.is_classmate;
-        
-        const isLimitReached = outgoing >= 5;
-
-        // Присваиваем "вес" для сортировки
-        let sortWeight = 0;
-        if (hasPendingDeal) sortWeight = -1; // Ожидающие ответа - в самый верх
-        if (isLimitReached) sortWeight = 10; // Лимит исчерпан - вниз
-        if (isClassmate) sortWeight = 20;    // Одноклассники - в самый низ
-
-        return { ...p, outgoing, incoming, hasPendingDeal, isClassmate, isLimitReached, sortWeight };
+        // [ИСПРАВЛЕНО] Маппинг данных с учетом новых имен колонок из SQL (ret_*)
+        // SQL возвращает: ret_id, ret_class_name, outgoing, incoming, etc.
+        return {
+            id: p.ret_id,                 // Исправлено
+            class_name: p.ret_class_name, // Исправлено (ошибка Ambiguous column решена)
+            outgoing: p.outgoing,
+            incoming: p.incoming,
+            hasPendingDeal: p.has_pending,
+            isClassmate: p.is_classmate,
+            
+            // Логика сортировки
+            isLimitReached: p.outgoing >= 5,
+            sortWeight: calculateSortWeight(p)
+        };
     });
 
-    // 2. СОРТИРОВКА
     processedPlayers.sort((a, b) => a.sortWeight - b.sortWeight);
-
-    // 3. ПАГИНАЦИЯ
     const visiblePlayers = processedPlayers.slice(0, visiblePlayersCount);
 
-    // 4. ОТРИСОВКА
     visiblePlayers.forEach(p => {
         let btnHtml = '';
         if (p.isClassmate) {
@@ -239,6 +234,13 @@ async function refreshPlayersForDeals() {
         };
         list.appendChild(loadMoreBtn);
     }
+}
+
+function calculateSortWeight(p) {
+    if (p.has_pending) return -1;
+    if (p.outgoing >= 5) return 10;
+    if (p.is_classmate) return 20;
+    return 0;
 }
 
 function checkIncomingDeals() {
