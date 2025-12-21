@@ -155,18 +155,18 @@ async function refreshPlayersForDeals() {
     }
 
     const processedPlayers = players.map(p => {
-        // [ИСПРАВЛЕНО] Маппинг данных с учетом новых имен колонок из SQL (ret_*)
-        // SQL возвращает: ret_id, ret_class_name, outgoing, incoming, etc.
         return {
-            id: p.ret_id,                 // Исправлено
-            class_name: p.ret_class_name, // Исправлено (ошибка Ambiguous column решена)
+            id: p.ret_id,
+            class_name: p.ret_class_name,
             outgoing: p.outgoing,
             incoming: p.incoming,
             hasPendingDeal: p.has_pending,
             isClassmate: p.is_classmate,
+            revealedName: p.revealed_name, // Новое поле из базы
             
-            // Логика сортировки
-            isLimitReached: p.outgoing >= 5,
+            isLimitReached: p.outgoing >= 5, // Лимит исходящих (не даем отправлять больше)
+            
+            // Сортировка
             sortWeight: calculateSortWeight(p)
         };
     });
@@ -176,6 +176,8 @@ async function refreshPlayersForDeals() {
 
     visiblePlayers.forEach(p => {
         let btnHtml = '';
+        
+        // Логика кнопок
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
@@ -186,8 +188,15 @@ async function refreshPlayersForDeals() {
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-[#d64045] hover:bg-[#b02e33] text-white text-lg font-bold shadow-lg transition active:scale-95 border-2 border-white/20">ПРЕДЛОЖИТЬ</button>`;
         }
 
-        const cardOpacity = (p.isClassmate || p.isLimitReached) ? 'opacity-60 bg-[#152518]' : 'bg-[#1a2f1d]';
-        const borderColor = (p.isClassmate || p.isLimitReached) ? 'border-[#2c3e30]' : 'border-[#60a846]';
+        // Логика стилей (Серый, если свой класс или лимит)
+        const isInactive = p.isClassmate || p.isLimitReached;
+        const cardOpacity = isInactive ? 'opacity-60 bg-[#152518]' : 'bg-[#1a2f1d]';
+        const borderColor = isInactive ? 'border-[#2c3e30]' : 'border-[#60a846]';
+        
+        // Логика отображения имени (Секрет или Раскрыто)
+        const displayName = p.revealedName ? p.revealedName : "Тайный Санта";
+        const displayStatus = p.revealedName ? "✨ Личность раскрыта!" : "Анонимный игрок";
+        const nameColor = p.revealedName ? "text-[#e9c46a]" : "text-[#fffdf5]";
 
         const el = document.createElement('div');
         el.className = `${cardOpacity} p-5 rounded-2xl border-2 ${borderColor} shadow-lg flex flex-col justify-between gap-4 relative overflow-hidden transition-all duration-300`;
@@ -201,8 +210,8 @@ async function refreshPlayersForDeals() {
                     <span class="text-4xl block leading-none">🎅</span>
                  </div>
                  <div class="leading-tight">
-                    <div class="text-2xl font-bold text-[#fffdf5] tracking-wide text-shadow">Тайный Санта</div>
-                    <div class="text-sm text-[#e9c46a] font-bold uppercase tracking-wider">Анонимный игрок</div>
+                    <div class="text-2xl font-bold ${nameColor} tracking-wide text-shadow">${displayName}</div>
+                    <div class="text-sm text-[#e9c46a] font-bold uppercase tracking-wider">${displayStatus}</div>
                  </div>
             </div>
             
