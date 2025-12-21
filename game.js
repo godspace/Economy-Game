@@ -320,10 +320,11 @@ async function loadMyInvestments() {
     const { data: investments } = await supabaseClient.rpc('get_my_investments', { my_id: myId });
     const list = document.getElementById('my-investments-list');
     const countEl = document.getElementById('active-invest-count');
+    
     list.innerHTML = '';
     
     if (!investments || investments.length === 0) { 
-        list.innerHTML = '<div class="text-center text-sage/30 py-4 text-sm italic">Портфель пуст</div>'; 
+        list.innerHTML = '<div class="text-center text-[#fffdf5]/30 py-4 text-sm italic">Портфель пуст</div>'; 
         countEl.innerText = '0'; return; 
     }
     
@@ -331,24 +332,56 @@ async function loadMyInvestments() {
     investments.forEach(inv => {
         if (inv.status === 'collected') return;
         activeCount++;
+        
         const unlockDate = new Date(inv.unlock_at);
         const isReady = new Date() >= unlockDate;
         const timeLeftMs = unlockDate - new Date();
         
         let icon = '💰', title = 'Вклад';
-        if(inv.tariff_id === 'call') { title = 'По звонку'; icon = '🔔'; } 
+        if(inv.tariff_id === 'call') { title = 'По звонку'; icon = '🔔'; }
         if(inv.tariff_id === 'five') { title = 'Пятёрка'; icon = '🖐️'; }
         if(inv.tariff_id === 'night') { title = 'Ночь'; icon = '🌙'; }
         if(inv.tariff_id === 'champion') { title = 'Чемпион'; icon = '🏆'; }
         if(inv.tariff_id === 'crypto') { title = 'Crypto'; icon = '💀'; }
         
-        let actionHtml = isReady ? 
-            `<button onclick="collectMoney('${inv.id}')" class="w-full mt-2 py-2 rounded bg-yellow-green text-[#1a2f1d] font-bold text-sm uppercase shadow hover:brightness-110 animate-bounce-slow">ЗАБРАТЬ ПРИБЫЛЬ</button>` : 
-            `<div class="mt-2 text-center text-xs text-yellow-green font-mono bg-black/20 rounded py-1">⏳ ${Math.floor(timeLeftMs / 3600000)}ч ${Math.floor((timeLeftMs % 3600000) / 60000)}мин</div>`;
+        // Стили для карточки
+        let cardClass = "bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/30 relative transition-all duration-300";
+        if (isReady) cardClass += " invest-ready"; // Добавляем пульсацию
+        if (inv.tariff_id === 'crypto') cardClass += " border-[#d64045]/50";
+
+        // Кнопка или Таймер
+        let actionHtml = '';
+        if (isReady) {
+            actionHtml = `
+                <div class="mt-3 flex items-center justify-between bg-black/20 p-2 rounded-lg">
+                    <span class="text-[#e9c46a] font-bold text-sm ml-2">🎉 Готово к выдаче!</span>
+                    <button onclick="collectMoney('${inv.id}')" class="bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-2 px-6 rounded-lg shadow-lg active:scale-95 transition border-b-4 border-[#b58b38] uppercase text-sm">
+                        ЗАБРАТЬ
+                    </button>
+                </div>
+            `;
+        } else {
+            const hours = Math.floor(timeLeftMs / 3600000);
+            const minutes = Math.floor((timeLeftMs % 3600000) / 60000);
+            const minStr = minutes < 10 ? '0' + minutes : minutes;
+            actionHtml = `<div class="mt-2 text-right text-xs text-[#e9c46a] font-mono opacity-80">⏳ ${hours}:${minStr}</div>`;
+        }
         
         const el = document.createElement('div');
-        el.className = `bg-[#1f3a24] p-3 rounded-xl border border-sage/50 relative`;
-        el.innerHTML = `<div class="flex justify-between items-start"><div class="flex gap-2"><span class="text-2xl">${icon}</span><div><div class="font-bold text-champagne text-sm">${title}</div><div class="text-xs text-sage">Вклад: <span class="text-champagne">${inv.invested_amount}</span></div></div></div></div>${actionHtml}`;
+        el.className = cardClass;
+        el.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div class="flex gap-3">
+                    <span class="text-3xl bg-black/20 rounded-full p-2 h-12 w-12 flex items-center justify-center">${icon}</span>
+                    <div>
+                        <div class="font-bold text-[#fffdf5] text-base">${title}</div>
+                        <div class="text-xs text-[#fffdf5]/60 mt-1">Вклад: <span class="text-[#e9c46a] font-bold">${inv.invested_amount}</span></div>
+                    </div>
+                </div>
+                ${inv.tariff_id === 'crypto' ? '<span class="text-[10px] bg-[#d64045] text-white px-2 py-1 rounded font-bold">RISK</span>' : ''}
+            </div>
+            ${actionHtml}
+        `;
         list.appendChild(el);
     });
     countEl.innerText = activeCount;
@@ -371,14 +404,27 @@ async function checkPendingTransfers() {
     if (transfers && transfers.length > 0) {
         transfers.forEach(tr => {
             const el = document.createElement('div');
-            el.className = 'bg-yellow-green p-4 rounded-xl shadow-lg border-2 border-champagne text-[#1a2f1d] animate-pulse-slow';
+            // Используем новый класс transfer-card из CSS
+            el.className = 'transfer-card p-5 rounded-2xl mb-4 animate-fade-in';
+            
             el.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold uppercase tracking-wider text-xs">Вам перевод!</span>
-                    <span class="text-2xl font-bold">+${tr.amount} 💰</span>
+                <div class="flex justify-between items-center mb-4 relative z-10">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">💸</span>
+                        <div>
+                            <span class="text-[10px] text-[#e9c46a] font-bold uppercase tracking-widest block">Вам перевод</span>
+                            <span class="text-[#fffdf5] font-bold text-sm">от ${tr.sender_name || 'Анонима'}</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-3xl font-bold text-[#e9c46a] text-shadow">+${tr.amount}</span>
+                    </div>
                 </div>
-                <div class="text-sm font-bold mb-3">От: ${tr.sender_name || 'Аноним'}</div>
-                <button onclick="claimTransfer('${tr.id}')" class="w-full py-3 rounded-lg bg-[#1a2f1d] text-yellow-green font-bold shadow-md hover:scale-105 transition">ПОЛУЧИТЬ</button>
+                
+                <button onclick="claimTransfer('${tr.id}')" class="relative z-10 w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold text-lg shadow-lg transition active:scale-95 border-b-4 border-[#3e6b2e] flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                    ПРИНЯТЬ МОНЕТЫ
+                </button>
             `;
             container.appendChild(el);
         });
@@ -492,7 +538,6 @@ async function loadLeaderboard(limit, tableId) {
     const table = document.getElementById(tableId);
     if (!table) return;
 
-    // Ищем или создаем tbody
     let container;
     if (table.tagName === 'TABLE') {
         container = table.tBodies[0];
@@ -502,11 +547,45 @@ async function loadLeaderboard(limit, tableId) {
     }
 
     container.innerHTML = '';
-    if (!players) return;
+    
+    if (!players || players.length === 0) {
+        container.innerHTML = '<tr><td colspan="4" class="text-center p-4 opacity-50">Список пуст...</td></tr>';
+        return;
+    }
+
     players.forEach((p, index) => {
         const row = document.createElement('tr');
-        if (index === 0) row.className = "text-yellow-green font-bold";
-        row.innerHTML = `<td class="p-3">${index + 1}</td><td class="p-3">${p.last_name} ${p.first_name}</td><td class="p-3 text-xs opacity-70">${p.class_name}</td><td class="p-3 text-right font-mono">${p.coins}</td>`;
+        
+        // Определяем стили для Топ-3
+        let rowClass = "leaderboard-row text-sm";
+        let rankDisplay = index + 1;
+        let icon = "";
+
+        if (index === 0) {
+            rowClass += " rank-1";
+            icon = "👑";
+        } else if (index === 1) {
+            rowClass += " rank-2";
+            icon = "🥈";
+        } else if (index === 2) {
+            rowClass += " rank-3";
+            icon = "🥉";
+        }
+
+        row.className = rowClass;
+        
+        row.innerHTML = `
+            <td class="p-3 font-bold rank-num text-center w-12">${rankDisplay}</td>
+            <td class="p-3">
+                <div class="font-bold text-[#fffdf5] flex items-center gap-2">
+                    ${p.last_name} ${p.first_name} ${icon}
+                </div>
+            </td>
+            <td class="p-3 text-xs text-[#60a846] font-bold uppercase">${p.class_name}</td>
+            <td class="p-3 text-right">
+                <span class="font-mono text-[#e9c46a] font-bold text-lg">${p.coins}</span>
+            </td>
+        `;
         container.appendChild(row);
     });
 }

@@ -103,3 +103,62 @@ body {
 }
 @keyframes fall { to { transform: translateY(105vh); } }
 .hidden { display: none !important; }
+
+/* --- НОВЫЕ СТИЛИ --- */
+
+/* 1. Улучшенная таблица рейтинга */
+.leaderboard-row {
+    transition: transform 0.2s;
+    border-bottom: 1px solid rgba(96, 168, 70, 0.2);
+}
+.leaderboard-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+    transform: scale(1.01);
+}
+/* Золото */
+.rank-1 {
+    background: linear-gradient(90deg, rgba(233, 196, 106, 0.1), transparent);
+    border-left: 4px solid #e9c46a;
+}
+.rank-1 .rank-num { color: #e9c46a; font-size: 1.5em; text-shadow: 0 0 10px rgba(233, 196, 106, 0.5); }
+/* Серебро */
+.rank-2 {
+    background: linear-gradient(90deg, rgba(224, 224, 224, 0.1), transparent);
+    border-left: 4px solid #e0e0e0;
+}
+.rank-2 .rank-num { color: #e0e0e0; font-size: 1.3em; text-shadow: 0 0 10px rgba(224, 224, 224, 0.5); }
+/* Бронза */
+.rank-3 {
+    background: linear-gradient(90deg, rgba(205, 127, 50, 0.1), transparent);
+    border-left: 4px solid #cd7f32;
+}
+.rank-3 .rank-num { color: #cd7f32; font-size: 1.2em; text-shadow: 0 0 10px rgba(205, 127, 50, 0.5); }
+
+/* 2. Готовый вклад (пульсация) */
+@keyframes glow-gold {
+    0% { box-shadow: 0 0 5px rgba(233, 196, 106, 0.2); border-color: rgba(233, 196, 106, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(233, 196, 106, 0.6); border-color: #e9c46a; }
+    100% { box-shadow: 0 0 5px rgba(233, 196, 106, 0.2); border-color: rgba(233, 196, 106, 0.5); }
+}
+.invest-ready {
+    animation: glow-gold 2s infinite;
+    background: linear-gradient(135deg, rgba(233, 196, 106, 0.1), rgba(26, 47, 29, 0.9)) !important;
+    border: 2px solid #e9c46a !important;
+}
+
+/* 3. Карточка перевода */
+.transfer-card {
+    background: #1a2f1d; /* Плотный темный фон */
+    border: 2px solid #e9c46a;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+}
+/* Блик на карточке */
+.transfer-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(233,196,106,0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
