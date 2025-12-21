@@ -14,6 +14,9 @@ let myDealsHistory = [];
 let currentTargetId = null;
 let respondingToDealId = null;
 
+// [НОВОЕ] Кэш для хранения имен и статусов игроков (чтобы модалка знала, как кого зовут)
+let playersCache = {}; 
+
 // Пагинация
 let visiblePlayersCount = 25; 
 const PLAYERS_PER_PAGE = 25;
@@ -39,6 +42,7 @@ async function login() {
 
     btn.disabled = true; btn.innerText = "Связь с лесом..."; err.classList.add('hidden');
 
+    // [ВАЖНО] Используем безопасную RPC функцию
     const { data, error } = await supabaseClient.rpc('login_player', { input_code: code });
 
     if (error || (data && data.error)) {
@@ -69,7 +73,6 @@ async function showGameScreen() {
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('my-class').innerText = myClass || 'Elf';
 
-    // [ИСПРАВЛЕНО] Используем безопасную функцию вместо прямого SELECT (ошибка 406)
     updateMyStats(); 
 }
 
@@ -120,14 +123,11 @@ function getPartnerIdFromDeal(dealId) {
     return deal.initiator_id === myId ? deal.receiver_id : deal.initiator_id;
 }
 
-// [ИСПРАВЛЕНО] Новая функция обновления статистики через RPC
 async function updateMyStats() {
     const { data, error } = await supabaseClient.rpc('get_my_stats', { player_uuid: myId });
     
     if (data && !error) {
         document.getElementById('my-coins').innerText = data.coins;
-        
-        // Проверяем админку здесь
         if (data.is_admin) {
             isAdmin = true;
             document.getElementById('tab-btn-admin').classList.remove('hidden');
@@ -155,6 +155,15 @@ async function refreshPlayersForDeals() {
     }
 
     const processedPlayers = players.map(p => {
+        // [ИСПРАВЛЕНО] Более строгая логика лимита (как в SQL)
+        const isLimit = p.outgoing >= 5 || p.incoming >= 5;
+
+        // Сохраняем данные в кэш для модалки
+        playersCache[p.ret_id] = {
+            name: p.revealed_name,
+            limitReached: isLimit
+        };
+
         return {
             id: p.ret_id,
             class_name: p.ret_class_name,
@@ -162,12 +171,9 @@ async function refreshPlayersForDeals() {
             incoming: p.incoming,
             hasPendingDeal: p.has_pending,
             isClassmate: p.is_classmate,
-            revealedName: p.revealed_name, // Новое поле из базы
-            
-            isLimitReached: p.outgoing >= 5, // Лимит исходящих (не даем отправлять больше)
-            
-            // Сортировка
-            sortWeight: calculateSortWeight(p)
+            revealedName: p.revealed_name, 
+            isLimitReached: isLimit, 
+            sortWeight: calculateSortWeight({ ...p, has_pending: p.has_pending, is_classmate: p.is_classmate, outgoing: p.outgoing })
         };
     });
 
@@ -177,23 +183,22 @@ async function refreshPlayersForDeals() {
     visiblePlayers.forEach(p => {
         let btnHtml = '';
         
-        // Логика кнопок
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
-            btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🔒 ЛИМИТ (5/5)</button>`;
+            // [НОВОЕ] Если лимит исчерпан, показываем кнопку Истории (если имя раскрыто) или просто Лимит
+            // Если имя раскрыто, кнопка активна и зеленая.
+            btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold border-2 border-[#fffdf5]/20 text-sm shadow-lg transition transform active:scale-95">📜 ИСТОРИЯ СДЕЛОК</button>`;
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
         } else {
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-[#d64045] hover:bg-[#b02e33] text-white text-lg font-bold shadow-lg transition active:scale-95 border-2 border-white/20">ПРЕДЛОЖИТЬ</button>`;
         }
 
-        // Логика стилей (Серый, если свой класс или лимит)
         const isInactive = p.isClassmate || p.isLimitReached;
-        const cardOpacity = isInactive ? 'opacity-60 bg-[#152518]' : 'bg-[#1a2f1d]';
-        const borderColor = isInactive ? 'border-[#2c3e30]' : 'border-[#60a846]';
-        
-        // Логика отображения имени (Секрет или Раскрыто)
+        const cardOpacity = isInactive ? 'opacity-80 bg-[#152518]' : 'bg-[#1a2f1d]'; // Чуть светлее для истории
+        const borderColor = isInactive ? 'border-[#60a846]/50' : 'border-[#60a846]';
+
         const displayName = p.revealedName ? p.revealedName : "Тайный Санта";
         const displayStatus = p.revealedName ? "✨ Личность раскрыта!" : "Анонимный игрок";
         const nameColor = p.revealedName ? "text-[#e9c46a]" : "text-[#fffdf5]";
@@ -350,43 +355,92 @@ async function loadAdminOrders() {
 window.deliverOrder = async function(orderId) { if(!confirm("Выдать товар?")) return; const { error } = await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); if(!error) loadAdminOrders(); };
 
 async function loadLeaderboard(limit, tableId) {
-    // [ИСПРАВЛЕНО] Используем RPC вместо прямого SELECT, так как прямой доступ закрыт
     const { data: players, error } = await supabaseClient.rpc('get_leaderboard', { limit_count: limit });
 
-    if (error) {
-        console.error("Ошибка загрузки рейтинга:", error);
-        return;
-    }
+    if (error) { console.error("Ошибка загрузки рейтинга:", error); return; }
 
     const container = document.getElementById(tableId).tagName === 'TABLE' ? document.getElementById(tableId).tBodies[0] || document.getElementById(tableId) : document.getElementById(tableId);
     container.innerHTML = '';
-    
-    if (!players || players.length === 0) {
-        container.innerHTML = '<tr><td colspan="4" class="text-center text-[#e9c46a] py-4">Список пуст...</td></tr>';
-        return;
-    }
-
+    if (!players) return;
     players.forEach((p, index) => {
         const row = document.createElement('tr');
         let rankColor = "text-[#fffdf5]/70";
         if (index === 0) rankColor = "text-[#e9c46a] font-bold text-lg";
         if (index === 1) rankColor = "text-[#e0e0e0] font-bold";
         if (index === 2) rankColor = "text-[#cd7f32] font-bold";
-        
-        row.innerHTML = `
-            <td class="${rankColor} text-center">${index + 1}</td>
-            <td class="text-[#fffdf5] font-medium tracking-wide">${p.last_name} ${p.first_name}</td>
-            <td class="text-xs text-[#e9c46a] font-bold opacity-80">${p.class_name}</td>
-            <td class="text-right text-[#e9c46a] font-bold text-lg tracking-wider">${p.coins}</td>
-        `;
+        row.innerHTML = `<td class="${rankColor} text-center">${index + 1}</td><td class="text-[#fffdf5] font-medium tracking-wide">${p.last_name} ${p.first_name}</td><td class="text-xs text-[#e9c46a] font-bold opacity-80">${p.class_name}</td><td class="text-right text-[#e9c46a] font-bold text-lg tracking-wider">${p.coins}</td>`;
         container.appendChild(row);
     });
 }
 
-// --- МОДАЛКИ ---
-window.openDealModal = (targetId) => { currentTargetId = targetId; respondingToDealId = null; renderModalHistory(targetId); document.getElementById('modal-title').innerText = "Предложить сделку"; document.getElementById('modal-move').classList.remove('hidden'); document.getElementById('modal-move').classList.add('flex'); };
-window.openResponseModal = (dealId) => { respondingToDealId = dealId; currentTargetId = null; const partnerId = getPartnerIdFromDeal(dealId); if(partnerId) renderModalHistory(partnerId); document.getElementById('modal-title').innerText = "Ваш ответ?"; document.getElementById('modal-move').classList.remove('hidden'); document.getElementById('modal-move').classList.add('flex'); };
-window.closeModal = () => { document.getElementById('modal-move').classList.add('hidden'); document.getElementById('modal-move').classList.remove('flex'); };
-window.makeMove = async (moveType) => { closeModal(); if (currentTargetId) { const { data } = await supabaseClient.rpc('create_deal', { my_id: myId, target_id: currentTargetId, my_move: moveType }); if (data && data.error) alert("❌ " + data.error); else alert("✅ Предложение отправлено!"); } else if (respondingToDealId) { const { data } = await supabaseClient.rpc('accept_deal', { deal_id_input: respondingToDealId, responder_id: myId, responder_move_input: moveType }); if (data && data.error) alert("❌ " + data.error); else { alert(`✅ Результат: ${data.p2_change > 0 ? '+' : ''}${data.p2_change}`); fetchAllMyDeals(); updateMyStats(); } } };
+// --- МОДАЛКИ И ИХ ЛОГИКА ---
+window.openDealModal = (targetId) => { 
+    currentTargetId = targetId; 
+    respondingToDealId = null; 
+    renderModalHistory(targetId); 
+    
+    // [НОВОЕ] Проверяем кэш, чтобы настроить окно (история или игра)
+    const pData = playersCache[targetId];
+    const modalTitle = document.getElementById('modal-title');
+    const actionsDiv = document.querySelector('#modal-move .grid'); // Кнопки действий
+    const tipsText = document.querySelector('#modal-move p'); // Текст с правилами
+
+    if (pData && pData.limitReached) {
+        // РЕЖИМ ИСТОРИИ (Кнопки скрыты)
+        modalTitle.innerText = pData.name ? `Архив: ${pData.name}` : "Архив сделок";
+        if(actionsDiv) actionsDiv.classList.add('hidden');
+        if(tipsText) tipsText.classList.add('hidden');
+    } else {
+        // РЕЖИМ ИГРЫ (Кнопки видны)
+        modalTitle.innerText = pData && pData.name ? `Сделка с: ${pData.name}` : "Предложить сделку";
+        if(actionsDiv) actionsDiv.classList.remove('hidden');
+        if(tipsText) tipsText.classList.remove('hidden');
+    }
+
+    document.getElementById('modal-move').classList.remove('hidden'); 
+    document.getElementById('modal-move').classList.add('flex'); 
+};
+
+window.openResponseModal = (dealId) => { 
+    respondingToDealId = dealId; 
+    currentTargetId = null; 
+    const partnerId = getPartnerIdFromDeal(dealId); 
+    
+    if(partnerId) {
+        renderModalHistory(partnerId);
+        
+        // Показываем имя, если оно уже известно
+        const pData = playersCache[partnerId];
+        const namePart = pData && pData.name ? ` (${pData.name})` : "";
+        document.getElementById('modal-title').innerText = `Ваш ответ?${namePart}`;
+    }
+    
+    // Возвращаем кнопки на место (если они были скрыты историей)
+    const actionsDiv = document.querySelector('#modal-move .grid');
+    const tipsText = document.querySelector('#modal-move p');
+    if(actionsDiv) actionsDiv.classList.remove('hidden');
+    if(tipsText) tipsText.classList.remove('hidden');
+
+    document.getElementById('modal-move').classList.remove('hidden'); 
+    document.getElementById('modal-move').classList.add('flex'); 
+};
+
+window.closeModal = () => { 
+    document.getElementById('modal-move').classList.add('hidden'); 
+    document.getElementById('modal-move').classList.remove('flex'); 
+};
+
+window.makeMove = async (moveType) => { 
+    closeModal(); 
+    if (currentTargetId) { 
+        const { data } = await supabaseClient.rpc('create_deal', { my_id: myId, target_id: currentTargetId, my_move: moveType }); 
+        if (data && data.error) alert("❌ " + data.error); 
+        else alert("✅ Предложение отправлено!"); 
+    } else if (respondingToDealId) { 
+        const { data } = await supabaseClient.rpc('accept_deal', { deal_id_input: respondingToDealId, responder_id: myId, responder_move_input: moveType }); 
+        if (data && data.error) alert("❌ " + data.error); 
+        else { alert(`✅ Результат: ${data.p2_change > 0 ? '+' : ''}${data.p2_change}`); fetchAllMyDeals(); updateMyStats(); } 
+    } 
+};
 
 function createSnow() { const container = document.getElementById('snow-container'); if(!container) return; for(let i=0; i<25; i++){ const div = document.createElement('div'); div.classList.add('snowflake'); div.innerHTML = '❄'; div.style.left = Math.random() * 100 + 'vw'; div.style.animationDuration = (Math.random() * 5 + 5) + 's'; div.style.opacity = Math.random(); div.style.fontSize = (Math.random() * 10 + 8) + 'px'; container.appendChild(div); } }
