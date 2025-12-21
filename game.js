@@ -14,7 +14,7 @@ let myDealsHistory = [];
 let currentTargetId = null;
 let respondingToDealId = null;
 
-// [НОВОЕ] Кэш для хранения имен и статусов игроков (чтобы модалка знала, как кого зовут)
+// Кэш для хранения имен и классов
 let playersCache = {}; 
 
 // Пагинация
@@ -42,7 +42,6 @@ async function login() {
 
     btn.disabled = true; btn.innerText = "Связь с лесом..."; err.classList.add('hidden');
 
-    // [ВАЖНО] Используем безопасную RPC функцию
     const { data, error } = await supabaseClient.rpc('login_player', { input_code: code });
 
     if (error || (data && data.error)) {
@@ -155,12 +154,12 @@ async function refreshPlayersForDeals() {
     }
 
     const processedPlayers = players.map(p => {
-        // [ИСПРАВЛЕНО] Более строгая логика лимита (как в SQL)
         const isLimit = p.outgoing >= 5 || p.incoming >= 5;
 
-        // Сохраняем данные в кэш для модалки
+        // [ОБНОВЛЕНО] Сохраняем имя и КЛАСС в кэш
         playersCache[p.ret_id] = {
             name: p.revealed_name,
+            className: p.ret_class_name, // <-- Добавили класс
             limitReached: isLimit
         };
 
@@ -186,8 +185,6 @@ async function refreshPlayersForDeals() {
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
-            // [НОВОЕ] Если лимит исчерпан, показываем кнопку Истории (если имя раскрыто) или просто Лимит
-            // Если имя раскрыто, кнопка активна и зеленая.
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold border-2 border-[#fffdf5]/20 text-sm shadow-lg transition transform active:scale-95">📜 ИСТОРИЯ СДЕЛОК</button>`;
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
@@ -196,11 +193,16 @@ async function refreshPlayersForDeals() {
         }
 
         const isInactive = p.isClassmate || p.isLimitReached;
-        const cardOpacity = isInactive ? 'opacity-80 bg-[#152518]' : 'bg-[#1a2f1d]'; // Чуть светлее для истории
+        const cardOpacity = isInactive ? 'opacity-80 bg-[#152518]' : 'bg-[#1a2f1d]';
         const borderColor = isInactive ? 'border-[#60a846]/50' : 'border-[#60a846]';
 
+        // [ОБНОВЛЕНО] Логика отображения имени и КЛАССА
         const displayName = p.revealedName ? p.revealedName : "Тайный Санта";
-        const displayStatus = p.revealedName ? "✨ Личность раскрыта!" : "Анонимный игрок";
+        // Если раскрыто, показываем класс и зеленый текст. Если нет - стандарт.
+        const displayStatus = p.revealedName 
+            ? `<span class="text-[#e9c46a] font-extrabold">${p.class_name}</span> • Раскрыт!` 
+            : "Анонимный игрок";
+        
         const nameColor = p.revealedName ? "text-[#e9c46a]" : "text-[#fffdf5]";
 
         const el = document.createElement('div');
@@ -373,26 +375,33 @@ async function loadLeaderboard(limit, tableId) {
     });
 }
 
-// --- МОДАЛКИ И ИХ ЛОГИКА ---
+// --- МОДАЛКИ ---
 window.openDealModal = (targetId) => { 
     currentTargetId = targetId; 
     respondingToDealId = null; 
     renderModalHistory(targetId); 
     
-    // [НОВОЕ] Проверяем кэш, чтобы настроить окно (история или игра)
+    // [ОБНОВЛЕНО] Настройка заголовка с учетом ИМЕНИ и КЛАССА
     const pData = playersCache[targetId];
     const modalTitle = document.getElementById('modal-title');
-    const actionsDiv = document.querySelector('#modal-move .grid'); // Кнопки действий
-    const tipsText = document.querySelector('#modal-move p'); // Текст с правилами
+    const actionsDiv = document.querySelector('#modal-move .grid'); 
+    const tipsText = document.querySelector('#modal-move p'); 
+
+    // Формируем строку имени с классом, если есть
+    let nameStr = "";
+    if (pData && pData.name) {
+        const classPart = pData.className ? ` (${pData.className})` : "";
+        nameStr = `${pData.name}${classPart}`;
+    }
 
     if (pData && pData.limitReached) {
-        // РЕЖИМ ИСТОРИИ (Кнопки скрыты)
-        modalTitle.innerText = pData.name ? `Архив: ${pData.name}` : "Архив сделок";
+        // Режим истории
+        modalTitle.innerText = nameStr ? `Архив: ${nameStr}` : "Архив сделок";
         if(actionsDiv) actionsDiv.classList.add('hidden');
         if(tipsText) tipsText.classList.add('hidden');
     } else {
-        // РЕЖИМ ИГРЫ (Кнопки видны)
-        modalTitle.innerText = pData && pData.name ? `Сделка с: ${pData.name}` : "Предложить сделку";
+        // Режим игры
+        modalTitle.innerText = nameStr ? `Сделка с: ${nameStr}` : "Предложить сделку";
         if(actionsDiv) actionsDiv.classList.remove('hidden');
         if(tipsText) tipsText.classList.remove('hidden');
     }
@@ -409,13 +418,15 @@ window.openResponseModal = (dealId) => {
     if(partnerId) {
         renderModalHistory(partnerId);
         
-        // Показываем имя, если оно уже известно
         const pData = playersCache[partnerId];
-        const namePart = pData && pData.name ? ` (${pData.name})` : "";
-        document.getElementById('modal-title').innerText = `Ваш ответ?${namePart}`;
+        let nameStr = "";
+        if (pData && pData.name) {
+            const classPart = pData.className ? ` (${pData.className})` : "";
+            nameStr = ` (${pData.name}${classPart})`;
+        }
+        document.getElementById('modal-title').innerText = `Ваш ответ?${nameStr}`;
     }
     
-    // Возвращаем кнопки на место (если они были скрыты историей)
     const actionsDiv = document.querySelector('#modal-move .grid');
     const tipsText = document.querySelector('#modal-move p');
     if(actionsDiv) actionsDiv.classList.remove('hidden');
