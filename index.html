@@ -2,161 +2,337 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Новогодняя сделка</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Тайный Санта: Дилемма</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="style.css">
     
     <style>
-        .text-champagne { color: var(--champagne-mist); }
-        .text-yellow-green { color: var(--yellow-green); }
-        .text-brick { color: var(--blushed-brick); }
-        .text-sage { color: var(--sage-green); }
+        /* Дополнительные анимации */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 2s infinite;
+        }
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .text-shadow {
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .snowflake {
+            position: fixed;
+            top: -10px;
+            z-index: 0;
+            user-select: none;
+            cursor: default;
+            animation-name: snowfall;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+            color: #fff;
+        }
+        @keyframes snowfall {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(100vh); }
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
+        }
         
-        .bg-hunter { background-color: var(--hunter-green); }
-        .bg-sage { background-color: var(--sage-green); }
-        
-        .border-sage { border-color: var(--sage-green); }
-        .border-brick { border-color: var(--blushed-brick); }
+        /* Скрытие скроллбара для красоты */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start p-4 pt-8 bg-[#386641]">
+<body class="min-h-screen bg-[#0f1c11] text-[#fffdf5] font-sans overflow-x-hidden selection:bg-[#e9c46a] selection:text-[#1a2f1d]">
 
-    <div id="snow-container"></div>
+    <div id="snow-container" class="pointer-events-none fixed inset-0 z-0 opacity-20"></div>
 
-    <div id="login-screen" class="glass-panel p-6 max-w-sm w-full z-10 flex flex-col gap-6">
-        <div class="text-center">
-            <h1 class="text-4xl font-bold text-brick mb-2">🎅 Вход</h1>
-            <p class="text-sm text-champagne opacity-80">Введите секретный код эльфа</p>
-        </div>
-        <div>
-            <input type="text" id="access-code" maxlength="6" placeholder="Код..." 
-                   class="w-full p-4 rounded-xl bg-[#2a4d31] border border-[#6a994e] text-center text-2xl text-champagne mb-4 focus:outline-none focus:border-[#a7c957] tracking-[0.2em] placeholder-opacity-30 placeholder-[#f2e8cf]">
-            <button id="login-btn" class="btn-primary w-full py-4 rounded-xl shadow-lg text-lg uppercase tracking-wider">Войти в игру</button>
-            <p id="login-error" class="text-brick mt-2 text-sm text-center hidden font-bold"></p>
-        </div>
-        <div class="border-t border-[#6a994e] pt-4">
-            <h3 class="text-center text-yellow-green font-bold mb-3 text-sm uppercase tracking-widest">🏆 Лидеры школы</h3>
-            <table class="ranking-table" id="login-leaderboard">
-                </table>
-        </div>
-    </div>
-
-    <div id="game-screen" class="hidden w-full max-w-2xl z-10">
+    <div id="login-screen" class="relative z-10 flex flex-col items-center justify-center min-h-screen p-4 max-w-md mx-auto w-full">
         
-        <div class="glass-panel p-5 mb-5 flex justify-between items-start shadow-xl">
-            <div>
-                <div class="text-xs text-sage font-bold uppercase tracking-wider">Вы: Тайный Санта</div>
-                <div class="text-3xl font-bold text-yellow-green drop-shadow-sm mt-1">💰 <span id="my-coins">0</span></div>
-            </div>
-            <div class="flex flex-col items-end gap-2">
-                <div class="text-right">
-                    <div class="text-xs text-sage font-bold uppercase tracking-wider">Ваш класс</div>
-                    <div class="font-bold text-xl text-champagne" id="my-class">--</div>
-                </div>
-                <button onclick="logout()" class="text-[10px] uppercase font-bold text-brick border border-brick hover:bg-brick hover:text-white px-3 py-1 rounded-full transition">Выйти 🚪</button>
-            </div>
+        <div class="mb-8 text-center animate-bounce-slow">
+            <div class="text-6xl mb-2">🎄</div>
+            <h1 class="text-4xl font-bold text-[#e9c46a] tracking-wider text-shadow">Тайный Санта</h1>
+            <p class="text-sm text-[#60a846] font-bold uppercase tracking-[0.2em] mt-2">Дилемма Заключенного</p>
         </div>
 
-        <div class="flex justify-center mb-6 space-x-2 bg-[#2a4d31] p-2 rounded-xl shadow-inner overflow-x-auto">
-            <button onclick="switchTab('game')" id="tab-btn-game" class="tab-btn active text-sm flex-1 min-w-[70px] py-2">🎄 ИГРА</button>
-            <button onclick="switchTab('shop')" id="tab-btn-shop" class="tab-btn text-sm flex-1 min-w-[70px] py-2">🍫 МАГАЗИН</button>
-            <button onclick="switchTab('rating')" id="tab-btn-rating" class="tab-btn text-sm flex-1 min-w-[70px] py-2">🏆 ТОП</button>
-            <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn text-sm flex-1 hidden text-brick font-bold border-brick min-w-[70px] py-2">ADMIN</button>
-        </div>
-
-        <div id="tab-content-game">
-            <div id="incoming-deals" class="mb-6 space-y-4"></div>
+        <div class="w-full bg-[#1a2f1d]/90 backdrop-blur-md p-6 rounded-3xl border-2 border-[#60a846] shadow-2xl mb-8">
+            <label class="block text-[#e9c46a] text-xs font-bold uppercase mb-2 ml-1">Код доступа</label>
+            <input type="text" id="access-code" class="w-full bg-[#0f1c11] border-2 border-[#2c3e30] rounded-xl px-4 py-4 text-[#fffdf5] text-lg focus:outline-none focus:border-[#e9c46a] transition mb-4 placeholder-[#fffdf5]/20 text-center uppercase tracking-widest" placeholder="XXXX-XXXX">
             
-            <div class="flex items-center justify-between mb-4 px-2">
-                <h2 class="text-base font-bold text-champagne uppercase tracking-widest opacity-70">Анонимные эльфы</h2>
-                <span class="text-xs text-yellow-green bg-[#2a4d31] px-3 py-1 rounded-full border border-[#6a994e]">Лимит: 5</span>
-            </div>
+            <p id="login-error" class="hidden text-[#d64045] text-sm text-center mb-4 font-bold bg-[#2b1114] py-2 rounded-lg border border-[#d64045]/30">Ошибка входа</p>
             
-            <div id="players-list" class="grid grid-cols-1 gap-4">
-                </div>
+            <button id="login-btn" class="w-full bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-4 rounded-xl shadow-lg transition transform active:scale-95 text-lg border-b-4 border-[#b58b38]">
+                ВОЙТИ В ИГРУ
+            </button>
         </div>
 
-        <div id="tab-content-shop" class="hidden">
-            <div class="glass-panel p-8 text-center">
-                <h2 class="text-2xl font-bold text-champagne mb-8">Лесная Лавка</h2>
-                
-                <div class="bg-[#2a4d31] p-6 rounded-2xl border-2 border-[#6a994e] shadow-xl max-w-sm mx-auto relative group">
-                    <div class="text-7xl mb-6 transform group-hover:scale-110 transition duration-300">🍫</div>
-                    <h3 class="text-2xl font-bold text-champagne mb-2">Baunty</h3>
-                    <p class="text-sage text-sm mb-6 font-bold">Райское наслаждение</p>
-                    <div class="text-4xl font-bold text-yellow-green mb-6">99 💰</div>
-                    
-                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" 
-                            class="btn-primary w-full py-4 rounded-xl text-xl shadow-lg active:scale-95">
-                        КУПИТЬ
-                    </button>
-                    
-                    <p id="shop-status" class="text-sm text-yellow-green mt-4 font-bold bg-[#386641] p-3 rounded-lg hidden border border-[#a7c957]">
-                        📦 Заказ оформлен! Ждите выдачи.
-                    </p>
-                </div>
-                
-                <div class="mt-8 text-xs text-sage opacity-70">
-                    * Вы не можете сделать новый заказ, пока не получили предыдущий.
-                </div>
+        <div class="w-full">
+            <h3 class="text-center text-[#60a846] text-xs font-bold uppercase tracking-widest mb-4">🏆 Лидеры леса</h3>
+            <div class="bg-[#1a2f1d]/80 rounded-2xl border border-[#2c3e30] overflow-hidden p-4">
+                <table id="login-leaderboard" class="w-full text-sm">
+                    </table>
             </div>
-        </div>
-
-        <div id="tab-content-rating" class="hidden glass-panel p-6">
-            <h2 class="text-center text-yellow-green font-bold mb-6 text-lg uppercase tracking-widest">Рейтинг школы</h2>
-            <div class="overflow-x-auto">
-                <table class="ranking-table w-full text-left" id="main-leaderboard">
-                    <thead>
-                        <tr class="text-xs text-sage uppercase">
-                            <th class="p-3">#</th>
-                            <th class="p-3">Имя</th>
-                            <th class="p-3">Класс</th>
-                            <th class="p-3 text-right">Coins</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-base">
-                        </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="tab-content-admin" class="hidden glass-panel p-4 border-brick">
-            <div class="flex justify-between items-center mb-4 border-b border-[#6a994e] pb-2">
-                <h2 class="text-brick font-bold uppercase text-sm">📦 Заказы</h2>
-                <button onclick="loadAdminOrders()" class="text-xs bg-[#2a4d31] hover:bg-[#386641] px-4 py-2 rounded-lg text-champagne">Обновить</button>
-            </div>
-            <div id="admin-orders-list" class="space-y-3">
-                </div>
         </div>
     </div>
 
-    <div id="modal-move" class="fixed inset-0 bg-[#0f1c11]/95 hidden items-center justify-center z-50 p-4">
-        <div class="glass-panel p-6 w-full max-w-sm text-center bg-[#2a4d31] border-[#a7c957] flex flex-col max-h-[90vh]">
-            <h3 id="modal-title" class="text-2xl mb-3 text-champagne font-bold flex-shrink-0">Ваш выбор?</h3>
+    <div id="game-screen" class="hidden relative z-10 flex flex-col min-h-screen max-w-md mx-auto w-full bg-[#0f1c11]">
+        
+        <header class="sticky top-0 z-40 bg-[#1a2f1d]/95 backdrop-blur-md border-b border-[#60a846] px-4 py-3 shadow-lg flex justify-between items-center">
+            <div class="flex flex-col">
+                <span id="my-class" class="text-xs text-[#60a846] font-bold uppercase tracking-wider">CLASS</span>
+                <span class="text-[#fffdf5] font-bold text-lg leading-none">Игрок</span>
+            </div>
             
-            <div class="flex-grow overflow-y-auto mb-6 bg-[#1f3a24] rounded-xl p-3 border border-[#386641] shadow-inner">
-                <div class="text-xs text-sage uppercase tracking-widest mb-3 sticky top-0 bg-[#1f3a24] py-1 font-bold z-10">История с игроком</div>
-                <div id="modal-history-list" class="space-y-2 text-sm">
+            <div class="flex items-center gap-3">
+                <div class="bg-[#0f1c11] px-3 py-1 rounded-full border border-[#e9c46a] flex items-center gap-2 shadow-inner">
+                    <span class="text-[#e9c46a]">🪙</span>
+                    <span id="my-coins" class="text-[#e9c46a] font-bold text-lg font-mono">0</span>
+                </div>
+                <button onclick="logout()" class="text-[#d64045] hover:text-[#ff6b6b] transition p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-grow p-4 overflow-y-auto">
+            
+            <div id="tab-content-game" class="pb-24 animate-fade-in">
+                <div id="incoming-deals" class="mb-6 space-y-3"></div>
+
+                <div id="players-list" class="grid grid-cols-1 gap-4">
                     </div>
             </div>
 
-            <p class="text-sm text-champagne/70 mb-6 px-2 flex-shrink-0 leading-relaxed">
-                <span class="text-yellow-green font-bold">Сотрудничество:</span> +2 / +2<br>
-                <span class="text-brick font-bold">Обман:</span> вы +3, он -1
-            </p>
-            
-            <div class="grid grid-cols-2 gap-4 flex-shrink-0">
-                <button onclick="makeMove('cooperate')" class="py-4 rounded-xl bg-[#6a994e] hover:bg-[#588540] text-[#1f3a24] font-bold text-lg shadow-lg active:scale-95 border-b-4 border-[#4a7036]">
-                    🤝 Дружба
-                </button>
-                <button onclick="makeMove('defect')" class="py-4 rounded-xl bg-[#bc4749] hover:bg-[#a33a3c] text-champagne font-bold text-lg shadow-lg active:scale-95 border-b-4 border-[#8f3234]">
-                    😈 Обман
+            <div id="tab-content-rating" class="hidden pb-24 animate-fade-in">
+                <div class="bg-[#1a2f1d] p-5 rounded-2xl border-2 border-[#e9c46a] shadow-lg mb-6 relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 text-[#e9c46a] opacity-10 text-9xl">🏆</div>
+                    <h2 class="text-2xl font-bold text-[#fffdf5] mb-1 text-shadow">Таблица Лидеров</h2>
+                    <p class="text-sm text-[#e9c46a] font-bold opacity-80">Кто станет королем леса?</p>
+                </div>
+
+                <div class="bg-[#1a2f1d] rounded-2xl border border-[#60a846] overflow-hidden shadow-lg">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-[#0f1c11] text-[#60a846] text-xs uppercase font-bold tracking-wider">
+                            <tr>
+                                <th class="p-4 w-12 text-center">#</th>
+                                <th class="p-4">Имя</th>
+                                <th class="p-4">Класс</th>
+                                <th class="p-4 text-right">Монеты</th>
+                            </tr>
+                        </thead>
+                        <tbody id="main-leaderboard" class="divide-y divide-[#60a846]/20 text-sm">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-content-shop" class="hidden pb-24 animate-fade-in">
+                <div class="bg-[#1a2f1d] p-5 rounded-2xl border-2 border-[#e9c46a] shadow-lg mb-6 relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 text-[#e9c46a] opacity-10 text-9xl">🎁</div>
+                    <h2 class="text-2xl font-bold text-[#fffdf5] mb-1 text-shadow">Лавка Чудес</h2>
+                    <p class="text-sm text-[#e9c46a] font-bold opacity-80">Трать монеты с умом</p>
+                </div>
+
+                <div class="bg-[#1f3a24] p-6 rounded-2xl border border-[#60a846] shadow-xl relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 bg-[#d64045] text-white text-xs font-bold px-3 py-1 rounded-bl-xl">ХИТ</div>
+                    <div class="flex justify-between items-start mb-4 relative z-10">
+                        <div>
+                            <h3 class="text-2xl font-bold text-[#fffdf5]">Baunty</h3>
+                            <p class="text-xs text-[#60a846] uppercase font-bold mt-1">Райское наслаждение</p>
+                        </div>
+                        <div class="text-3xl">🥥</div>
+                    </div>
+                    
+                    <div class="flex items-end justify-between relative z-10">
+                        <div class="text-[#e9c46a] font-bold text-3xl font-mono">99 <span class="text-sm">🪙</span></div>
+                        <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" class="bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-2 px-6 rounded-lg shadow-md transition active:scale-95 border-b-4 border-[#b58b38]">
+                            КУПИТЬ
+                        </button>
+                    </div>
+                    
+                    <div id="shop-status" class="hidden mt-4 p-3 bg-[#e9c46a]/20 border border-[#e9c46a] rounded-lg text-center">
+                        <p class="text-[#e9c46a] text-sm font-bold animate-pulse">📦 Заказ оформлен! Идите к учителю.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-content-bank" class="hidden pb-24 animate-fade-in w-full">
+                
+                <div class="mb-6 bg-[#1a2f1d] p-5 rounded-2xl border-2 border-[#e9c46a] shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 text-[#e9c46a] opacity-10 text-9xl">💰</div>
+                    <h2 class="text-2xl font-bold text-[#fffdf5] mb-1 text-shadow">Лесной Банк</h2>
+                    <p class="text-sm text-[#e9c46a] font-bold opacity-80 mb-4">Деньги должны работать</p>
+                    
+                    <div class="bg-black/30 p-3 rounded-xl border border-[#e9c46a]/30 flex justify-between items-center">
+                        <span class="text-xs text-[#fffdf5]/70 uppercase font-bold">Активные вклады</span>
+                        <span id="active-invest-count" class="text-xl font-bold text-[#e9c46a]">0</span>
+                    </div>
+                </div>
+
+                <div id="my-investments-list" class="space-y-3 mb-8">
+                    </div>
+
+                <div class="flex items-center gap-2 mb-4 px-2">
+                    <div class="h-[2px] bg-[#e9c46a]/30 flex-grow"></div>
+                    <span class="text-xs font-bold text-[#e9c46a] uppercase tracking-widest">Тарифы</span>
+                    <div class="h-[2px] bg-[#e9c46a]/30 flex-grow"></div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    
+                    <div onclick="openInvestModal('call', 'По звонку', '45 мин', '3%')" class="bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/50 shadow-md hover:scale-[1.02] transition cursor-pointer relative overflow-hidden group">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-lg">📞 По звонку</div>
+                                <div class="text-xs text-[#fffdf5]/60">Срок: 45 минут</div>
+                            </div>
+                            <div class="text-xl font-bold text-[#60a846] bg-[#0f1c11] px-3 py-1 rounded-lg border border-[#60a846]/30">+3%</div>
+                        </div>
+                    </div>
+
+                    <div onclick="openInvestModal('five', 'Пятёрка', '6 часов', '5%')" class="bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/50 shadow-md hover:scale-[1.02] transition cursor-pointer group">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-lg">🖐️ Пятёрка</div>
+                                <div class="text-xs text-[#fffdf5]/60">Срок: 6 часов</div>
+                            </div>
+                            <div class="text-xl font-bold text-[#60a846] bg-[#0f1c11] px-3 py-1 rounded-lg border border-[#60a846]/30">+5%</div>
+                        </div>
+                    </div>
+
+                    <div onclick="openInvestModal('night', 'Ночь', '12 часов', '10%')" class="bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/50 shadow-md hover:scale-[1.02] transition cursor-pointer">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-lg">🌙 Ночь</div>
+                                <div class="text-xs text-[#fffdf5]/60">Срок: 12 часов</div>
+                            </div>
+                            <div class="text-xl font-bold text-[#60a846] bg-[#0f1c11] px-3 py-1 rounded-lg border border-[#60a846]/30">+10%</div>
+                        </div>
+                    </div>
+
+                    <div onclick="openInvestModal('champion', 'Чемпион', '24 часа', '20%')" class="bg-gradient-to-r from-[#1f3a24] to-[#2d4a33] p-4 rounded-xl border border-[#e9c46a] shadow-lg hover:scale-[1.02] transition cursor-pointer relative">
+                        <div class="absolute -right-2 -top-2 text-4xl opacity-20">🏆</div>
+                        <div class="flex justify-between items-center relative z-10">
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-lg">🏆 Чемпион</div>
+                                <div class="text-xs text-[#fffdf5]/60">Срок: 24 часа</div>
+                            </div>
+                            <div class="text-2xl font-bold text-[#e9c46a] bg-black/40 px-3 py-1 rounded-lg border border-[#e9c46a]/50 text-shadow">+20%</div>
+                        </div>
+                    </div>
+
+                    <div onclick="openInvestModal('crypto', 'Crypto SCAM', '45 мин', '???')" class="bg-[#2b1114] p-4 rounded-xl border-2 border-[#d64045] shadow-[0_0_15px_rgba(214,64,69,0.3)] hover:scale-[1.02] transition cursor-pointer relative overflow-hidden animate-pulse-slow">
+                        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')] opacity-10"></div>
+                        <div class="flex justify-between items-center relative z-10">
+                            <div>
+                                <div class="text-[#d64045] font-bold text-lg flex items-center gap-2">💀 CRYPTO <span class="text-xs bg-[#d64045] text-white px-1 rounded">RISK</span></div>
+                                <div class="text-xs text-[#d64045]/70">Срок: 45 минут</div>
+                            </div>
+                            <div class="text-center">
+                                 <div class="text-lg font-bold text-[#fffdf5]">X0 ... X2.5</div>
+                                 <div class="text-[10px] text-[#d64045] uppercase font-bold">Пан или пропал</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div id="tab-content-admin" class="hidden pb-24 animate-fade-in">
+                <div class="bg-[#2b1114] p-5 rounded-2xl border-2 border-[#d64045] shadow-lg mb-6">
+                    <h2 class="text-2xl font-bold text-[#fffdf5] mb-1">Учительская</h2>
+                    <p class="text-sm text-[#d64045] font-bold uppercase tracking-wider">Панель управления</p>
+                </div>
+                
+                <h3 class="text-[#60a846] font-bold uppercase text-xs tracking-widest mb-4">Ожидающие выдачи</h3>
+                <div id="admin-orders-list" class="space-y-3">
+                    </div>
+            </div>
+
+        </main>
+
+        <nav class="fixed bottom-0 left-0 right-0 bg-[#0f1c11]/95 backdrop-blur border-t border-[#60a846] flex justify-around py-3 pb-safe max-w-md mx-auto z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+            <button id="tab-btn-game" onclick="switchTab('game')" class="flex flex-col items-center gap-1 text-[#e9c46a] transition active">
+                <span class="text-2xl">🎮</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">ИГРА</span>
+            </button>
+            <button id="tab-btn-rating" onclick="switchTab('rating')" class="flex flex-col items-center gap-1 text-[#fffdf5]/50 hover:text-[#e9c46a] transition">
+                <span class="text-2xl">📊</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">ТОП</span>
+            </button>
+            <button id="tab-btn-shop" onclick="switchTab('shop')" class="flex flex-col items-center gap-1 text-[#fffdf5]/50 hover:text-[#e9c46a] transition">
+                <span class="text-2xl">🛒</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">ШОП</span>
+            </button>
+            <button id="tab-btn-bank" onclick="switchTab('bank')" class="flex flex-col items-center gap-1 text-[#fffdf5]/50 hover:text-[#e9c46a] transition">
+                <span class="text-2xl">🏦</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">БАНК</span>
+            </button>
+            <button id="tab-btn-admin" onclick="switchTab('admin')" class="hidden flex flex-col items-center gap-1 text-[#d64045]/50 hover:text-[#d64045] transition">
+                <span class="text-2xl">🔑</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest">АДМИН</span>
+            </button>
+        </nav>
+
+        <div id="modal-move" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
+            <div class="bg-[#1a2f1d] border-2 border-[#60a846] rounded-2xl p-6 w-full max-w-sm relative shadow-2xl">
+                <button onclick="closeModal()" class="absolute top-4 right-4 text-[#60a846] hover:text-[#fffdf5] transition text-2xl">✕</button>
+                
+                <h3 id="modal-title" class="text-2xl font-bold text-[#fffdf5] mb-4 text-center text-shadow">Сделка</h3>
+                
+                <div class="bg-[#0f1c11] rounded-xl p-3 border border-[#60a846]/30 mb-6 max-h-40 overflow-y-auto">
+                    <div class="text-[10px] text-[#60a846] uppercase tracking-widest mb-2 sticky top-0 bg-[#0f1c11] py-1">История отношений</div>
+                    <div id="modal-history-list" class="space-y-2">
+                        </div>
+                </div>
+
+                <p class="text-xs text-[#fffdf5]/70 text-center mb-6 leading-relaxed">
+                    <span class="text-[#e9c46a] font-bold">Сотрудничество:</span> Оба +2<br>
+                    <span class="text-[#d64045] font-bold">Обман:</span> Предатель +3, Жертва -1<br>
+                    <span class="text-gray-400 font-bold">Оба обманули:</span> Оба -1
+                </p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="makeMove('cooperate')" class="py-4 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold text-lg shadow-lg transition active:scale-95 border-b-4 border-[#3e6b2e]">
+                        🤝 ДРУЖБА
+                    </button>
+                    <button onclick="makeMove('defect')" class="py-4 rounded-xl bg-[#d64045] hover:bg-[#b02e33] text-[#fffdf5] font-bold text-lg shadow-lg transition active:scale-95 border-b-4 border-[#94292d]">
+                        😈 ОБМАН
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-invest" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
+            <div class="bg-[#1a2f1d] border-2 border-[#e9c46a] rounded-2xl p-6 w-full max-w-sm relative shadow-2xl">
+                <button onclick="document.getElementById('modal-invest').classList.add('hidden'); document.getElementById('modal-invest').classList.remove('flex')" class="absolute top-4 right-4 text-[#60a846] hover:text-[#fffdf5] transition text-2xl">✕</button>
+                
+                <h3 id="invest-title" class="text-2xl font-bold text-[#fffdf5] mb-2 text-center text-shadow">Название</h3>
+                <p class="text-center text-[#e9c46a] mb-6 text-sm">Вложите монеты, чтобы получить <span id="invest-percent" class="font-bold"></span></p>
+
+                <div class="mb-6">
+                    <label class="block text-xs text-[#60a846] uppercase font-bold mb-2 ml-1">Сумма вклада</label>
+                    <input type="number" id="invest-amount" class="w-full bg-[#0f1c11] border-2 border-[#60a846] rounded-xl px-4 py-3 text-[#fffdf5] text-lg font-bold focus:outline-none focus:border-[#e9c46a] transition text-center" placeholder="Минимум 10">
+                </div>
+
+                <button onclick="confirmInvest()" class="w-full py-4 rounded-xl bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold text-lg shadow-lg transition active:scale-95 border-b-4 border-[#b58b38]">
+                    ВНЕСТИ
                 </button>
             </div>
-            <button onclick="closeModal()" class="mt-6 text-sage text-sm hover:text-champagne underline flex-shrink-0 transition">Отмена</button>
         </div>
+
     </div>
 
     <script src="game.js"></script>

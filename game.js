@@ -4,6 +4,7 @@
 const SUPABASE_URL = 'https://ferhcoqknnobeesscvdv.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlcmhjb3Frbm5vYmVlc3NjdmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3MjQ0NDUsImV4cCI6MjA4MTMwMDQ0NX0.pJB2oBN9Asp8mO0Od1lHD6sRjr-swoaJu5Z-ZJvw9jA';
 
+// Клиент базы данных
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- 2. СОСТОЯНИЕ ---
@@ -14,10 +15,11 @@ let myDealsHistory = [];
 let currentTargetId = null;
 let respondingToDealId = null;
 
-// Кэш для хранения имен и классов
+// Кэш для хранения имен и статусов игроков (для модальных окон)
 let playersCache = {}; 
+let currentTariffId = null; // Для банка
 
-// Пагинация
+// Пагинация списка игроков
 let visiblePlayersCount = 25; 
 const PLAYERS_PER_PAGE = 25;
 
@@ -75,19 +77,25 @@ async function showGameScreen() {
     updateMyStats(); 
 }
 
-// --- 5. ВКЛАДКИ ---
+// --- 5. НАВИГАЦИЯ (ВКЛАДКИ) ---
 window.switchTab = function(tabName) {
-    ['game', 'rating', 'shop', 'admin'].forEach(t => {
-        document.getElementById(`tab-content-${t}`).classList.add('hidden');
-        document.getElementById(`tab-btn-${t}`).classList.remove('active');
+    ['game', 'rating', 'shop', 'bank', 'admin'].forEach(t => {
+        const content = document.getElementById(`tab-content-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if(content) content.classList.add('hidden');
+        if(btn) btn.classList.remove('active');
     });
 
-    document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
-    document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+    const targetContent = document.getElementById(`tab-content-${tabName}`);
+    const targetBtn = document.getElementById(`tab-btn-${tabName}`);
+    
+    if(targetContent) targetContent.classList.remove('hidden');
+    if(targetBtn) targetBtn.classList.add('active');
 
     if (tabName === 'rating') loadLeaderboard(50, 'main-leaderboard');
     if (tabName === 'shop') checkShopStatus();
     if (tabName === 'admin') loadAdminOrders();
+    if (tabName === 'bank') loadMyInvestments();
 };
 
 // --- 6. ИГРОВОЙ ЦИКЛ ---
@@ -99,9 +107,13 @@ function startGameLoop() {
 function refreshAllData() {
     fetchAllMyDeals();
     updateMyStats();
-    if(isAdmin) loadAdminOrders();
+    
+    // Если открыты специфические вкладки, обновляем их
+    if (document.getElementById('tab-btn-bank').classList.contains('active')) loadMyInvestments();
+    if (isAdmin && document.getElementById('tab-btn-admin').classList.contains('active')) loadAdminOrders();
 }
 
+// --- 7. ДАННЫЕ ИГРОКА И СДЕЛКИ ---
 async function fetchAllMyDeals() {
     const { data: deals } = await supabaseClient.rpc('get_my_deals', { player_uuid: myId });
     if (deals) {
@@ -109,6 +121,7 @@ async function fetchAllMyDeals() {
         checkIncomingDeals();     
         refreshPlayersForDeals(); 
         
+        // Обновление истории в реальном времени, если открыта модалка
         if (!document.getElementById('modal-move').classList.contains('hidden')) {
              const activeTarget = currentTargetId || (respondingToDealId ? getPartnerIdFromDeal(respondingToDealId) : null);
              if(activeTarget) renderModalHistory(activeTarget);
@@ -134,16 +147,13 @@ async function updateMyStats() {
     }
 }
 
-// --- СПИСОК ИГРОКОВ (СОРТИРОВКА + ПАГИНАЦИЯ) ---
+// --- 8. СПИСОК ИГРОКОВ (ЛОГИКА ОТОБРАЖЕНИЯ) ---
 async function refreshPlayersForDeals() {
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
     const { data: players, error } = await supabaseClient.rpc('get_active_players', { my_id: myId });
 
-    if (error) {
-        console.error("Ошибка загрузки игроков:", error);
-        return;
-    }
+    if (error) { console.error("Ошибка игроков:", error); return; }
 
     const list = document.getElementById('players-list');
     list.innerHTML = '';
@@ -156,10 +166,10 @@ async function refreshPlayersForDeals() {
     const processedPlayers = players.map(p => {
         const isLimit = p.outgoing >= 5 || p.incoming >= 5;
 
-        // [ОБНОВЛЕНО] Сохраняем имя и КЛАСС в кэш
+        // Сохраняем в кэш имя, класс и статус лимита
         playersCache[p.ret_id] = {
             name: p.revealed_name,
-            className: p.ret_class_name, // <-- Добавили класс
+            className: p.ret_class_name,
             limitReached: isLimit
         };
 
@@ -185,6 +195,7 @@ async function refreshPlayersForDeals() {
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2c3e30] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
+            // Если лимит исчерпан и имя известно - даем кнопку истории
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold border-2 border-[#fffdf5]/20 text-sm shadow-lg transition transform active:scale-95">📜 ИСТОРИЯ СДЕЛОК</button>`;
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
@@ -196,13 +207,8 @@ async function refreshPlayersForDeals() {
         const cardOpacity = isInactive ? 'opacity-80 bg-[#152518]' : 'bg-[#1a2f1d]';
         const borderColor = isInactive ? 'border-[#60a846]/50' : 'border-[#60a846]';
 
-        // [ОБНОВЛЕНО] Логика отображения имени и КЛАССА
         const displayName = p.revealedName ? p.revealedName : "Тайный Санта";
-        // Если раскрыто, показываем класс и зеленый текст. Если нет - стандарт.
-        const displayStatus = p.revealedName 
-            ? `<span class="text-[#e9c46a] font-extrabold">${p.class_name}</span> • Раскрыт!` 
-            : "Анонимный игрок";
-        
+        const displayStatus = p.revealedName ? "✨ Личность раскрыта!" : "Анонимный игрок";
         const nameColor = p.revealedName ? "text-[#e9c46a]" : "text-[#fffdf5]";
 
         const el = document.createElement('div');
@@ -240,6 +246,7 @@ async function refreshPlayersForDeals() {
         list.appendChild(el);
     });
 
+    // Кнопка "Показать еще"
     if (processedPlayers.length > visiblePlayersCount) {
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.innerText = `ПОКАЗАТЬ ЕЩЕ (${processedPlayers.length - visiblePlayersCount})`;
@@ -279,6 +286,7 @@ function checkIncomingDeals() {
     });
 }
 
+// --- 9. ИСТОРИЯ СДЕЛОК (РЕНДЕР) ---
 function renderModalHistory(partnerId) {
     const container = document.getElementById('modal-history-list');
     container.innerHTML = '';
@@ -323,22 +331,168 @@ function renderModalHistory(partnerId) {
     });
 }
 
-// --- МАГАЗИН И АДМИНКА ---
+// --- 10. БАНК И ВКЛАДЫ ---
+
+// Открыть модалку вклада
+window.openInvestModal = function(id, title, time, percent) {
+    currentTariffId = id;
+    document.getElementById('invest-title').innerText = title;
+    document.getElementById('invest-percent').innerText = percent;
+    document.getElementById('invest-amount').value = '';
+    
+    // Красный стиль для крипты
+    const modal = document.querySelector('#modal-invest > div');
+    const titleEl = document.getElementById('invest-title');
+    
+    if (id === 'crypto') {
+        modal.classList.replace('border-[#e9c46a]', 'border-[#d64045]');
+        titleEl.classList.add('text-[#d64045]');
+    } else {
+        modal.classList.replace('border-[#d64045]', 'border-[#e9c46a]');
+        titleEl.classList.remove('text-[#d64045]');
+    }
+
+    document.getElementById('modal-invest').classList.remove('hidden');
+    document.getElementById('modal-invest').classList.add('flex');
+};
+
+// Подтвердить создание вклада
+window.confirmInvest = async function() {
+    const amount = parseInt(document.getElementById('invest-amount').value);
+    if (!amount || amount < 10) { alert("Минимальная сумма 10 монет"); return; }
+    
+    document.getElementById('modal-invest').classList.add('hidden');
+    document.getElementById('modal-invest').classList.remove('flex');
+
+    const { data, error } = await supabaseClient.rpc('create_investment', { 
+        my_id: myId, 
+        tariff: currentTariffId, 
+        amount: amount 
+    });
+
+    if (error || (data && data.error)) {
+        alert("❌ Ошибка: " + (error ? error.message : data.error));
+    } else {
+        alert("✅ Вклад открыт! Деньги начали работать.");
+        updateMyStats();
+        loadMyInvestments();
+    }
+};
+
+// Загрузить мои вклады
+async function loadMyInvestments() {
+    if (document.getElementById('tab-content-bank').classList.contains('hidden')) return;
+
+    const { data: investments } = await supabaseClient.rpc('get_my_investments', { my_id: myId });
+    const list = document.getElementById('my-investments-list');
+    const countEl = document.getElementById('active-invest-count');
+    
+    list.innerHTML = '';
+    
+    if (!investments || investments.length === 0) {
+        list.innerHTML = '<div class="text-center text-[#fffdf5]/30 py-4 text-sm italic">У вас нет активных вкладов</div>';
+        countEl.innerText = '0';
+        return;
+    }
+
+    let activeCount = 0;
+
+    investments.forEach(inv => {
+        if (inv.status === 'collected') return; // Скрываем завершенные
+        activeCount++;
+
+        const unlockDate = new Date(inv.unlock_at);
+        const now = new Date();
+        const isReady = now >= unlockDate;
+        const timeLeftMs = unlockDate - now;
+
+        let icon = '💰';
+        let title = 'Вклад';
+        if(inv.tariff_id === 'call') { title = 'По звонку'; icon = '📞'; }
+        if(inv.tariff_id === 'five') { title = 'Пятёрка'; icon = '🖐️'; }
+        if(inv.tariff_id === 'night') { title = 'Ночь'; icon = '🌙'; }
+        if(inv.tariff_id === 'champion') { title = 'Чемпион'; icon = '🏆'; }
+        if(inv.tariff_id === 'crypto') { title = 'Crypto'; icon = '💀'; }
+
+        // Таймер или Кнопка
+        let actionHtml = '';
+        if (isReady) {
+            actionHtml = `<button onclick="collectMoney('${inv.id}')" class="w-full mt-2 py-2 rounded bg-[#e9c46a] text-[#1a2f1d] font-bold text-sm uppercase shadow hover:bg-[#d4a373] animate-bounce-slow">ЗАБРАТЬ</button>`;
+        } else {
+            // Форматируем время
+            const hours = Math.floor(timeLeftMs / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeftMs % (1000 * 60 * 60)) / (1000 * 60));
+            const minStr = minutes < 10 ? '0' + minutes : minutes;
+            actionHtml = `<div class="mt-2 text-center text-xs text-[#e9c46a] font-mono bg-black/20 rounded py-1">⏳ ${hours}ч ${minStr}мин</div>`;
+        }
+
+        const borderColor = inv.tariff_id === 'crypto' ? 'border-[#d64045]' : 'border-[#60a846]';
+
+        const el = document.createElement('div');
+        el.className = `bg-[#0f1c11] p-3 rounded-xl border ${borderColor} relative`;
+        el.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div class="flex gap-2">
+                    <span class="text-2xl">${icon}</span>
+                    <div>
+                        <div class="font-bold text-[#fffdf5] text-sm">${title}</div>
+                        <div class="text-xs text-[#fffdf5]/50">Вклад: <span class="text-[#fffdf5]">${inv.invested_amount}</span></div>
+                    </div>
+                </div>
+                ${inv.tariff_id === 'crypto' ? '<span class="text-xs text-[#d64045] font-bold">RISK</span>' : ''}
+            </div>
+            ${actionHtml}
+        `;
+        list.appendChild(el);
+    });
+    
+    countEl.innerText = activeCount;
+}
+
+// Забрать прибыль
+window.collectMoney = async function(invId) {
+    const { data, error } = await supabaseClient.rpc('collect_investment', { invest_id: invId, my_id: myId });
+
+    if (error || (data && data.error)) {
+        alert("Ошибка: " + (error ? error.message : data.error));
+    } else {
+        const profit = data.profit;
+        let msg = "";
+        if (profit > 0) msg = `🤑 Прибыль: +${profit} монет!`;
+        else if (profit === 0) msg = `😐 Вышли в ноль.`;
+        else msg = `📉 Убыток: ${profit} монет... Крипта жестока.`;
+        
+        alert(msg);
+        updateMyStats();
+        loadMyInvestments();
+    }
+};
+
+// --- 11. МАГАЗИН И АДМИНКА ---
 async function buyItem(itemName, cost) {
     if (!confirm(`Купить ${itemName} за ${cost} монет?`)) return;
     const btn = document.getElementById('btn-buy-bounty');
     btn.disabled = true; btn.innerText = "Магия...";
     const { data, error } = await supabaseClient.rpc('buy_item', { my_id: myId, item_label: itemName, cost: cost });
-    if (error || (data && data.error)) { alert("❌ " + (error ? error.message : data.error)); btn.disabled = false; btn.innerText = "КУПИТЬ"; } 
-    else { alert("✅ Успешно! Лесные духи приняли оплату."); checkShopStatus(); updateMyStats(); }
+    if (error || (data && data.error)) { 
+        alert("❌ " + (error ? error.message : data.error)); 
+        btn.disabled = false; btn.innerText = "КУПИТЬ"; 
+    } else { 
+        alert("✅ Успешно! Лесные духи приняли оплату."); 
+        checkShopStatus(); 
+        updateMyStats(); 
+    }
 }
 
 async function checkShopStatus() {
     const { data } = await supabaseClient.from('shop_orders').select('*').eq('player_id', myId).eq('status', 'pending');
     const btn = document.getElementById('btn-buy-bounty');
     const msg = document.getElementById('shop-status');
-    if (data && data.length > 0) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.classList.remove('btn-primary'); btn.innerText = "ЖДЕМ ВЫДАЧИ..."; msg.classList.remove('hidden'); } 
-    else { btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.classList.add('btn-primary'); btn.innerText = "КУПИТЬ"; msg.classList.add('hidden'); }
+    if (data && data.length > 0) { 
+        btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.classList.remove('btn-primary'); btn.innerText = "ЖДЕМ ВЫДАЧИ..."; msg.classList.remove('hidden'); 
+    } else { 
+        btn.disabled = false; btn.classList.remove('opacity-50', 'cursor-not-allowed'); btn.classList.add('btn-primary'); btn.innerText = "КУПИТЬ"; msg.classList.add('hidden'); 
+    }
 }
 
 async function loadAdminOrders() {
@@ -354,12 +508,17 @@ async function loadAdminOrders() {
         container.appendChild(el);
     });
 }
-window.deliverOrder = async function(orderId) { if(!confirm("Выдать товар?")) return; const { error } = await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); if(!error) loadAdminOrders(); };
+
+window.deliverOrder = async function(orderId) { 
+    if(!confirm("Выдать товар?")) return; 
+    const { error } = await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); 
+    if(!error) loadAdminOrders(); 
+};
 
 async function loadLeaderboard(limit, tableId) {
     const { data: players, error } = await supabaseClient.rpc('get_leaderboard', { limit_count: limit });
 
-    if (error) { console.error("Ошибка загрузки рейтинга:", error); return; }
+    if (error) { console.error("Ошибка рейтинга:", error); return; }
 
     const container = document.getElementById(tableId).tagName === 'TABLE' ? document.getElementById(tableId).tBodies[0] || document.getElementById(tableId) : document.getElementById(tableId);
     container.innerHTML = '';
@@ -375,33 +534,27 @@ async function loadLeaderboard(limit, tableId) {
     });
 }
 
-// --- МОДАЛКИ ---
+// --- 12. МОДАЛЬНЫЕ ОКНА СДЕЛОК ---
 window.openDealModal = (targetId) => { 
     currentTargetId = targetId; 
     respondingToDealId = null; 
     renderModalHistory(targetId); 
     
-    // [ОБНОВЛЕНО] Настройка заголовка с учетом ИМЕНИ и КЛАССА
+    // Проверяем кэш, чтобы настроить окно (история или игра)
     const pData = playersCache[targetId];
     const modalTitle = document.getElementById('modal-title');
-    const actionsDiv = document.querySelector('#modal-move .grid'); 
-    const tipsText = document.querySelector('#modal-move p'); 
-
-    // Формируем строку имени с классом, если есть
-    let nameStr = "";
-    if (pData && pData.name) {
-        const classPart = pData.className ? ` (${pData.className})` : "";
-        nameStr = `${pData.name}${classPart}`;
-    }
+    const actionsDiv = document.querySelector('#modal-move .grid'); // Кнопки действий
+    const tipsText = document.querySelector('#modal-move p'); // Текст с правилами
 
     if (pData && pData.limitReached) {
-        // Режим истории
-        modalTitle.innerText = nameStr ? `Архив: ${nameStr}` : "Архив сделок";
+        // РЕЖИМ ИСТОРИИ (Архив)
+        const classSuffix = pData.className ? ` (${pData.className})` : '';
+        modalTitle.innerText = pData.name ? `Архив: ${pData.name}${classSuffix}` : "Архив сделок";
         if(actionsDiv) actionsDiv.classList.add('hidden');
         if(tipsText) tipsText.classList.add('hidden');
     } else {
-        // Режим игры
-        modalTitle.innerText = nameStr ? `Сделка с: ${nameStr}` : "Предложить сделку";
+        // РЕЖИМ ИГРЫ
+        modalTitle.innerText = pData && pData.name ? `Сделка с: ${pData.name}` : "Предложить сделку";
         if(actionsDiv) actionsDiv.classList.remove('hidden');
         if(tipsText) tipsText.classList.remove('hidden');
     }
@@ -418,15 +571,13 @@ window.openResponseModal = (dealId) => {
     if(partnerId) {
         renderModalHistory(partnerId);
         
+        // Показываем имя, если оно уже известно
         const pData = playersCache[partnerId];
-        let nameStr = "";
-        if (pData && pData.name) {
-            const classPart = pData.className ? ` (${pData.className})` : "";
-            nameStr = ` (${pData.name}${classPart})`;
-        }
-        document.getElementById('modal-title').innerText = `Ваш ответ?${nameStr}`;
+        const namePart = pData && pData.name ? ` (${pData.name})` : "";
+        document.getElementById('modal-title').innerText = `Ваш ответ?${namePart}`;
     }
     
+    // Возвращаем кнопки на место (если они были скрыты историей)
     const actionsDiv = document.querySelector('#modal-move .grid');
     const tipsText = document.querySelector('#modal-move p');
     if(actionsDiv) actionsDiv.classList.remove('hidden');
@@ -454,4 +605,5 @@ window.makeMove = async (moveType) => {
     } 
 };
 
+// --- УТИЛИТЫ ---
 function createSnow() { const container = document.getElementById('snow-container'); if(!container) return; for(let i=0; i<25; i++){ const div = document.createElement('div'); div.classList.add('snowflake'); div.innerHTML = '❄'; div.style.left = Math.random() * 100 + 'vw'; div.style.animationDuration = (Math.random() * 5 + 5) + 's'; div.style.opacity = Math.random(); div.style.fontSize = (Math.random() * 10 + 8) + 'px'; container.appendChild(div); } }
