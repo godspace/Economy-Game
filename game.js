@@ -1,5 +1,9 @@
-// --- КОНФИГУРАЦИЯ ---
+// game.js
+
+// --- 1. КОНФИГУРАЦИЯ ---
 const SUPABASE_URL = 'https://ferhcoqknnobeesscvdv.supabase.co';
+// ВАЖНО: Это публичный ключ (anon key), он безопасен для фронтенда, 
+// если настроены RLS политики и RPC функции.
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlcmhjb3Frbm5vYmVlc3NjdmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3MjQ0NDUsImV4cCI6MjA4MTMwMDQ0NX0.pJB2oBN9Asp8mO0Od1lHD6sRjr-swoaJu5Z-ZJvw9jA';
 
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -51,8 +55,13 @@ async function login() {
     }
 }
 
-window.logout = function() {
+window.logout = async function() {
     if (confirm("Покинуть волшебный лес?")) {
+        // [UPDATED] Отправляем сигнал на сервер, что игрок вышел
+        if (myId) {
+            await supabase.rpc('logout_player', { player_uuid: myId });
+        }
+        
         localStorage.removeItem('santa_id');
         localStorage.removeItem('santa_class');
         location.reload();
@@ -64,6 +73,7 @@ async function showGameScreen() {
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('my-class').innerText = myClass || 'Elf';
 
+    // Проверяем админку (можно оставить прямой запрос, если RLS позволяет читать свой профиль)
     const { data } = await supabase.from('players').select('is_admin').eq('id', myId).single();
     if (data && data.is_admin) {
         isAdmin = true;
@@ -89,6 +99,7 @@ window.switchTab = function(tabName) {
 // --- 6. ИГРОВОЙ ЦИКЛ ---
 function startGameLoop() {
     refreshAllData();
+    // Обновляем данные каждые 3 секунды
     setInterval(refreshAllData, 3000);
 }
 
@@ -105,6 +116,7 @@ async function fetchAllMyDeals() {
         checkIncomingDeals();     
         refreshPlayersForDeals(); 
         
+        // Если открыта модалка, обновляем её историю в реальном времени
         if (!document.getElementById('modal-move').classList.contains('hidden')) {
              const activeTarget = currentTargetId || (respondingToDealId ? getPartnerIdFromDeal(respondingToDealId) : null);
              if(activeTarget) renderModalHistory(activeTarget);
@@ -127,16 +139,16 @@ async function updateMyStats() {
 async function refreshPlayersForDeals() {
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
-    const { data: players } = await supabase
-        .from('players')
-        .select('id, class_name') 
-        .neq('id', myId)
-        .eq('is_online', true);
+    // [UPDATED] ИСПОЛЬЗУЕМ БЕЗОПАСНУЮ RPC ФУНКЦИЮ
+    // Она сразу возвращает статистику и флаги, не раскрывая access_code других игроков
+    const { data: players, error } = await supabase.rpc('get_active_players', { my_id: myId });
+
+    if (error) {
+        console.error("Ошибка загрузки игроков:", error);
+        return;
+    }
 
     const list = document.getElementById('players-list');
-    
-    // ВАЖНО: Не очищаем список полностью, если просто обновляем данные, 
-    // но для простоты кода очистим и перерисуем с учетом пагинации.
     list.innerHTML = '';
 
     if (!players || players.length === 0) {
@@ -146,17 +158,20 @@ async function refreshPlayersForDeals() {
 
     // 1. ПОДГОТОВКА ДАННЫХ ДЛЯ СОРТИРОВКИ
     const processedPlayers = players.map(p => {
-        const outgoing = myDealsHistory.filter(d => d.initiator_id === myId && d.receiver_id === p.id).length;
-        const incoming = myDealsHistory.filter(d => d.initiator_id === p.id && d.receiver_id === myId).length;
-        const hasPendingDeal = myDealsHistory.some(d => d.initiator_id === myId && d.receiver_id === p.id && d.status === 'pending');
-        const isClassmate = p.class_name === myClass;
+        // Маппинг данных из SQL (snake_case) в JS (camelCase)
+        const outgoing = p.outgoing;
+        const incoming = p.incoming;
+        const hasPendingDeal = p.has_pending;
+        const isClassmate = p.is_classmate;
+        
+        // Лимит исчерпан?
         const isLimitReached = outgoing >= 5;
 
         // Присваиваем "вес" для сортировки (чем меньше, тем выше в списке)
         let sortWeight = 0;
         if (hasPendingDeal) sortWeight = -1; // Ожидающие ответа - в самый верх
         if (isLimitReached) sortWeight = 10; // Лимит исчерпан - вниз
-        if (isClassmate) sortWeight = 20;    // Одноклассники - в самый низ (неиграбельны)
+        if (isClassmate) sortWeight = 20;    // Одноклассники - в самый низ
 
         return { ...p, outgoing, incoming, hasPendingDeal, isClassmate, isLimitReached, sortWeight };
     });
@@ -177,7 +192,7 @@ async function refreshPlayersForDeals() {
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
         } else {
-            // Кнопка стала ярче (красный + золотой)
+            // Кнопка предложения
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-[#d64045] hover:bg-[#b02e33] text-white text-lg font-bold shadow-lg transition active:scale-95 border-2 border-white/20">ПРЕДЛОЖИТЬ</button>`;
         }
 
@@ -239,7 +254,6 @@ function checkIncomingDeals() {
     container.innerHTML = '';
     deals.forEach(deal => {
         const el = document.createElement('div');
-        // Очень высокий контраст для уведомлений
         el.className = 'bg-[#e9c46a] border-4 border-white p-4 rounded-xl shadow-2xl animate-bounce-slow mb-4 text-[#1a2f1d]';
         el.innerHTML = `
             <div class="flex justify-between items-center mb-2">
@@ -273,7 +287,6 @@ function renderModalHistory(partnerId) {
         if (d.status === 'pending') return;
 
         const el = document.createElement('div');
-        // Темный фон для истории для контраста
         el.className = 'bg-[#0f1c11] p-3 rounded-lg border border-[#60a846]/50 flex justify-between items-center shadow-sm mb-2';
 
         const iamInitiator = d.initiator_id === myId;
@@ -355,4 +368,3 @@ window.closeModal = () => { document.getElementById('modal-move').classList.add(
 window.makeMove = async (moveType) => { closeModal(); if (currentTargetId) { const { data } = await supabase.rpc('create_deal', { my_id: myId, target_id: currentTargetId, my_move: moveType }); if (data && data.error) alert("❌ " + data.error); else alert("✅ Предложение отправлено!"); } else if (respondingToDealId) { const { data } = await supabase.rpc('accept_deal', { deal_id_input: respondingToDealId, responder_id: myId, responder_move_input: moveType }); if (data && data.error) alert("❌ " + data.error); else { alert(`✅ Результат: ${data.p2_change > 0 ? '+' : ''}${data.p2_change}`); fetchAllMyDeals(); updateMyStats(); } } };
 
 function createSnow() { const container = document.getElementById('snow-container'); if(!container) return; for(let i=0; i<25; i++){ const div = document.createElement('div'); div.classList.add('snowflake'); div.innerHTML = '❄'; div.style.left = Math.random() * 100 + 'vw'; div.style.animationDuration = (Math.random() * 5 + 5) + 's'; div.style.opacity = Math.random(); div.style.fontSize = (Math.random() * 10 + 8) + 'px'; container.appendChild(div); } }
-
