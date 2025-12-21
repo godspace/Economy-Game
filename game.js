@@ -517,36 +517,42 @@ async function checkShopStatus() {
 }
 
 async function loadAdminOrders() {
-    // Если вкладка админа закрыта, не тратим ресурсы
+    // Проверка: если вкладка закрыта, не грузим
     if (document.getElementById('tab-content-admin').classList.contains('hidden')) return;
     
-    // [ИСПРАВЛЕНО] Теперь мы передаем свой ID (myId) в функцию
+    // Запрашиваем заказы, передавая свой ID для проверки прав
     const { data: orders, error } = await supabaseClient.rpc('get_admin_orders', { requestor_id: myId });
     
     const container = document.getElementById('admin-orders-list');
     container.innerHTML = '';
 
-    // Обработка ошибки доступа (если кто-то пытается взломать или слетели права)
     if (error) {
-        console.error("Admin Access Error:", error);
-        container.innerHTML = '<p class="text-center text-brick font-bold text-sm">⛔ Нет доступа</p>';
+        console.error("Admin Error:", error);
+        container.innerHTML = '<p class="text-center text-brick font-bold">⛔ Ошибка доступа</p>';
         return;
     }
 
     if (!orders || orders.length === 0) { 
-        container.innerHTML = '<p class="text-center text-sage">Пусто</p>'; 
+        container.innerHTML = '<p class="text-center text-sage opacity-50 italic">Нет новых заказов</p>'; 
         return; 
     }
 
     orders.forEach(order => {
         const el = document.createElement('div');
-        el.className = 'bg-[#1f3a24] p-3 rounded-lg flex justify-between items-center border border-[#60a846]/30';
+        // Используем flex-row для расположения "Текст слева - Кнопка справа"
+        el.className = 'bg-[#1f3a24] p-4 rounded-xl flex justify-between items-center border border-[#60a846]/30 shadow-md mb-3';
+        
         el.innerHTML = `
-            <div>
-                <div class="font-bold text-champagne">${order.player_name}</div>
-                <div class="text-xs text-sage">${order.item_name}</div>
+            <div class="flex flex-col">
+                <span class="font-bold text-[#fffdf5] text-lg">${order.player_name}</span>
+                <span class="text-sm text-[#e9c46a] font-bold">🛒 ${order.item_name}</span>
+                <span class="text-[10px] text-[#60a846]">${new Date(order.created_at).toLocaleTimeString()}</span>
             </div>
-            <button onclick="deliverOrder('${order.id}')" class="bg-yellow-green hover:bg-[#d4a373] text-[#1a2f1d] px-3 py-1 rounded font-bold text-xs shadow transition active:scale-95">ВЫДАТЬ</button>
+            
+            <button onclick="deliverOrder('${order.id}')" 
+                class="ml-4 bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-2 px-6 rounded-lg shadow-lg active:scale-95 transition uppercase text-sm border-b-4 border-[#b58b38]">
+                ВЫДАТЬ
+            </button>
         `;
         container.appendChild(el);
     });
