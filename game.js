@@ -9,7 +9,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // --- 2. СОСТОЯНИЕ ---
 let myId = localStorage.getItem('santa_id');
 let myClass = localStorage.getItem('santa_class');
-let myName = localStorage.getItem('santa_name'); // [НОВОЕ] Имя игрока
+let myName = localStorage.getItem('santa_name'); 
 let isAdmin = false;
 let myDealsHistory = []; 
 let currentTargetId = null;
@@ -20,6 +20,9 @@ let currentTariffId = null;
 
 let visiblePlayersCount = 25; 
 const PLAYERS_PER_PAGE = 25;
+
+// Кэш для списка перевода
+let allTransferTargets = [];
 
 // --- 3. ИНИЦИАЛИЗАЦИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,11 +53,11 @@ async function login() {
         btn.disabled = false; btn.innerText = "ВОЙТИ В ИГРУ";
     } else {
         myId = data.player_id;
-        myName = `${data.first_name} ${data.last_name}`; // Собираем имя
+        myName = `${data.first_name} ${data.last_name}`; 
         
         localStorage.setItem('santa_id', myId);
         localStorage.setItem('santa_class', data.class);
-        localStorage.setItem('santa_name', myName); // Сохраняем
+        localStorage.setItem('santa_name', myName); 
         
         location.reload(); 
     }
@@ -74,7 +77,6 @@ async function showGameScreen() {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.remove('hidden');
     
-    // [НОВОЕ] Вывод имени и класса
     document.getElementById('my-class').innerText = myClass || 'Elf';
     if(myName) document.getElementById('my-name').innerText = myName;
 
@@ -146,7 +148,7 @@ async function updateMyStats() {
     }
 }
 
-// --- 7. ЛОГИКА ОТОБРАЖЕНИЯ ИГРОКОВ ---
+// --- 7. СПИСОК ИГРОКОВ ---
 async function refreshPlayersForDeals() {
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
@@ -268,9 +270,7 @@ function renderModalHistory(partnerId) {
     });
 }
 
-// --- 8. БАНК И ПЕРЕВОДЫ ---
-
-// Вклады
+// --- 8. БАНК (Вклады) ---
 window.openInvestModal = function(id, title, time, percent) {
     currentTariffId = id;
     document.getElementById('invest-title').innerText = title;
@@ -291,30 +291,64 @@ window.confirmInvest = async function() {
     if (error || (data && data.error)) alert("❌ Ошибка: " + (error ? error.message : data.error)); else { alert("✅ Вклад открыт!"); updateMyStats(); loadMyInvestments(); }
 };
 
-// [НОВОЕ] Переводы
+// --- 9. БАНК (Переводы: Новая логика) ---
 window.openTransferModal = async function() {
     const modal = document.getElementById('modal-transfer');
-    const select = document.getElementById('transfer-target');
+    const classSelect = document.getElementById('transfer-class');
+    const studentSelect = document.getElementById('transfer-student');
+    
     modal.classList.remove('hidden'); modal.classList.add('flex');
-    select.innerHTML = '<option value="">Загрузка...</option>';
+    classSelect.innerHTML = '<option value="">Загрузка...</option>';
+    studentSelect.innerHTML = '<option value="">Сначала выберите класс</option>';
+    studentSelect.disabled = true;
 
-    // Загружаем список игроков
+    // Загружаем всех доступных
     const { data, error } = await supabaseClient.rpc('get_transfer_targets', { my_id: myId });
     if (error) { alert("Ошибка загрузки списка"); return; }
     
-    select.innerHTML = '<option value="">Выберите получателя</option>';
-    if(data && data.length > 0) {
-        data.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.innerText = `${p.first_name} ${p.last_name} (${p.class_name})`;
-            select.appendChild(opt);
-        });
+    // Сохраняем в кэш
+    allTransferTargets = data || [];
+
+    // Получаем уникальные классы
+    const classes = [...new Set(allTransferTargets.map(p => p.class_name))];
+    classes.sort();
+
+    classSelect.innerHTML = '<option value="">Выберите класс</option>';
+    classes.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.innerText = c;
+        classSelect.appendChild(opt);
+    });
+};
+
+// Фильтрация учеников при выборе класса
+window.filterTransferStudents = function() {
+    const selectedClass = document.getElementById('transfer-class').value;
+    const studentSelect = document.getElementById('transfer-student');
+    
+    studentSelect.innerHTML = '<option value="">Выберите ученика</option>';
+    
+    if (!selectedClass) {
+        studentSelect.disabled = true;
+        return;
     }
+
+    studentSelect.disabled = false;
+    
+    // Фильтруем список
+    const studentsInClass = allTransferTargets.filter(p => p.class_name === selectedClass);
+    
+    studentsInClass.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.innerText = `${p.last_name} ${p.first_name}`;
+        studentSelect.appendChild(opt);
+    });
 };
 
 window.confirmTransfer = async function() {
-    const targetId = document.getElementById('transfer-target').value;
+    const targetId = document.getElementById('transfer-student').value;
     const amount = parseInt(document.getElementById('transfer-amount').value);
     
     if (!targetId) { alert("Выберите получателя"); return; }
@@ -334,13 +368,13 @@ window.confirmTransfer = async function() {
     else { alert("✅ Перевод отправлен!"); updateMyStats(); }
 };
 
-// Загрузка вкладов
+// --- 10. ЗАГРУЗКА ВКЛАДОВ ---
 async function loadMyInvestments() {
     const { data: investments } = await supabaseClient.rpc('get_my_investments', { my_id: myId });
     const list = document.getElementById('my-investments-list');
     const countEl = document.getElementById('active-invest-count');
     list.innerHTML = '';
-    if (!investments || investments.length === 0) { list.innerHTML = '<div class="text-center text-[#fffdf5]/30 py-4 text-sm italic">У вас нет активных вкладов</div>'; countEl.innerText = '0'; return; }
+    if (!investments || investments.length === 0) { list.innerHTML = '<div class="text-center text-[#fffdf5]/30 py-4 text-sm italic">Портфель пуст</div>'; countEl.innerText = '0'; return; }
     let activeCount = 0;
     investments.forEach(inv => {
         if (inv.status === 'collected') return;
@@ -355,7 +389,7 @@ async function loadMyInvestments() {
         if(inv.tariff_id === 'champion') { title = 'Чемпион'; icon = '🏆'; }
         if(inv.tariff_id === 'crypto') { title = 'Crypto'; icon = '💀'; }
         
-        let actionHtml = isReady ? `<button onclick="collectMoney('${inv.id}')" class="w-full mt-2 py-2 rounded bg-[#e9c46a] text-[#1a2f1d] font-bold text-sm uppercase shadow hover:bg-[#d4a373] animate-bounce-slow">ЗАБРАТЬ</button>` : `<div class="mt-2 text-center text-xs text-[#e9c46a] font-mono bg-black/20 rounded py-1">⏳ ${Math.floor(timeLeftMs / 3600000)}ч ${Math.floor((timeLeftMs % 3600000) / 60000)}мин</div>`;
+        let actionHtml = isReady ? `<button onclick="collectMoney('${inv.id}')" class="w-full mt-2 py-2 rounded bg-[#e9c46a] text-[#1a2f1d] font-bold text-sm uppercase shadow hover:bg-[#d4a373] animate-bounce-slow">ЗАБРАТЬ ПРИБЫЛЬ</button>` : `<div class="mt-2 text-center text-xs text-[#e9c46a] font-mono bg-black/20 rounded py-1">⏳ ${Math.floor(timeLeftMs / 3600000)}ч ${Math.floor((timeLeftMs % 3600000) / 60000)}мин</div>`;
         const borderColor = inv.tariff_id === 'crypto' ? 'border-[#d64045]' : 'border-[#60a846]';
         const el = document.createElement('div');
         el.className = `bg-[#0f1c11] p-3 rounded-xl border ${borderColor} relative`;
@@ -370,7 +404,7 @@ window.collectMoney = async function(invId) {
     if (error || (data && data.error)) alert("Ошибка: " + (error ? error.message : data.error)); else { alert(`Результат: ${data.profit > 0 ? '+' : ''}${data.profit} монет`); updateMyStats(); loadMyInvestments(); }
 };
 
-// --- 9. МАГАЗИН И АДМИНКА ---
+// --- 11. МАГАЗИН И АДМИНКА ---
 async function buyItem(itemName, cost) {
     if (!confirm(`Купить ${itemName} за ${cost} монет?`)) return;
     const btn = document.getElementById('btn-buy-bounty');
@@ -420,7 +454,7 @@ async function loadLeaderboard(limit, tableId) {
     });
 }
 
-// --- 10. МОДАЛКИ СДЕЛОК ---
+// --- 12. МОДАЛКИ СДЕЛОК ---
 window.openDealModal = (targetId) => { 
     currentTargetId = targetId; respondingToDealId = null; renderModalHistory(targetId); 
     const pData = playersCache[targetId];

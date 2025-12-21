@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
     <style>
+        /* Анимации */
         @keyframes bounce-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
         .animate-bounce-slow { animation: bounce-slow 2s infinite; }
         .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -16,9 +17,13 @@
         @keyframes snowfall { 0% { transform: translateY(0); } 100% { transform: translateY(100vh); } }
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #0f1c11; }
-        ::-webkit-scrollbar-thumb { background: #60a846; border-radius: 2px; }
+        
+        /* Скроллбар */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        
+        /* Стили для активных кнопок меню (Классические) */
+        .nav-btn.active svg { stroke: #e9c46a; transform: scale(1.1); filter: drop-shadow(0 0 5px rgba(233, 196, 106, 0.5)); }
+        .nav-btn.active span { color: #e9c46a; }
     </style>
 </head>
 <body class="min-h-screen bg-[#0f1c11] text-[#fffdf5] font-sans overflow-hidden selection:bg-[#e9c46a] selection:text-[#1a2f1d]">
@@ -47,18 +52,27 @@
 
     <div id="game-screen" class="hidden relative z-10 flex flex-col h-screen max-w-md mx-auto w-full bg-[#0f1c11]">
         
-        <header class="flex-none bg-[#1a2f1d]/95 backdrop-blur-md border-b border-[#60a846] px-4 py-3 shadow-lg flex justify-between items-center z-40">
-            <div class="flex flex-col">
-                <span id="my-class" class="text-xs text-[#60a846] font-bold uppercase tracking-wider">CLASS</span>
-                <span id="my-name" class="text-[#fffdf5] font-bold text-lg leading-none truncate max-w-[150px]">Игрок</span>
+        <header class="flex-none bg-[#1a2f1d]/90 backdrop-blur border-b border-[#60a846]/50 px-5 py-4 shadow-lg flex justify-between items-center z-40">
+            <div>
+                <div id="my-class" class="text-[10px] text-[#60a846] font-bold uppercase tracking-widest mb-0.5">CLASS</div>
+                <div id="my-name" class="font-bold text-lg leading-none truncate max-w-[150px] text-shadow">Игрок</div>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="bg-[#0f1c11] px-3 py-1 rounded-full border border-[#e9c46a] flex items-center gap-2 shadow-inner">
-                    <span class="text-[#e9c46a]">🪙</span>
-                    <span id="my-coins" class="text-[#e9c46a] font-bold text-lg font-mono">0</span>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-[#e9c46a] font-bold uppercase tracking-widest">Баланс</span>
+                    <div class="flex items-center gap-1.5">
+                        <span id="my-coins" class="text-[#e9c46a] font-bold text-2xl font-mono leading-none drop-shadow-sm">0</span>
+                        <span class="text-lg">🪙</span>
+                    </div>
                 </div>
-                <button onclick="logout()" class="text-[#d64045] hover:text-[#ff6b6b] transition p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                
+                <div class="h-8 w-[1px] bg-[#60a846]/30 mx-1"></div>
+
+                <button onclick="logout()" class="text-[#d64045] hover:text-[#ff6b6b] transition active:scale-90">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
                 </button>
             </div>
         </header>
@@ -74,7 +88,6 @@
                 <div class="bg-[#1a2f1d] p-5 rounded-2xl border-2 border-[#e9c46a] shadow-lg mb-6 relative overflow-hidden">
                     <div class="absolute -right-6 -top-6 text-[#e9c46a] opacity-10 text-9xl">🏆</div>
                     <h2 class="text-2xl font-bold text-[#fffdf5] mb-1 text-shadow">Таблица Лидеров</h2>
-                    <p class="text-sm text-[#e9c46a] font-bold opacity-80">Кто станет королем леса?</p>
                 </div>
                 <div class="bg-[#1a2f1d] rounded-2xl border border-[#60a846] overflow-hidden shadow-lg">
                     <table class="w-full text-left border-collapse">
@@ -90,7 +103,6 @@
                 <div class="bg-[#1a2f1d] p-5 rounded-2xl border-2 border-[#e9c46a] shadow-lg mb-6 relative overflow-hidden">
                     <div class="absolute -right-6 -top-6 text-[#e9c46a] opacity-10 text-9xl">🎁</div>
                     <h2 class="text-2xl font-bold text-[#fffdf5] mb-1 text-shadow">Лавка Чудес</h2>
-                    <p class="text-sm text-[#e9c46a] font-bold opacity-80">Трать монеты с умом</p>
                 </div>
                 <div class="bg-[#1f3a24] p-6 rounded-2xl border border-[#60a846] shadow-xl relative overflow-hidden group">
                     <div class="absolute top-0 right-0 bg-[#d64045] text-white text-xs font-bold px-3 py-1 rounded-bl-xl">ХИТ</div>
@@ -108,47 +120,89 @@
                 </div>
             </div>
 
-            <div id="tab-content-bank" class="hidden animate-fade-in w-full">
-                <div class="mb-6 bg-[#1a2f1d] p-5 rounded-2xl border-2 border-[#e9c46a] shadow-lg relative overflow-hidden">
-                    <div class="absolute -right-6 -top-6 text-[#e9c46a] opacity-10 text-9xl">💰</div>
-                    <h2 class="text-2xl font-bold text-[#fffdf5] mb-1 text-shadow">Лесной Банк</h2>
-                    <p class="text-sm text-[#e9c46a] font-bold opacity-80 mb-4">Инвестиции и Переводы</p>
-                    <div class="bg-black/30 p-3 rounded-xl border border-[#e9c46a]/30 flex justify-between items-center mb-4">
-                        <span class="text-xs text-[#fffdf5]/70 uppercase font-bold">Активные вклады</span>
-                        <span id="active-invest-count" class="text-xl font-bold text-[#e9c46a]">0</span>
+            <div id="tab-content-bank" class="hidden animate-fade-in w-full space-y-6">
+                
+                <div class="bg-gradient-to-br from-[#1a2f1d] to-[#0f1c11] p-5 rounded-3xl border border-[#60a846] shadow-lg relative overflow-hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <div class="text-xs text-[#60a846] font-bold uppercase tracking-widest">Мой портфель</div>
+                            <div class="text-2xl font-bold text-[#fffdf5] mt-1">Активные вклады</div>
+                        </div>
+                        <div class="bg-[#0f1c11] w-12 h-12 rounded-full flex items-center justify-center border border-[#e9c46a] shadow-inner">
+                            <span id="active-invest-count" class="text-[#e9c46a] font-bold text-xl">0</span>
+                        </div>
                     </div>
                     
-                    <button onclick="openTransferModal()" class="w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold uppercase shadow-lg border border-[#fffdf5]/20 flex items-center justify-center gap-2 transition active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                        Перевести другу
+                    <div id="my-investments-list" class="space-y-3 min-h-[50px]">
+                        </div>
+                </div>
+
+                <div>
+                    <h3 class="text-[#e9c46a] font-bold uppercase text-xs tracking-widest mb-3 ml-1">Операции</h3>
+                    <button onclick="openTransferModal()" class="w-full py-4 rounded-2xl bg-[#60a846] hover:bg-[#4a8236] text-[#fffdf5] font-bold uppercase shadow-lg border-2 border-[#fffdf5]/10 flex items-center justify-between px-6 transition active:scale-95 group">
+                        <span class="flex items-center gap-3">
+                            <span class="bg-[#fffdf5]/20 p-2 rounded-lg group-hover:bg-[#fffdf5]/30 transition">💸</span>
+                            <span>Перевод другу</span>
+                        </span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                     </button>
                 </div>
 
-                <div id="my-investments-list" class="space-y-3 mb-8"></div>
+                <div>
+                    <h3 class="text-[#e9c46a] font-bold uppercase text-xs tracking-widest mb-3 ml-1">Инвестиционные продукты</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        
+                        <div onclick="openInvestModal('call', 'По звонку', '45 мин', '3%')" class="bg-[#1f3a24] p-4 rounded-2xl border border-[#60a846]/30 shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between h-32">
+                            <div class="text-3xl">📞</div>
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-sm">По звонку</div>
+                                <div class="text-[10px] text-[#fffdf5]/50 mt-0.5">45 минут</div>
+                                <div class="mt-2 text-[#60a846] font-bold text-lg">+3%</div>
+                            </div>
+                        </div>
 
-                <div class="flex items-center gap-2 mb-4 px-2">
-                    <div class="h-[2px] bg-[#e9c46a]/30 flex-grow"></div>
-                    <span class="text-xs font-bold text-[#e9c46a] uppercase tracking-widest">Тарифы</span>
-                    <div class="h-[2px] bg-[#e9c46a]/30 flex-grow"></div>
-                </div>
+                        <div onclick="openInvestModal('five', 'Пятёрка', '6 часов', '5%')" class="bg-[#1f3a24] p-4 rounded-2xl border border-[#60a846]/30 shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between h-32">
+                            <div class="text-3xl">🖐️</div>
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-sm">Пятёрка</div>
+                                <div class="text-[10px] text-[#fffdf5]/50 mt-0.5">6 часов</div>
+                                <div class="mt-2 text-[#60a846] font-bold text-lg">+5%</div>
+                            </div>
+                        </div>
 
-                <div class="grid grid-cols-1 gap-4">
-                    <div onclick="openInvestModal('call', 'По звонку', '45 мин', '3%')" class="bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/50 shadow-md hover:scale-[1.02] transition cursor-pointer relative overflow-hidden group">
-                        <div class="flex justify-between items-center"><div><div class="text-[#e9c46a] font-bold text-lg">📞 По звонку</div><div class="text-xs text-[#fffdf5]/60">Срок: 45 минут</div></div><div class="text-xl font-bold text-[#60a846] bg-[#0f1c11] px-3 py-1 rounded-lg border border-[#60a846]/30">+3%</div></div>
-                    </div>
-                    <div onclick="openInvestModal('five', 'Пятёрка', '6 часов', '5%')" class="bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/50 shadow-md hover:scale-[1.02] transition cursor-pointer group">
-                        <div class="flex justify-between items-center"><div><div class="text-[#e9c46a] font-bold text-lg">🖐️ Пятёрка</div><div class="text-xs text-[#fffdf5]/60">Срок: 6 часов</div></div><div class="text-xl font-bold text-[#60a846] bg-[#0f1c11] px-3 py-1 rounded-lg border border-[#60a846]/30">+5%</div></div>
-                    </div>
-                    <div onclick="openInvestModal('night', 'Ночь', '12 часов', '10%')" class="bg-[#1f3a24] p-4 rounded-xl border border-[#60a846]/50 shadow-md hover:scale-[1.02] transition cursor-pointer">
-                        <div class="flex justify-between items-center"><div><div class="text-[#e9c46a] font-bold text-lg">🌙 Ночь</div><div class="text-xs text-[#fffdf5]/60">Срок: 12 часов</div></div><div class="text-xl font-bold text-[#60a846] bg-[#0f1c11] px-3 py-1 rounded-lg border border-[#60a846]/30">+10%</div></div>
-                    </div>
-                    <div onclick="openInvestModal('champion', 'Чемпион', '24 часа', '20%')" class="bg-gradient-to-r from-[#1f3a24] to-[#2d4a33] p-4 rounded-xl border border-[#e9c46a] shadow-lg hover:scale-[1.02] transition cursor-pointer relative">
-                        <div class="absolute -right-2 -top-2 text-4xl opacity-20">🏆</div>
-                        <div class="flex justify-between items-center relative z-10"><div><div class="text-[#e9c46a] font-bold text-lg">🏆 Чемпион</div><div class="text-xs text-[#fffdf5]/60">Срок: 24 часа</div></div><div class="text-2xl font-bold text-[#e9c46a] bg-black/40 px-3 py-1 rounded-lg border border-[#e9c46a]/50 text-shadow">+20%</div></div>
-                    </div>
-                    <div onclick="openInvestModal('crypto', 'Crypto SCAM', '45 мин', '???')" class="bg-[#2b1114] p-4 rounded-xl border-2 border-[#d64045] shadow-[0_0_15px_rgba(214,64,69,0.3)] hover:scale-[1.02] transition cursor-pointer relative overflow-hidden animate-pulse-slow">
-                        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')] opacity-10"></div>
-                        <div class="flex justify-between items-center relative z-10"><div><div class="text-[#d64045] font-bold text-lg flex items-center gap-2">💀 CRYPTO <span class="text-xs bg-[#d64045] text-white px-1 rounded">RISK</span></div><div class="text-xs text-[#d64045]/70">Срок: 45 минут</div></div><div class="text-center"><div class="text-lg font-bold text-[#fffdf5]">X0 ... X2.5</div><div class="text-[10px] text-[#d64045] uppercase font-bold">Пан или пропал</div></div></div>
+                        <div onclick="openInvestModal('night', 'Ночь', '12 часов', '10%')" class="bg-[#1f3a24] p-4 rounded-2xl border border-[#60a846]/30 shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between h-32">
+                            <div class="text-3xl">🌙</div>
+                            <div>
+                                <div class="text-[#e9c46a] font-bold text-sm">Ночь</div>
+                                <div class="text-[10px] text-[#fffdf5]/50 mt-0.5">12 часов</div>
+                                <div class="mt-2 text-[#60a846] font-bold text-lg">+10%</div>
+                            </div>
+                        </div>
+
+                        <div onclick="openInvestModal('champion', 'Чемпион', '24 часа', '20%')" class="bg-gradient-to-br from-[#2d4a33] to-[#1f3a24] p-4 rounded-2xl border border-[#e9c46a]/50 shadow-md active:scale-95 transition cursor-pointer flex flex-col justify-between h-32 relative overflow-hidden">
+                            <div class="absolute -right-2 -top-2 text-5xl opacity-10 text-[#e9c46a]">🏆</div>
+                            <div class="text-3xl relative z-10">🏆</div>
+                            <div class="relative z-10">
+                                <div class="text-[#e9c46a] font-bold text-sm">Чемпион</div>
+                                <div class="text-[10px] text-[#fffdf5]/50 mt-0.5">24 часа</div>
+                                <div class="mt-2 text-[#e9c46a] font-bold text-lg">+20%</div>
+                            </div>
+                        </div>
+
+                        <div onclick="openInvestModal('crypto', 'Crypto SCAM', '45 мин', '???')" class="col-span-2 bg-[#2b1114] p-4 rounded-2xl border border-[#d64045] shadow-[0_0_10px_rgba(214,64,69,0.2)] active:scale-95 transition cursor-pointer flex items-center justify-between relative overflow-hidden">
+                             <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')] opacity-10"></div>
+                             <div class="flex items-center gap-3 relative z-10">
+                                 <div class="text-3xl animate-pulse">💀</div>
+                                 <div>
+                                     <div class="text-[#d64045] font-bold">CRYPTO RISK</div>
+                                     <div class="text-[10px] text-[#d64045]/70">45 минут • Риск потери всего</div>
+                                 </div>
+                             </div>
+                             <div class="text-right relative z-10">
+                                 <div class="text-xl font-bold text-[#fffdf5]">X0..X2.5</div>
+                             </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -156,19 +210,33 @@
             <div id="tab-content-admin" class="hidden animate-fade-in">
                 <div class="bg-[#2b1114] p-5 rounded-2xl border-2 border-[#d64045] shadow-lg mb-6">
                     <h2 class="text-2xl font-bold text-[#fffdf5] mb-1">Учительская</h2>
-                    <p class="text-sm text-[#d64045] font-bold uppercase tracking-wider">Панель управления</p>
                 </div>
                 <h3 class="text-[#60a846] font-bold uppercase text-xs tracking-widest mb-4">Ожидающие выдачи</h3>
                 <div id="admin-orders-list" class="space-y-3"></div>
             </div>
         </main>
 
-        <nav class="flex-none bg-[#0f1c11]/95 backdrop-blur border-t border-[#60a846] flex justify-around py-3 pb-safe max-w-md mx-auto z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
-            <button id="tab-btn-game" onclick="switchTab('game')" class="flex flex-col items-center gap-1 text-[#e9c46a] transition active"><span class="text-2xl">🎮</span><span class="text-[10px] font-bold uppercase tracking-widest">ИГРА</span></button>
-            <button id="tab-btn-rating" onclick="switchTab('rating')" class="flex flex-col items-center gap-1 text-[#fffdf5]/50 hover:text-[#e9c46a] transition"><span class="text-2xl">📊</span><span class="text-[10px] font-bold uppercase tracking-widest">ТОП</span></button>
-            <button id="tab-btn-shop" onclick="switchTab('shop')" class="flex flex-col items-center gap-1 text-[#fffdf5]/50 hover:text-[#e9c46a] transition"><span class="text-2xl">🛒</span><span class="text-[10px] font-bold uppercase tracking-widest">ШОП</span></button>
-            <button id="tab-btn-bank" onclick="switchTab('bank')" class="flex flex-col items-center gap-1 text-[#fffdf5]/50 hover:text-[#e9c46a] transition"><span class="text-2xl">🏦</span><span class="text-[10px] font-bold uppercase tracking-widest">БАНК</span></button>
-            <button id="tab-btn-admin" onclick="switchTab('admin')" class="hidden flex flex-col items-center gap-1 text-[#d64045]/50 hover:text-[#d64045] transition"><span class="text-2xl">🔑</span><span class="text-[10px] font-bold uppercase tracking-widest">АДМИН</span></button>
+        <nav class="flex-none bg-[#1a2f1d]/95 backdrop-blur border-t border-[#60a846]/50 flex justify-around py-2 pb-safe max-w-md mx-auto z-50 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+            <button id="tab-btn-game" onclick="switchTab('game')" class="nav-btn flex flex-col items-center gap-1 p-2 text-[#fffdf5]/40 transition active">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-current transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300">Игра</span>
+            </button>
+            <button id="tab-btn-rating" onclick="switchTab('rating')" class="nav-btn flex flex-col items-center gap-1 p-2 text-[#fffdf5]/40 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-current transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                <span class="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300">Топ</span>
+            </button>
+            <button id="tab-btn-shop" onclick="switchTab('shop')" class="nav-btn flex flex-col items-center gap-1 p-2 text-[#fffdf5]/40 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-current transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <span class="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300">Шоп</span>
+            </button>
+            <button id="tab-btn-bank" onclick="switchTab('bank')" class="nav-btn flex flex-col items-center gap-1 p-2 text-[#fffdf5]/40 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-current transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300">Банк</span>
+            </button>
+            <button id="tab-btn-admin" onclick="switchTab('admin')" class="hidden nav-btn flex flex-col items-center gap-1 p-2 text-[#d64045]/40 hover:text-[#d64045] transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-current transition-all duration-300" fill="none" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                <span class="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300">Админ</span>
+            </button>
         </nav>
 
         <div id="modal-move" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in">
@@ -178,8 +246,7 @@
                 
                 <div class="bg-[#0f1c11] rounded-xl p-3 border border-[#60a846]/30 mb-4 flex-grow overflow-y-auto flex flex-col relative">
                     <div class="text-[10px] text-[#60a846] uppercase tracking-widest mb-2 sticky top-0 bg-[#0f1c11] py-1 z-10 border-b border-[#60a846]/20">История отношений</div>
-                    <div id="modal-history-list" class="space-y-2 pb-2">
-                        </div>
+                    <div id="modal-history-list" class="space-y-2 pb-2"></div>
                 </div>
 
                 <div class="flex-none">
@@ -217,9 +284,16 @@
                 <p class="text-center text-[#e9c46a] mb-6 text-sm opacity-80">Поделиться монетами с другом</p>
 
                 <div class="mb-4">
-                    <label class="block text-xs text-[#60a846] uppercase font-bold mb-2 ml-1">Кому перевести?</label>
-                    <select id="transfer-target" class="w-full bg-[#0f1c11] border-2 border-[#60a846] rounded-xl px-4 py-3 text-[#fffdf5] text-sm focus:outline-none focus:border-[#e9c46a] transition">
-                        <option value="">Загрузка списка...</option>
+                    <label class="block text-xs text-[#60a846] uppercase font-bold mb-2 ml-1">1. Выберите класс</label>
+                    <select id="transfer-class" onchange="filterTransferStudents()" class="w-full bg-[#0f1c11] border-2 border-[#60a846] rounded-xl px-4 py-3 text-[#fffdf5] text-sm focus:outline-none focus:border-[#e9c46a] transition">
+                        <option value="">Загрузка...</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-xs text-[#60a846] uppercase font-bold mb-2 ml-1">2. Выберите ученика</label>
+                    <select id="transfer-student" disabled class="w-full bg-[#0f1c11] border-2 border-[#60a846]/50 rounded-xl px-4 py-3 text-[#fffdf5] text-sm focus:outline-none focus:border-[#e9c46a] transition disabled:opacity-50">
+                        <option value="">Сначала выберите класс</option>
                     </select>
                 </div>
 
