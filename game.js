@@ -24,6 +24,16 @@ const PLAYERS_PER_PAGE = 25;
 
 // --- 3. ИНИЦИАЛИЗАЦИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Логика заставки
+    const splash = document.getElementById('splash-screen');
+    if (splash) {
+        // Ждем 3 секунды и запускаем исчезновение
+        setTimeout(() => {
+            splash.classList.add('fade-out');
+        }, 3000);
+    }
+
+    // 2. Остальная инициализация
     createSnow();
     if (myId) {
         showGameScreen();
@@ -161,9 +171,7 @@ async function refreshPlayersForDeals() {
     }
 
     const processedPlayers = players.map(p => {
-        // [ИЗМЕНЕНО] Лимит исчерпан ТОЛЬКО если 5 и там и там
         const isLimit = p.outgoing >= 5 && p.incoming >= 5;
-        
         const safeName = isLimit ? p.revealed_name : null;
         const safeClass = isLimit ? p.ret_class_name : null;
 
@@ -190,13 +198,10 @@ async function refreshPlayersForDeals() {
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#1f3a24] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
-            // Кнопка истории только при полном раскрытии (5 и 5)
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#1f3a24] font-bold border-b-4 border-[#3e6b2e] text-sm shadow-lg active:scale-95">📜 ИСТОРИЯ</button>`;
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ...</button>`;
         } else {
-            // Если хотя бы один лимит не достигнут (например, исходящих 5, но входящих 2) — кнопка активна!
-            // Но мы должны блокировать создание сделки, если ИСХОДЯЩИХ уже 5.
             if (p.outgoing >= 5) {
                  btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#2a4d31] text-sage font-bold border border-sage/50 text-sm">🔒 ВЫ ВСЁ (5/5)</button>`;
             } else {
@@ -240,7 +245,7 @@ async function refreshPlayersForDeals() {
 
 function calculateSortWeight(p) {
     if (p.has_pending) return -1;
-    if (p.isLimitReached) return 100; // Раскрытые вниз
+    if (p.isLimitReached) return 100;
     if (p.is_classmate) return 20;
     return 0;
 }
@@ -513,7 +518,6 @@ async function checkShopStatus() {
 }
 
 async function loadAdminOrders() {
-    // [ИСПРАВЛЕНО] Передаем requestor_id для безопасности
     const { data: orders, error } = await supabaseClient.rpc('get_admin_orders', { requestor_id: myId });
     
     const container = document.getElementById('admin-orders-list');
