@@ -2,11 +2,10 @@
 
 // --- 1. КОНФИГУРАЦИЯ ---
 const SUPABASE_URL = 'https://ferhcoqknnobeesscvdv.supabase.co';
-// ВАЖНО: Это публичный ключ (anon key), он безопасен для фронтенда, 
-// если настроены RLS политики и RPC функции.
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZlcmhjb3Frbm5vYmVlc3NjdmR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3MjQ0NDUsImV4cCI6MjA4MTMwMDQ0NX0.pJB2oBN9Asp8mO0Od1lHD6sRjr-swoaJu5Z-ZJvw9jA';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ИСПРАВЛЕНИЕ: Переименовали переменную в supabaseClient, чтобы не конфликтовать с библиотекой
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // --- 2. СОСТОЯНИЕ ---
 let myId = localStorage.getItem('santa_id');
@@ -41,7 +40,7 @@ async function login() {
 
     btn.disabled = true; btn.innerText = "Связь с лесом..."; err.classList.add('hidden');
 
-    const { data, error } = await supabase.rpc('login_player', { input_code: code });
+    const { data, error } = await supabaseClient.rpc('login_player', { input_code: code });
 
     if (error || (data && data.error)) {
         err.innerText = error ? error.message : data.error;
@@ -57,9 +56,9 @@ async function login() {
 
 window.logout = async function() {
     if (confirm("Покинуть волшебный лес?")) {
-        // [UPDATED] Отправляем сигнал на сервер, что игрок вышел
+        // Отправляем сигнал на сервер, что игрок вышел
         if (myId) {
-            await supabase.rpc('logout_player', { player_uuid: myId });
+            await supabaseClient.rpc('logout_player', { player_uuid: myId });
         }
         
         localStorage.removeItem('santa_id');
@@ -73,8 +72,8 @@ async function showGameScreen() {
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('my-class').innerText = myClass || 'Elf';
 
-    // Проверяем админку (можно оставить прямой запрос, если RLS позволяет читать свой профиль)
-    const { data } = await supabase.from('players').select('is_admin').eq('id', myId).single();
+    // Проверяем админку
+    const { data } = await supabaseClient.from('players').select('is_admin').eq('id', myId).single();
     if (data && data.is_admin) {
         isAdmin = true;
         document.getElementById('tab-btn-admin').classList.remove('hidden');
@@ -110,7 +109,7 @@ function refreshAllData() {
 }
 
 async function fetchAllMyDeals() {
-    const { data: deals } = await supabase.rpc('get_my_deals', { player_uuid: myId });
+    const { data: deals } = await supabaseClient.rpc('get_my_deals', { player_uuid: myId });
     if (deals) {
         myDealsHistory = deals;
         checkIncomingDeals();     
@@ -131,7 +130,7 @@ function getPartnerIdFromDeal(dealId) {
 }
 
 async function updateMyStats() {
-    const { data } = await supabase.from('players').select('coins').eq('id', myId).single();
+    const { data } = await supabaseClient.from('players').select('coins').eq('id', myId).single();
     if (data) document.getElementById('my-coins').innerText = data.coins;
 }
 
@@ -139,9 +138,8 @@ async function updateMyStats() {
 async function refreshPlayersForDeals() {
     if (document.getElementById('tab-content-game').classList.contains('hidden')) return;
 
-    // [UPDATED] ИСПОЛЬЗУЕМ БЕЗОПАСНУЮ RPC ФУНКЦИЮ
-    // Она сразу возвращает статистику и флаги, не раскрывая access_code других игроков
-    const { data: players, error } = await supabase.rpc('get_active_players', { my_id: myId });
+    // ИСПОЛЬЗУЕМ БЕЗОПАСНУЮ RPC ФУНКЦИЮ
+    const { data: players, error } = await supabaseClient.rpc('get_active_players', { my_id: myId });
 
     if (error) {
         console.error("Ошибка загрузки игроков:", error);
@@ -158,16 +156,14 @@ async function refreshPlayersForDeals() {
 
     // 1. ПОДГОТОВКА ДАННЫХ ДЛЯ СОРТИРОВКИ
     const processedPlayers = players.map(p => {
-        // Маппинг данных из SQL (snake_case) в JS (camelCase)
         const outgoing = p.outgoing;
         const incoming = p.incoming;
         const hasPendingDeal = p.has_pending;
         const isClassmate = p.is_classmate;
         
-        // Лимит исчерпан?
         const isLimitReached = outgoing >= 5;
 
-        // Присваиваем "вес" для сортировки (чем меньше, тем выше в списке)
+        // Присваиваем "вес" для сортировки
         let sortWeight = 0;
         if (hasPendingDeal) sortWeight = -1; // Ожидающие ответа - в самый верх
         if (isLimitReached) sortWeight = 10; // Лимит исчерпан - вниз
@@ -179,7 +175,7 @@ async function refreshPlayersForDeals() {
     // 2. СОРТИРОВКА
     processedPlayers.sort((a, b) => a.sortWeight - b.sortWeight);
 
-    // 3. ПАГИНАЦИЯ (Отрезаем кусочек)
+    // 3. ПАГИНАЦИЯ
     const visiblePlayers = processedPlayers.slice(0, visiblePlayersCount);
 
     // 4. ОТРИСОВКА
@@ -192,11 +188,9 @@ async function refreshPlayersForDeals() {
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ ОТВЕТА...</button>`;
         } else {
-            // Кнопка предложения
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-[#d64045] hover:bg-[#b02e33] text-white text-lg font-bold shadow-lg transition active:scale-95 border-2 border-white/20">ПРЕДЛОЖИТЬ</button>`;
         }
 
-        // Подсвечиваем серым тех, с кем играть нельзя
         const cardOpacity = (p.isClassmate || p.isLimitReached) ? 'opacity-60 bg-[#152518]' : 'bg-[#1a2f1d]';
         const borderColor = (p.isClassmate || p.isLimitReached) ? 'border-[#2c3e30]' : 'border-[#60a846]';
 
@@ -235,14 +229,13 @@ async function refreshPlayersForDeals() {
         list.appendChild(el);
     });
 
-    // 5. КНОПКА "ЗАГРУЗИТЬ ЕЩЕ"
     if (processedPlayers.length > visiblePlayersCount) {
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.innerText = `ПОКАЗАТЬ ЕЩЕ (${processedPlayers.length - visiblePlayersCount})`;
         loadMoreBtn.className = "w-full py-3 mt-4 rounded-xl border-2 border-[#e9c46a] text-[#e9c46a] font-bold uppercase hover:bg-[#e9c46a] hover:text-[#1a2f1d] transition";
         loadMoreBtn.onclick = () => {
             visiblePlayersCount += PLAYERS_PER_PAGE;
-            refreshPlayersForDeals(); // Перерисовываем с новым лимитом
+            refreshPlayersForDeals();
         };
         list.appendChild(loadMoreBtn);
     }
@@ -317,13 +310,13 @@ async function buyItem(itemName, cost) {
     if (!confirm(`Купить ${itemName} за ${cost} монет?`)) return;
     const btn = document.getElementById('btn-buy-bounty');
     btn.disabled = true; btn.innerText = "Магия...";
-    const { data, error } = await supabase.rpc('buy_item', { my_id: myId, item_label: itemName, cost: cost });
+    const { data, error } = await supabaseClient.rpc('buy_item', { my_id: myId, item_label: itemName, cost: cost });
     if (error || (data && data.error)) { alert("❌ " + (error ? error.message : data.error)); btn.disabled = false; btn.innerText = "КУПИТЬ"; } 
     else { alert("✅ Успешно! Лесные духи приняли оплату."); checkShopStatus(); updateMyStats(); }
 }
 
 async function checkShopStatus() {
-    const { data } = await supabase.from('shop_orders').select('*').eq('player_id', myId).eq('status', 'pending');
+    const { data } = await supabaseClient.from('shop_orders').select('*').eq('player_id', myId).eq('status', 'pending');
     const btn = document.getElementById('btn-buy-bounty');
     const msg = document.getElementById('shop-status');
     if (data && data.length > 0) { btn.disabled = true; btn.classList.add('opacity-50', 'cursor-not-allowed'); btn.classList.remove('btn-primary'); btn.innerText = "ЖДЕМ ВЫДАЧИ..."; msg.classList.remove('hidden'); } 
@@ -332,7 +325,7 @@ async function checkShopStatus() {
 
 async function loadAdminOrders() {
     if (document.getElementById('tab-content-admin').classList.contains('hidden')) return;
-    const { data: orders } = await supabase.rpc('get_admin_orders');
+    const { data: orders } = await supabaseClient.rpc('get_admin_orders');
     const container = document.getElementById('admin-orders-list');
     container.innerHTML = '';
     if (!orders || orders.length === 0) { container.innerHTML = '<p class="text-[#e9c46a] text-center text-sm opacity-70">Корзина пуста</p>'; return; }
@@ -343,10 +336,10 @@ async function loadAdminOrders() {
         container.appendChild(el);
     });
 }
-window.deliverOrder = async function(orderId) { if(!confirm("Выдать товар?")) return; const { error } = await supabase.rpc('deliver_order', { order_uuid: orderId }); if(!error) loadAdminOrders(); };
+window.deliverOrder = async function(orderId) { if(!confirm("Выдать товар?")) return; const { error } = await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); if(!error) loadAdminOrders(); };
 
 async function loadLeaderboard(limit, tableId) {
-    const { data: players } = await supabase.from('players').select('class_name, first_name, last_name, coins').order('coins', { ascending: false }).limit(limit);
+    const { data: players } = await supabaseClient.from('players').select('class_name, first_name, last_name, coins').order('coins', { ascending: false }).limit(limit);
     const container = document.getElementById(tableId).tagName === 'TABLE' ? document.getElementById(tableId).tBodies[0] || document.getElementById(tableId) : document.getElementById(tableId);
     container.innerHTML = '';
     if (!players) return;
@@ -365,6 +358,6 @@ async function loadLeaderboard(limit, tableId) {
 window.openDealModal = (targetId) => { currentTargetId = targetId; respondingToDealId = null; renderModalHistory(targetId); document.getElementById('modal-title').innerText = "Предложить сделку"; document.getElementById('modal-move').classList.remove('hidden'); document.getElementById('modal-move').classList.add('flex'); };
 window.openResponseModal = (dealId) => { respondingToDealId = dealId; currentTargetId = null; const partnerId = getPartnerIdFromDeal(dealId); if(partnerId) renderModalHistory(partnerId); document.getElementById('modal-title').innerText = "Ваш ответ?"; document.getElementById('modal-move').classList.remove('hidden'); document.getElementById('modal-move').classList.add('flex'); };
 window.closeModal = () => { document.getElementById('modal-move').classList.add('hidden'); document.getElementById('modal-move').classList.remove('flex'); };
-window.makeMove = async (moveType) => { closeModal(); if (currentTargetId) { const { data } = await supabase.rpc('create_deal', { my_id: myId, target_id: currentTargetId, my_move: moveType }); if (data && data.error) alert("❌ " + data.error); else alert("✅ Предложение отправлено!"); } else if (respondingToDealId) { const { data } = await supabase.rpc('accept_deal', { deal_id_input: respondingToDealId, responder_id: myId, responder_move_input: moveType }); if (data && data.error) alert("❌ " + data.error); else { alert(`✅ Результат: ${data.p2_change > 0 ? '+' : ''}${data.p2_change}`); fetchAllMyDeals(); updateMyStats(); } } };
+window.makeMove = async (moveType) => { closeModal(); if (currentTargetId) { const { data } = await supabaseClient.rpc('create_deal', { my_id: myId, target_id: currentTargetId, my_move: moveType }); if (data && data.error) alert("❌ " + data.error); else alert("✅ Предложение отправлено!"); } else if (respondingToDealId) { const { data } = await supabaseClient.rpc('accept_deal', { deal_id_input: respondingToDealId, responder_id: myId, responder_move_input: moveType }); if (data && data.error) alert("❌ " + data.error); else { alert(`✅ Результат: ${data.p2_change > 0 ? '+' : ''}${data.p2_change}`); fetchAllMyDeals(); updateMyStats(); } } };
 
 function createSnow() { const container = document.getElementById('snow-container'); if(!container) return; for(let i=0; i<25; i++){ const div = document.createElement('div'); div.classList.add('snowflake'); div.innerHTML = '❄'; div.style.left = Math.random() * 100 + 'vw'; div.style.animationDuration = (Math.random() * 5 + 5) + 's'; div.style.opacity = Math.random(); div.style.fontSize = (Math.random() * 10 + 8) + 'px'; container.appendChild(div); } }
