@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showGameScreen();
         startGameLoop();
     } else {
+        // Загружаем лидерборд, даже если не вошли
         loadLeaderboard(10, 'login-leaderboard');
     }
     const loginBtn = document.getElementById('login-btn');
@@ -76,7 +77,7 @@ async function showGameScreen() {
     document.getElementById('game-screen').classList.remove('hidden');
     
     document.getElementById('my-class').innerText = myClass || 'Elf';
-    if(myName) document.getElementById('my-name').innerText = myName; // Показываем имя
+    if(myName) document.getElementById('my-name').innerText = myName;
 
     updateMyStats(); 
 }
@@ -107,10 +108,9 @@ function refreshAllData() {
     fetchAllMyDeals();
     updateMyStats();
     
-    // Обновляем активную вкладку
     if (document.getElementById('tab-btn-bank').classList.contains('active')) {
         loadMyInvestments();
-        checkPendingTransfers(); // Проверяем переводы
+        checkPendingTransfers(); 
     }
     if (isAdmin && document.getElementById('tab-btn-admin').classList.contains('active')) loadAdminOrders();
 }
@@ -163,10 +163,8 @@ async function refreshPlayersForDeals() {
     }
 
     const processedPlayers = players.map(p => {
-        // Лимит исчерпан = 5 входящих ИЛИ 5 исходящих
         const isLimit = p.outgoing >= 5 || p.incoming >= 5;
         
-        // Кэшируем: имя показываем ТОЛЬКО если лимит исчерпан (SQL это уже делает, но подстрахуемся)
         const safeName = isLimit ? p.revealed_name : null;
         const safeClass = isLimit ? p.ret_class_name : null;
 
@@ -197,12 +195,10 @@ async function refreshPlayersForDeals() {
         if (p.isClassmate) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#1f3a24] text-[#6c757d] font-bold border border-[#495057] text-sm">🚫 СВОЙ КЛАСС</button>`;
         } else if (p.isLimitReached) {
-            // Кнопка истории
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-3 rounded-xl bg-[#60a846] hover:bg-[#4a8236] text-[#1f3a24] font-bold border-b-4 border-[#3e6b2e] text-sm shadow-lg active:scale-95">📜 ИСТОРИЯ</button>`;
         } else if (p.hasPendingDeal) {
             btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[#e9c46a]/20 text-[#e9c46a] font-bold border border-[#e9c46a] animate-pulse text-sm">⏳ ЖДЕМ...</button>`;
         } else {
-            // Обычная кнопка
             btnHtml = `<button onclick="openDealModal('${p.id}')" class="w-full py-4 rounded-xl bg-gradient-to-r from-[#d64045] to-[#b02e33] hover:brightness-110 text-white text-lg font-bold shadow-lg active:scale-95 border-b-4 border-[#8f3234]">ПРЕДЛОЖИТЬ</button>`;
         }
 
@@ -284,19 +280,17 @@ function renderModalHistory(partnerId) {
 
 // --- 8. БАНК ---
 
-// Вклады (Новые лимиты)
 window.openInvestModal = function(id, title, time, percent) {
     currentTariffId = id;
     document.getElementById('invest-title').innerText = title;
     document.getElementById('invest-percent').innerText = percent;
     document.getElementById('invest-amount').value = '';
     
-    // Подсказка минимума
     let min = 10;
-    if(id === 'call') min = 34; // 34 * 0.03 = 1.02
-    if(id === 'five') min = 20; // 20 * 0.05 = 1
-    if(id === 'night') min = 10; // 10 * 0.1 = 1
-    if(id === 'champion') min = 5; // 5 * 0.2 = 1
+    if(id === 'call') min = 34; 
+    if(id === 'five') min = 20; 
+    if(id === 'night') min = 10; 
+    if(id === 'champion') min = 5; 
     
     document.getElementById('invest-amount').placeholder = `Минимум ${min}`;
     document.getElementById('modal-invest').classList.remove('hidden'); 
@@ -306,7 +300,6 @@ window.openInvestModal = function(id, title, time, percent) {
 window.confirmInvest = async function() {
     const amount = parseInt(document.getElementById('invest-amount').value);
     
-    // Валидация минимумов
     let min = 10;
     if(currentTariffId === 'call') min = 34;
     if(currentTariffId === 'five') min = 20;
@@ -323,7 +316,6 @@ window.confirmInvest = async function() {
     else { alert("✅ Вклад открыт!"); updateMyStats(); loadMyInvestments(); }
 };
 
-// Загрузка вкладов
 async function loadMyInvestments() {
     const { data: investments } = await supabaseClient.rpc('get_my_investments', { my_id: myId });
     const list = document.getElementById('my-investments-list');
@@ -344,7 +336,7 @@ async function loadMyInvestments() {
         const timeLeftMs = unlockDate - new Date();
         
         let icon = '💰', title = 'Вклад';
-        if(inv.tariff_id === 'call') { title = 'По звонку'; icon = '🔔'; } // Колокольчик
+        if(inv.tariff_id === 'call') { title = 'По звонку'; icon = '🔔'; } 
         if(inv.tariff_id === 'five') { title = 'Пятёрка'; icon = '🖐️'; }
         if(inv.tariff_id === 'night') { title = 'Ночь'; icon = '🌙'; }
         if(inv.tariff_id === 'champion') { title = 'Чемпион'; icon = '🏆'; }
@@ -368,9 +360,8 @@ window.collectMoney = async function(invId) {
     else { alert(`Результат: ${data.profit > 0 ? '+' : ''}${data.profit} монет`); updateMyStats(); loadMyInvestments(); }
 };
 
-// --- 9. ПЕРЕВОДЫ (Логика с принятием) ---
+// --- 9. ПЕРЕВОДЫ ---
 
-// Проверка входящих переводов
 async function checkPendingTransfers() {
     const container = document.getElementById('incoming-transfers');
     const { data: transfers } = await supabaseClient.rpc('get_my_transfers', { my_id: myId });
@@ -493,9 +484,23 @@ async function loadAdminOrders() {
 }
 window.deliverOrder = async function(orderId) { if(confirm("Выдать?")) { await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); loadAdminOrders(); } };
 
+// [ИСПРАВЛЕНО] Безопасная функция загрузки таблицы
 async function loadLeaderboard(limit, tableId) {
-    const { data: players } = await supabaseClient.rpc('get_leaderboard', { limit_count: limit });
-    const container = document.getElementById(tableId).tagName === 'TABLE' ? document.getElementById(tableId).tBodies[0] : document.getElementById(tableId);
+    const { data: players, error } = await supabaseClient.rpc('get_leaderboard', { limit_count: limit });
+    if (error) { console.error("Ошибка рейтинга:", error); return; }
+
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    // Ищем или создаем tbody
+    let container;
+    if (table.tagName === 'TABLE') {
+        container = table.tBodies[0];
+        if (!container) container = table.createTBody();
+    } else {
+        container = table;
+    }
+
     container.innerHTML = '';
     if (!players) return;
     players.forEach((p, index) => {
@@ -516,7 +521,6 @@ window.openDealModal = (targetId) => {
     if (pData && pData.limitReached) {
         // ИСТОРИЯ
         const classSuffix = pData.className ? ` (${pData.className})` : '';
-        // Показываем имя только если лимит достигнут (здесь это гарантировано if-ом)
         modalTitle.innerText = pData.name ? `Архив: ${pData.name}${classSuffix}` : "Архив сделок";
         if(actionsDiv) actionsDiv.classList.add('hidden');
         if(tipsText) tipsText.classList.add('hidden');
