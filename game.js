@@ -341,17 +341,35 @@ async function loadAdminOrders() {
 window.deliverOrder = async function(orderId) { if(!confirm("Выдать товар?")) return; const { error } = await supabaseClient.rpc('deliver_order', { order_uuid: orderId }); if(!error) loadAdminOrders(); };
 
 async function loadLeaderboard(limit, tableId) {
-    const { data: players } = await supabaseClient.from('players').select('class_name, first_name, last_name, coins').order('coins', { ascending: false }).limit(limit);
+    // [ИСПРАВЛЕНО] Используем RPC вместо прямого SELECT, так как прямой доступ закрыт
+    const { data: players, error } = await supabaseClient.rpc('get_leaderboard', { limit_count: limit });
+
+    if (error) {
+        console.error("Ошибка загрузки рейтинга:", error);
+        return;
+    }
+
     const container = document.getElementById(tableId).tagName === 'TABLE' ? document.getElementById(tableId).tBodies[0] || document.getElementById(tableId) : document.getElementById(tableId);
     container.innerHTML = '';
-    if (!players) return;
+    
+    if (!players || players.length === 0) {
+        container.innerHTML = '<tr><td colspan="4" class="text-center text-[#e9c46a] py-4">Список пуст...</td></tr>';
+        return;
+    }
+
     players.forEach((p, index) => {
         const row = document.createElement('tr');
         let rankColor = "text-[#fffdf5]/70";
         if (index === 0) rankColor = "text-[#e9c46a] font-bold text-lg";
         if (index === 1) rankColor = "text-[#e0e0e0] font-bold";
         if (index === 2) rankColor = "text-[#cd7f32] font-bold";
-        row.innerHTML = `<td class="${rankColor} text-center">${index + 1}</td><td class="text-[#fffdf5] font-medium tracking-wide">${p.last_name} ${p.first_name}</td><td class="text-xs text-[#e9c46a] font-bold opacity-80">${p.class_name}</td><td class="text-right text-[#e9c46a] font-bold text-lg tracking-wider">${p.coins}</td>`;
+        
+        row.innerHTML = `
+            <td class="${rankColor} text-center">${index + 1}</td>
+            <td class="text-[#fffdf5] font-medium tracking-wide">${p.last_name} ${p.first_name}</td>
+            <td class="text-xs text-[#e9c46a] font-bold opacity-80">${p.class_name}</td>
+            <td class="text-right text-[#e9c46a] font-bold text-lg tracking-wider">${p.coins}</td>
+        `;
         container.appendChild(row);
     });
 }
