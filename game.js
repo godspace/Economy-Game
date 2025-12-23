@@ -288,6 +288,8 @@ function renderModalHistory(partnerId) {
 // --- 8. БАНК ---
 
 // --- Обновленная логика модального окна вкладов ---
+// --- Вставьте это вместо старой функции openInvestModal ---
+
 window.openInvestModal = function(id, title, time, percent) {
     currentTariffId = id;
     document.getElementById('invest-title').innerText = title;
@@ -296,47 +298,71 @@ window.openInvestModal = function(id, title, time, percent) {
     const amountInput = document.getElementById('invest-amount');
     amountInput.value = '';
     
-    // Определяем минимальный вклад для отображения условий
+    // 1. Настройка условий и описания
     let min = 10;
     let description = "";
     
     switch(id) {
-        case 'call': min = 34; description = "Ваши монеты будут заморожены на 45 минут."; break;
-        case 'five': min = 20; description = "Средства недоступны в течение 6 часов."; break;
-        case 'night': min = 10; description = "Выплата произойдет через 12 часов."; break;
-        case 'champion': min = 5; description = "Максимальный доход через 24 часа."; break;
-        case 'crypto': min = 10; description = "Внимание: есть риск потерять всё или получить x2.5 через 45 мин."; break;
+        case 'call': 
+            min = 34; 
+            description = "⏱ Заморозка: 45 минут.\nРиска нет. Стабильный доход."; 
+            break;
+        case 'five': 
+            min = 20; 
+            description = "⏱ Заморозка: 6 часов.\nХороший выбор для школьного дня."; 
+            break;
+        case 'night': 
+            min = 10; 
+            description = "⏱ Заморозка: 12 часов.\nОставь деньги работать на ночь."; 
+            break;
+        case 'champion': 
+            min = 5; 
+            description = "⏱ Заморозка: 24 часа.\nСамый выгодный процент!"; 
+            break;
+        case 'crypto': 
+            min = 10; 
+            description = "⏱ Заморозка: 45 минут.\n⚠️ ОПАСНО: Можно потерять всё (0) или получить много (x2.5)."; 
+            break;
     }
 
-    // Добавляем описание условий в модалку
+    // 2. Добавляем/обновляем блок описания
     let infoDiv = document.getElementById('invest-conditions');
+    // Если элемента еще нет, создаем его
     if (!infoDiv) {
         infoDiv = document.createElement('div');
         infoDiv.id = 'invest-conditions';
-        infoDiv.className = 'text-[10px] text-sage/80 mt-2 italic text-center leading-tight';
-        amountInput.parentNode.insertBefore(infoDiv, amountInput.nextSibling);
+        infoDiv.className = 'text-xs text-sage/90 mt-3 mb-2 italic text-center leading-snug whitespace-pre-wrap';
+        amountInput.parentNode.insertBefore(infoDiv, amountInput);
     }
     infoDiv.innerText = description;
 
-    // Поле для предпросмотра прибыли
+    // 3. Добавляем/обновляем блок предпросмотра прибыли
     let profitDiv = document.getElementById('invest-profit-preview');
     if (!profitDiv) {
         profitDiv = document.createElement('div');
         profitDiv.id = 'invest-profit-preview';
-        profitDiv.className = 'text-xs text-yellow-green font-bold mt-2 text-center';
-        amountInput.parentNode.insertBefore(profitDiv, amountInput.nextSibling);
+        profitDiv.className = 'text-sm text-yellow-green font-bold mt-2 text-center h-5';
+        amountInput.parentNode.insertBefore(profitDiv, amountInput.nextSibling.nextSibling); // После кнопки
     }
-    profitDiv.innerText = "Введите сумму для расчета";
+    profitDiv.innerText = ""; // Очищаем при открытии
 
-    // Слушатель ввода для живого расчета
+    // 4. Живой калькулятор
     amountInput.oninput = function() {
         const val = parseInt(this.value);
-        if (!val || val < min) {
-            profitDiv.innerText = `Мин. сумма: ${min} 💰`;
+        if (!val) {
+            profitDiv.innerText = "";
             return;
         }
+        if (val < min) {
+            profitDiv.innerText = `Нужно минимум ${min} 💰`;
+            profitDiv.className = 'text-sm text-brick font-bold mt-2 text-center h-5';
+            return;
+        }
+
+        profitDiv.className = 'text-sm text-yellow-green font-bold mt-2 text-center h-5';
+        
         if (id === 'crypto') {
-            profitDiv.innerText = `Возможный итог: 0 или ${Math.floor(val * 2.5)} 💰`;
+            profitDiv.innerText = `Итог: 0 ... ${Math.floor(val * 2.5)} 💰`;
         } else {
             let mult = (id === 'call' ? 1.03 : id === 'five' ? 1.05 : id === 'night' ? 1.10 : 1.20);
             let expected = Math.floor(val * mult);
