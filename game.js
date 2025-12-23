@@ -287,19 +287,65 @@ function renderModalHistory(partnerId) {
 
 // --- 8. БАНК ---
 
+// --- Обновленная логика модального окна вкладов ---
 window.openInvestModal = function(id, title, time, percent) {
     currentTariffId = id;
     document.getElementById('invest-title').innerText = title;
     document.getElementById('invest-percent').innerText = percent;
-    document.getElementById('invest-amount').value = '';
     
+    const amountInput = document.getElementById('invest-amount');
+    amountInput.value = '';
+    
+    // Определяем минимальный вклад для отображения условий
     let min = 10;
-    if(id === 'call') min = 34; 
-    if(id === 'five') min = 20; 
-    if(id === 'night') min = 10; 
-    if(id === 'champion') min = 5; 
+    let description = "";
     
-    document.getElementById('invest-amount').placeholder = `Минимум ${min}`;
+    switch(id) {
+        case 'call': min = 34; description = "Ваши монеты будут заморожены на 45 минут."; break;
+        case 'five': min = 20; description = "Средства недоступны в течение 6 часов."; break;
+        case 'night': min = 10; description = "Выплата произойдет через 12 часов."; break;
+        case 'champion': min = 5; description = "Максимальный доход через 24 часа."; break;
+        case 'crypto': min = 10; description = "Внимание: есть риск потерять всё или получить x2.5 через 45 мин."; break;
+    }
+
+    // Добавляем описание условий в модалку
+    let infoDiv = document.getElementById('invest-conditions');
+    if (!infoDiv) {
+        infoDiv = document.createElement('div');
+        infoDiv.id = 'invest-conditions';
+        infoDiv.className = 'text-[10px] text-sage/80 mt-2 italic text-center leading-tight';
+        amountInput.parentNode.insertBefore(infoDiv, amountInput.nextSibling);
+    }
+    infoDiv.innerText = description;
+
+    // Поле для предпросмотра прибыли
+    let profitDiv = document.getElementById('invest-profit-preview');
+    if (!profitDiv) {
+        profitDiv = document.createElement('div');
+        profitDiv.id = 'invest-profit-preview';
+        profitDiv.className = 'text-xs text-yellow-green font-bold mt-2 text-center';
+        amountInput.parentNode.insertBefore(profitDiv, amountInput.nextSibling);
+    }
+    profitDiv.innerText = "Введите сумму для расчета";
+
+    // Слушатель ввода для живого расчета
+    amountInput.oninput = function() {
+        const val = parseInt(this.value);
+        if (!val || val < min) {
+            profitDiv.innerText = `Мин. сумма: ${min} 💰`;
+            return;
+        }
+        if (id === 'crypto') {
+            profitDiv.innerText = `Возможный итог: 0 или ${Math.floor(val * 2.5)} 💰`;
+        } else {
+            let mult = (id === 'call' ? 1.03 : id === 'five' ? 1.05 : id === 'night' ? 1.10 : 1.20);
+            let expected = Math.floor(val * mult);
+            if (expected <= val) expected = val + 1; // Гарантия +1
+            profitDiv.innerText = `Вы получите: ${expected} 💰 (+${expected - val})`;
+        }
+    };
+
+    amountInput.placeholder = `Минимум ${min}`;
     document.getElementById('modal-invest').classList.remove('hidden'); 
     document.getElementById('modal-invest').classList.add('flex');
 };
