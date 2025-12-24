@@ -601,17 +601,29 @@ async function loadAdminOrders() {
         return;
     }
 
-    if (!orders || orders.length === 0) { container.innerHTML = '<p class="text-center text-sage opacity-50">Нет заказов</p>'; return; }
+    if (!orders || orders.length === 0) { 
+        container.innerHTML = '<p class="text-center text-sage opacity-50">Нет заказов</p>'; 
+        return; 
+    }
     
     orders.forEach(order => {
         const el = document.createElement('div');
         el.className = 'bg-[#1f3a24] p-4 rounded-xl flex justify-between items-center border border-[#60a846]/30 shadow-md mb-3';
+        
         el.innerHTML = `
             <div class="flex flex-col">
-                <span class="font-bold text-[#fffdf5] text-lg">${order.player_name}</span>
-                <span class="text-sm text-[#e9c46a] font-bold">🛒 ${order.item_name}</span>
+                <div class="flex items-baseline gap-2">
+                    <span class="font-bold text-[#fffdf5] text-lg">${order.player_name}</span>
+                    <span class="text-xs font-bold text-[#60a846] bg-[#2a4d31] px-2 py-0.5 rounded border border-[#60a846]/50">
+                        ${order.player_class}
+                    </span>
+                </div>
+                <span class="text-sm text-[#e9c46a] font-bold mt-1">🛒 ${order.item_name}</span>
             </div>
-            <button onclick="deliverOrder('${order.id}')" class="ml-4 bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-2 px-6 rounded-lg shadow-lg active:scale-95 transition uppercase text-sm border-b-4 border-[#b58b38]">ВЫДАТЬ</button>
+            
+            <button onclick="deliverOrder('${order.id}')" class="ml-4 bg-[#e9c46a] hover:bg-[#d4a373] text-[#1a2f1d] font-bold py-2 px-6 rounded-lg shadow-lg active:scale-95 transition uppercase text-sm border-b-4 border-[#b58b38]">
+                ВЫДАТЬ
+            </button>
         `;
         container.appendChild(el);
     });
