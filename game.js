@@ -695,4 +695,13 @@ window.makeMove = async (moveType) => {
     else if (respondingToDealId) { const { data } = await supabaseClient.rpc('accept_deal', { deal_id_input: respondingToDealId, responder_id: myId, responder_move_input: moveType }); if (data && data.error) alert("❌ " + data.error); else { alert(`✅ Результат: ${data.p2_change > 0 ? '+' : ''}${data.p2_change}`); fetchAllMyDeals(); updateMyStats(); } } 
 };
 
+// Функция закрытия рекламного баннера
+window.closePromoBanner = function() {
+    const banner = document.getElementById('game-promo-banner');
+    if (banner) {
+        // Добавляем класс скрытия (можно сделать плавное исчезновение через CSS, если нужно)
+        banner.style.display = 'none';
+    }
+};
+
 function createSnow() { const container = document.getElementById('snow-container'); if(!container) return; for(let i=0; i<25; i++){ const div = document.createElement('div'); div.classList.add('snowflake'); div.innerHTML = '❄'; div.style.left = Math.random() * 100 + 'vw'; div.style.animationDuration = (Math.random() * 5 + 5) + 's'; div.style.opacity = Math.random(); div.style.fontSize = (Math.random() * 10 + 8) + 'px'; container.appendChild(div); } }

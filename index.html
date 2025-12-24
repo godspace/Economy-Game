@@ -80,6 +80,22 @@
             </div>
         </div>
 
+        <div id="game-promo-banner" class="relative mb-6 bg-gradient-to-r from-[#5a1014] to-[#d64045] rounded-xl p-3 border border-[#e9c46a] shadow-lg flex items-center justify-between animate-fade-in">
+            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none"></div>
+            
+            <div class="flex items-center gap-3 relative z-10">
+                <div class="text-2xl animate-bounce-slow">🍫</div>
+                <div>
+                    <div class="text-[10px] text-[#e9c46a] font-bold uppercase tracking-widest leading-none mb-1">Распродажа</div>
+                    <div class="text-[#fffdf5] font-bold text-sm leading-none">
+                        Baunty: <span class="line-through opacity-50 decoration-brick">99</span> <span class="text-[#e9c46a] text-lg">49 💰</span>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closePromoBanner()" class="relative z-10 text-[#e9c46a] hover:text-white p-2 transition opacity-70 hover:opacity-100 font-bold">✕</button>
+        </div>
+
         <div class="flex justify-center mb-6 space-x-2 bg-[#2a4d31] p-2 rounded-xl shadow-inner overflow-x-auto sticky top-2 z-40 border border-[#6a994e]/50 backdrop-blur">
             <button onclick="switchTab('game')" id="tab-btn-game" class="tab-btn active text-sm flex-1 min-w-[70px] py-2 rounded-lg">🎄 ИГРА</button>
             <button onclick="switchTab('shop')" id="tab-btn-shop" class="tab-btn text-sm flex-1 min-w-[70px] py-2 rounded-lg">🍫 ШОП</button>
@@ -110,7 +126,7 @@
                     <div class="text-3xl">🔥</div>
                 </div>
             </div>
-        
+
             <div class="glass-panel p-8 text-center relative">
                 <h2 class="text-2xl font-bold text-champagne mb-8">Лесная Лавка</h2>
                 
@@ -119,7 +135,7 @@
                     <div class="ribbon-container">
                         <div class="ribbon">SALE -50%</div>
                     </div>
-        
+
                     <div class="text-7xl mb-6 transform group-hover:rotate-12 transition duration-300 inline-block">🍫</div>
                     <h3 class="text-2xl font-bold text-champagne mb-2">Baunty</h3>
                     <p class="text-sage text-sm mb-6 font-bold">Райское наслаждение</p>
@@ -128,7 +144,7 @@
                         <div class="text-xl text-sage line-through decoration-brick decoration-2 opacity-60">99 💰</div>
                         <div class="text-5xl font-bold text-yellow-green drop-shadow-[0_0_10px_rgba(233,196,106,0.5)]">49 💰</div>
                     </div>
-        
+
                     <button id="btn-buy-bounty" onclick="buyItem('Baunty', 49)" class="btn-primary w-full py-4 rounded-xl text-xl shadow-lg active:scale-95 border-b-4 border-[#b58b38]">
                         КУПИТЬ
                     </button>
@@ -139,15 +155,15 @@
         </div>
 
         <div id="tab-content-bank" class="hidden space-y-6">
-    
+            
             <div id="incoming-transfers" class="space-y-3"></div>
-        
+
             <button onclick="openTransferModal()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-[#60a846] to-[#4a7036] hover:brightness-110 text-[#fffdf5] font-bold text-lg uppercase shadow-lg border-2 border-[#fffdf5]/20 flex items-center justify-center gap-3 transition active:scale-95 group relative overflow-hidden">
                 <div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition"></div>
                 <span class="text-2xl">💸</span>
                 <span>ПЕРЕВОД ДРУГУ</span>
             </button>
-        
+
             <div class="glass-panel p-6 flex flex-col gap-4">
                 <div class="flex justify-between items-center border-b border-[#6a994e]/30 pb-4">
                     <div class="text-xs text-sage font-bold uppercase tracking-widest">Мои вклады</div>
@@ -158,7 +174,7 @@
                 </div>
                 <div id="my-investments-list" class="space-y-3 min-h-[50px]"></div>
             </div>
-        
+
             <div class="grid grid-cols-2 gap-3">
                 <div onclick="openInvestModal('call', 'По звонку', '45 мин', '3%')" class="bg-[#2a4d31] p-4 rounded-xl border border-[#6a994e] hover:bg-[#386641] transition cursor-pointer h-32 flex flex-col justify-between relative overflow-hidden group">
                     <div class="absolute -right-2 -top-2 text-4xl opacity-10 group-hover:opacity-20 transition">🔔</div>
@@ -171,7 +187,7 @@
                     </div>
                     <div class="text-right text-xl font-bold text-champagne">+3%</div>
                 </div>
-        
+
                 <div onclick="openInvestModal('five', 'Пятёрка', '6 часов', '5%')" class="bg-[#2a4d31] p-4 rounded-xl border border-[#6a994e] hover:bg-[#386641] transition cursor-pointer h-32 flex flex-col justify-between">
                     <div class="text-3xl">🖐️</div>
                     <div>
@@ -182,7 +198,7 @@
                     </div>
                     <div class="text-right text-xl font-bold text-champagne">+5%</div>
                 </div>
-        
+
                 <div onclick="openInvestModal('night', 'Ночь', '12 часов', '10%')" class="bg-[#2a4d31] p-4 rounded-xl border border-[#6a994e] hover:bg-[#386641] transition cursor-pointer h-32 flex flex-col justify-between">
                     <div class="text-3xl">🌙</div>
                     <div>
@@ -193,7 +209,7 @@
                     </div>
                     <div class="text-right text-xl font-bold text-champagne">+10%</div>
                 </div>
-        
+
                 <div onclick="openInvestModal('champion', 'Чемпион', '24 часа', '20%')" class="bg-gradient-to-br from-[#2a4d31] to-[#1a2f1d] p-4 rounded-xl border border-[#e9c46a] shadow-lg hover:scale-[1.02] transition cursor-pointer h-32 flex flex-col justify-between relative">
                     <div class="absolute -right-2 -top-2 text-yellow-green opacity-20 text-5xl">🏆</div>
                     <div class="text-3xl">🏆</div>
@@ -205,7 +221,7 @@
                     </div>
                     <div class="text-right text-xl font-bold text-champagne">+20%</div>
                 </div>
-        
+
                 <div onclick="openInvestModal('crypto', 'Crypto SCAM', '45 мин', '???')" class="col-span-2 bg-[#2b1114] p-4 rounded-xl border-2 border-brick shadow-[0_0_10px_rgba(214,64,69,0.3)] hover:scale-[1.01] transition cursor-pointer flex items-center justify-between relative overflow-hidden animate-pulse-slow">
                     <div class="flex items-center gap-3 relative z-10">
                         <div class="text-3xl">💀</div>
