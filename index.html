@@ -85,14 +85,40 @@
         </div>
 
         <div id="tab-content-shop" class="hidden">
-            <div class="glass-panel p-8 text-center">
+            <div class="bg-gradient-to-r from-[#d64045] to-[#b02e33] p-4 rounded-xl shadow-lg mb-6 border-2 border-[#ff9f1c] animate-pulse relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+                <div class="relative z-10 flex items-center justify-between">
+                    <div class="text-3xl">🔥</div>
+                    <div class="text-center">
+                        <h3 class="text-[#fffdf5] font-bold text-lg uppercase tracking-widest leading-none">Распродажа!</h3>
+                        <p class="text-[#ff9f1c] font-bold text-sm">Скидка 50% на сладости</p>
+                    </div>
+                    <div class="text-3xl">🔥</div>
+                </div>
+            </div>
+        
+            <div class="glass-panel p-8 text-center relative">
                 <h2 class="text-2xl font-bold text-champagne mb-8">Лесная Лавка</h2>
-                <div class="bg-[#2a4d31] p-6 rounded-2xl border-2 border-[#6a994e] shadow-xl max-w-sm mx-auto relative group">
-                    <div class="text-7xl mb-6 transform group-hover:scale-110 transition duration-300">🍫</div>
+                
+                <div class="bg-[#2a4d31] p-6 rounded-2xl border-2 border-[#6a994e] shadow-xl max-w-sm mx-auto relative group transition hover:scale-105 duration-300">
+                    
+                    <div class="ribbon-container">
+                        <div class="ribbon">SALE -50%</div>
+                    </div>
+        
+                    <div class="text-7xl mb-6 transform group-hover:rotate-12 transition duration-300 inline-block">🍫</div>
                     <h3 class="text-2xl font-bold text-champagne mb-2">Baunty</h3>
                     <p class="text-sage text-sm mb-6 font-bold">Райское наслаждение</p>
-                    <div class="text-4xl font-bold text-yellow-green mb-6">99 💰</div>
-                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 99)" class="btn-primary w-full py-4 rounded-xl text-xl shadow-lg active:scale-95">КУПИТЬ</button>
+                    
+                    <div class="flex justify-center items-center gap-4 mb-6">
+                        <div class="text-xl text-sage line-through decoration-brick decoration-2 opacity-60">99 💰</div>
+                        <div class="text-5xl font-bold text-yellow-green drop-shadow-[0_0_10px_rgba(233,196,106,0.5)]">49 💰</div>
+                    </div>
+        
+                    <button id="btn-buy-bounty" onclick="buyItem('Baunty', 49)" class="btn-primary w-full py-4 rounded-xl text-xl shadow-lg active:scale-95 border-b-4 border-[#b58b38]">
+                        КУПИТЬ
+                    </button>
+                    
                     <p id="shop-status" class="text-sm text-yellow-green mt-4 font-bold bg-[#386641] p-3 rounded-lg hidden border border-[#a7c957]">📦 Заказ оформлен! Ждите выдачи.</p>
                 </div>
             </div>

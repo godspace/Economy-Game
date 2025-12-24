@@ -143,3 +143,35 @@ body {
     visibility: hidden;
     pointer-events: none;
 }
+
+/* --- СКИДКИ --- */
+.ribbon-container {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 100px;
+    height: 100px;
+    overflow: hidden;
+    z-index: 20;
+    pointer-events: none;
+}
+
+.ribbon {
+    background: #d64045;
+    color: #fff;
+    text-align: center;
+    transform: rotate(45deg) translate(0px, 25px);
+    font-weight: bold;
+    font-size: 12px;
+    padding: 5px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    border: 1px dashed rgba(255,255,255,0.5);
+    width: 150px;
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { background: #d64045; }
+    50% { background: #ff5e63; }
+    100% { background: #d64045; }
+}
