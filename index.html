@@ -210,16 +210,22 @@
                     <div class="text-right text-xl font-bold text-champagne">+10%</div>
                 </div>
 
-                <div onclick="openInvestModal('champion', 'Чемпион', '24 часа', '20%')" class="bg-gradient-to-br from-[#2a4d31] to-[#1a2f1d] p-4 rounded-xl border border-[#e9c46a] shadow-lg hover:scale-[1.02] transition cursor-pointer h-32 flex flex-col justify-between relative">
-                    <div class="absolute -right-2 -top-2 text-yellow-green opacity-20 text-5xl">🏆</div>
-                    <div class="text-3xl">🏆</div>
-                    <div>
-                        <div class="text-yellow-green font-bold leading-tight">Чемпион</div>
-                        <div class="text-[10px] text-sage font-bold mt-1">
-                            Min. 5 💰 <span class="text-[#fffdf5]/60 ml-1">⏳ 24 ч</span>
+                <div class="bg-[#1f2923] p-4 rounded-xl border border-[#6a994e]/30 relative flex flex-col justify-between grayscale opacity-60 cursor-not-allowed">
+                    <div class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                        <div class="bg-brick/80 text-white font-bold text-xl uppercase px-4 py-2 border-2 border-white transform -rotate-12 shadow-lg backdrop-blur-sm">
+                            ⛔ Закрыто
                         </div>
                     </div>
-                    <div class="text-right text-xl font-bold text-champagne">+20%</div>
+
+                    <div class="absolute -right-2 -top-2 text-sage opacity-20 text-5xl">🏆</div>
+                    <div class="text-3xl opacity-50">🏆</div>
+                    <div>
+                        <div class="text-sage font-bold leading-tight">Чемпион</div>
+                        <div class="text-[10px] text-sage/50 font-bold mt-1">
+                            Прием вкладов окончен
+                        </div>
+                    </div>
+                    <div class="text-right text-xl font-bold text-sage/50">+20%</div>
                 </div>
 
                 <div onclick="openInvestModal('crypto', 'Crypto SCAM', '45 мин', '???')" class="col-span-2 bg-[#2b1114] p-4 rounded-xl border-2 border-brick shadow-[0_0_10px_rgba(214,64,69,0.3)] hover:scale-[1.01] transition cursor-pointer flex items-center justify-between relative overflow-hidden animate-pulse-slow">
