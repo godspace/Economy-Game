@@ -20,7 +20,12 @@
         .text-shadow { text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .animate-bounce-slow { animation: bounce-slow 2s infinite; }
         .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes bounce-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        /* Усиленная пульсация для финального баннера */
+        @keyframes pulse-bright {
+            0%, 100% { box-shadow: 0 0 10px rgba(214, 64, 69, 0.5); transform: scale(1); }
+            50% { box-shadow: 0 0 25px rgba(214, 64, 69, 0.9); transform: scale(1.02); }
+        }
+        .animate-pulse-bright { animation: pulse-bright 2s infinite; }
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
     </style>
@@ -39,14 +44,14 @@
             <p class="text-sm text-champagne opacity-80">Введите секретный код эльфа</p>
         </div>
 
-        <div class="relative overflow-hidden bg-gradient-to-r from-[#1a2f1d] to-[#2a4d31] rounded-xl p-4 border border-[#e9c46a] shadow-lg text-center cursor-default mb-4">
-            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10"></div>
+        <div class="relative overflow-hidden bg-gradient-to-r from-[#d64045] to-[#ff5e63] rounded-xl p-4 border-2 border-[#fffdf5] text-center cursor-default mb-4 animate-pulse-bright">
+            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20"></div>
             
             <div class="relative z-10 flex flex-col items-center">
-                <div class="bg-[#e9c46a] text-[#1a2f1d] font-bold text-[10px] px-2 py-0.5 rounded mb-2 uppercase tracking-widest">📢 Внимание</div>
-                <div class="text-[#fffdf5] font-bold text-lg leading-tight">
-                    Награждение завтра<br>
-                    <span class="text-[#e9c46a] text-xl">после 3 урока</span> 🏆
+                <div class="bg-[#fffdf5] text-[#d64045] font-bold text-xs px-3 py-1 rounded-full mb-2 uppercase tracking-widest shadow-sm">📢 Внимание</div>
+                <div class="text-[#fffdf5] font-bold text-2xl leading-none drop-shadow-md">
+                    Награждение<br>
+                    <span class="text-[#fca311] text-3xl drop-shadow-lg">в 10:15</span> ⏰
                 </div>
             </div>
         </div>
@@ -79,20 +84,20 @@
             </div>
         </div>
 
-        <div id="game-promo-banner" class="relative mb-6 bg-gradient-to-r from-[#1a2f1d] to-[#2a4d31] rounded-xl p-4 border border-[#e9c46a] shadow-lg flex items-center justify-between animate-fade-in">
-            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 pointer-events-none"></div>
+        <div id="game-promo-banner" class="relative mb-6 bg-gradient-to-r from-[#d64045] to-[#ff5e63] rounded-xl p-4 border-2 border-[#fffdf5] flex items-center justify-between animate-fade-in animate-pulse-bright">
+            <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 pointer-events-none"></div>
             
             <div class="flex items-center gap-3 relative z-10">
                 <div class="text-3xl animate-bounce-slow">🏆</div>
                 <div>
-                    <div class="text-[10px] text-[#e9c46a] font-bold uppercase tracking-widest leading-none mb-1">Финал</div>
-                    <div class="text-[#fffdf5] font-bold text-sm leading-tight">
-                        Награждение завтра<br>после 3 урока
+                    <div class="text-[10px] text-[#fffdf5] font-bold uppercase tracking-widest leading-none mb-1">Финал</div>
+                    <div class="text-[#fffdf5] font-bold text-lg leading-none drop-shadow-md">
+                        Награждение <span class="text-[#fca311]">в 10:15</span>
                     </div>
                 </div>
             </div>
 
-            <button onclick="closePromoBanner()" class="relative z-10 text-[#e9c46a] hover:text-white p-2 transition opacity-70 hover:opacity-100 font-bold">✕</button>
+            <button onclick="closePromoBanner()" class="relative z-10 text-[#fffdf5] hover:text-[#fca311] p-2 transition opacity-80 hover:opacity-100 font-bold text-xl">✕</button>
         </div>
 
         <div class="flex justify-center mb-6 space-x-2 bg-[#2a4d31] p-2 rounded-xl shadow-inner overflow-x-auto sticky top-2 z-40 border border-[#6a994e]/50 backdrop-blur">
